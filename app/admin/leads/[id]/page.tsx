@@ -28,7 +28,6 @@ export default function LeadDetailPage() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Edit Lead Details
   const [editingLead, setEditingLead] = useState(false);
   const [catalogue, setCatalogue] = useState<any[]>([]);
   const [editCustomerName, setEditCustomerName] = useState('');
@@ -80,8 +79,12 @@ export default function LeadDetailPage() {
   const [bookingAmount, setBookingAmount] = useState('');
   const [deliveryDate, setDeliveryDate] = useState('');
 
+  const [messages, setMessages] = useState<any[]>([]);
+  const [messageBody, setMessageBody] = useState('');
+
   useEffect(() => {
     loadLead();
+    loadMessages();
     api.listDealers().then(setDealers).catch(() => {});
     api.listBanks().then(setBanks).catch(() => {});
     api.getFullCatalogue().then(setCatalogue).catch(() => {});
@@ -102,7 +105,6 @@ export default function LeadDetailPage() {
       if (data.dealerId) loadDealerExecs(data.dealerId);
       if (data.bankId) loadFinanceExecs(data.bankId);
 
-      // seed edit form
       setEditCustomerName(data.customer?.name || '');
       setEditCustomerMobile(data.customer?.mobile || '');
       setEditCity(data.customer?.city || '');
@@ -116,6 +118,14 @@ export default function LeadDetailPage() {
       setError(e.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadMessages() {
+    try {
+      setMessages(await api.listMessages(id));
+    } catch {
+      setMessages([]);
     }
   }
 
@@ -277,6 +287,22 @@ export default function LeadDetailPage() {
   const handleMarkDelivered = withSaving(async () => {
     await api.updateDelivery(lead.delivery.id, { status: 'DELIVERED', deliveredAt: new Date().toISOString() });
   });
+
+  async function handleSendMessage(e: React.FormEvent) {
+    e.preventDefault();
+    if (!messageBody.trim()) return;
+    setSaving(true);
+    setError('');
+    try {
+      await api.createMessage({ leadId: id, senderUserId: staff!.id, body: messageBody });
+      setMessageBody('');
+      await loadMessages();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   if (loading) return <p className="text-gray-500 text-sm">Loading...</p>;
   if (error && !lead) return <p className="text-red-600 text-sm">{error}</p>;
@@ -478,6 +504,27 @@ export default function LeadDetailPage() {
               <p className="font-medium">{f.type} — {f.result}</p>
               {f.notes && <p className="text-gray-600">{f.notes}</p>}
               <p className="text-xs text-gray-400">Next: {new Date(f.nextFollowUpAt).toLocaleString()}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Team Notes / Messages">
+        <form onSubmit={handleSendMessage} className="flex gap-2 mb-4">
+          <input
+            className="flex-1 border rounded-lg px-3 py-2 text-sm"
+            placeholder="Write a note about this lead..."
+            value={messageBody}
+            onChange={(e) => setMessageBody(e.target.value)}
+          />
+          <button disabled={saving} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">Send</button>
+        </form>
+        {messages.length === 0 && <p className="text-sm text-gray-500">No messages yet.</p>}
+        <div className="space-y-3">
+          {messages.map((m) => (
+            <div key={m.id} className="border-t pt-2 text-sm">
+              <p className="font-medium text-xs text-gray-500">{m.sender?.name || 'Team member'} · {new Date(m.createdAt).toLocaleString()}</p>
+              <p className="text-gray-700 mt-0.5">{m.body}</p>
             </div>
           ))}
         </div>

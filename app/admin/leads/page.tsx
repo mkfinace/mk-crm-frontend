@@ -47,24 +47,29 @@ export default function LeadsListPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold">Leads</h1>
-        <select
-          className="border rounded-lg px-3 py-2 text-sm"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="">All statuses</option>
-          <option value="NEW">New</option>
-          <option value="CONTACTED">Contacted</option>
-          <option value="INTERESTED">Interested</option>
-          <option value="TEST_DRIVE">Test Drive</option>
-          <option value="QUOTATION">Quotation</option>
-          <option value="NEGOTIATION">Negotiation</option>
-          <option value="BOOKING">Booking</option>
-          <option value="DELIVERY">Delivery</option>
-          <option value="CLOSED">Closed</option>
-          <option value="HOLD">Hold</option>
-          <option value="LOST">Lost</option>
-        </select>
+        <div className="flex items-center gap-3">
+          <select
+            className="border rounded-lg px-3 py-2 text-sm"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="">All statuses</option>
+            <option value="NEW">New</option>
+            <option value="CONTACTED">Contacted</option>
+            <option value="INTERESTED">Interested</option>
+            <option value="TEST_DRIVE">Test Drive</option>
+            <option value="QUOTATION">Quotation</option>
+            <option value="NEGOTIATION">Negotiation</option>
+            <option value="BOOKING">Booking</option>
+            <option value="DELIVERY">Delivery</option>
+            <option value="CLOSED">Closed</option>
+            <option value="HOLD">Hold</option>
+            <option value="LOST">Lost</option>
+          </select>
+          <Link href="/admin/leads/new" className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium">
+            + Add Lead
+          </Link>
+        </div>
       </div>
 
       {error && <p className="text-red-600 text-sm mb-4">{error}</p>}

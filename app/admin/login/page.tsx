@@ -23,7 +23,7 @@ export default function StaffLoginPage() {
         return;
       }
       saveStaffUser(res.user);
-      router.push('/admin/leads');
+      router.push('/admin');
     } catch (e: any) {
       setError(e.message);
     } finally {

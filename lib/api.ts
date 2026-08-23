@@ -91,4 +91,8 @@ export const api = {
   listNotifications: (userId: string, unreadOnly?: boolean) => apiFetch(`/notifications?userId=${userId}${unreadOnly ? '&unreadOnly=true' : ''}`),
   createNotification: (data: any) => apiFetch('/notifications', { method: 'POST', body: JSON.stringify(data) }),
   markNotificationRead: (id: string) => apiFetch(`/notifications/${id}/read`, { method: 'PUT' }),
+
+  // Messages
+  listMessages: (leadId: string) => apiFetch(`/messages?leadId=${leadId}`),
+  createMessage: (data: any) => apiFetch('/messages', { method: 'POST', body: JSON.stringify(data) }),
 };

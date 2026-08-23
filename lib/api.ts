@@ -41,6 +41,9 @@ export const api = {
   staffLogin: (mobile: string, password: string) => apiFetch('/users/login', { method: 'POST', body: JSON.stringify({ mobile, password }) }),
   listUsers: (role?: string) => apiFetch(`/users${role ? `?role=${role}` : ''}`),
   createUser: (data: any) => apiFetch('/users', { method: 'POST', body: JSON.stringify(data) }),
+  updateUser: (id: string, data: any) => apiFetch(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  toggleUserActive: (id: string) => apiFetch(`/users/${id}/toggle-active`, { method: 'PUT' }),
+  deleteUser: (id: string) => apiFetch(`/users/${id}`, { method: 'DELETE' }),
 
   // Dealers / Banks
   listDealers: () => apiFetch('/dealers'),

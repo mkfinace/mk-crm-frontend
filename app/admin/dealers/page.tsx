@@ -15,6 +15,8 @@ export default function DealersAdminPage() {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
 
   const [branchName, setBranchName] = useState('');
   const [branchCity, setBranchCity] = useState('');
@@ -56,10 +58,18 @@ export default function DealersAdminPage() {
     setSaving(true);
     setError('');
     try {
-      await api.createDealer({ name, address: address || undefined, city: city || undefined });
+      await api.createDealer({
+        name,
+        address: address || undefined,
+        city: city || undefined,
+        phone: phone || undefined,
+        email: email || undefined,
+      });
       setName('');
       setAddress('');
       setCity('');
+      setPhone('');
+      setEmail('');
       await loadDealers();
     } catch (e: any) {
       setError(e.message);
@@ -107,11 +117,13 @@ export default function DealersAdminPage() {
 
       <div className="bg-white rounded-xl border p-4 mb-8">
         <p className="font-semibold mb-3">Add Dealer</p>
-        <form onSubmit={handleAddDealer} className="grid grid-cols-3 gap-3">
+        <form onSubmit={handleAddDealer} className="grid grid-cols-2 gap-3">
           <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Dealer name" value={name} onChange={(e) => setName(e.target.value)} required />
-          <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Address" value={address} onChange={(e) => setAddress(e.target.value)} />
           <input className="border rounded-lg px-3 py-2 text-sm" placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} />
-          <button disabled={saving} className="col-span-3 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-60">Add Dealer</button>
+          <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Address" value={address} onChange={(e) => setAddress(e.target.value)} />
+          <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <input className="col-span-2 border rounded-lg px-3 py-2 text-sm" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <button disabled={saving} className="col-span-2 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-60">Add Dealer</button>
         </form>
       </div>
 
@@ -125,7 +137,11 @@ export default function DealersAdminPage() {
             <button onClick={() => loadDetail(d.id)} className="w-full text-left flex justify-between items-center">
               <div>
                 <p className="font-medium">{d.name}</p>
-                <p className="text-xs text-gray-500">{d.city || 'No city'} · {d.branches?.length || 0} branches</p>
+                <p className="text-xs text-gray-500">
+                  {d.city || 'No city'} · {d.branches?.length || 0} branches
+                  {d.phone && ` · ${d.phone}`}
+                  {d.email && ` · ${d.email}`}
+                </p>
               </div>
               <span className="text-blue-600 text-sm">{expanded === d.id ? 'Hide' : 'Manage'}</span>
             </button>

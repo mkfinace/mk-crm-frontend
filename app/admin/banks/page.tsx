@@ -13,6 +13,8 @@ export default function BanksAdminPage() {
   const [saving, setSaving] = useState(false);
 
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
 
   const [branchName, setBranchName] = useState('');
   const [branchCity, setBranchCity] = useState('');
@@ -54,8 +56,10 @@ export default function BanksAdminPage() {
     setSaving(true);
     setError('');
     try {
-      await api.createBank({ name });
+      await api.createBank({ name, phone: phone || undefined, email: email || undefined });
       setName('');
+      setPhone('');
+      setEmail('');
       await loadBanks();
     } catch (e: any) {
       setError(e.message);
@@ -103,9 +107,11 @@ export default function BanksAdminPage() {
 
       <div className="bg-white rounded-xl border p-4 mb-8">
         <p className="font-semibold mb-3">Add Bank</p>
-        <form onSubmit={handleAddBank} className="flex gap-3">
-          <input className="flex-1 border rounded-lg px-3 py-2 text-sm" placeholder="Bank name" value={name} onChange={(e) => setName(e.target.value)} required />
-          <button disabled={saving} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">Add Bank</button>
+        <form onSubmit={handleAddBank} className="grid grid-cols-2 gap-3">
+          <input className="col-span-2 border rounded-lg px-3 py-2 text-sm" placeholder="Bank name" value={name} onChange={(e) => setName(e.target.value)} required />
+          <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <button disabled={saving} className="col-span-2 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-60">Add Bank</button>
         </form>
       </div>
 
@@ -119,7 +125,11 @@ export default function BanksAdminPage() {
             <button onClick={() => loadDetail(b.id)} className="w-full text-left flex justify-between items-center">
               <div>
                 <p className="font-medium">{b.name}</p>
-                <p className="text-xs text-gray-500">{b.branches?.length || 0} branches</p>
+                <p className="text-xs text-gray-500">
+                  {b.branches?.length || 0} branches
+                  {b.phone && ` · ${b.phone}`}
+                  {b.email && ` · ${b.email}`}
+                </p>
               </div>
               <span className="text-blue-600 text-sm">{expanded === b.id ? 'Hide' : 'Manage'}</span>
             </button>

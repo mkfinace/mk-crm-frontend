@@ -28,11 +28,23 @@ export default function LeadDetailPage() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Edit Lead Details
+  const [editingLead, setEditingLead] = useState(false);
+  const [catalogue, setCatalogue] = useState<any[]>([]);
+  const [editCustomerName, setEditCustomerName] = useState('');
+  const [editCustomerMobile, setEditCustomerMobile] = useState('');
+  const [editCity, setEditCity] = useState('');
+  const [editBrandId, setEditBrandId] = useState('');
+  const [editModelId, setEditModelId] = useState('');
+  const [editVariantId, setEditVariantId] = useState('');
+  const [editBudget, setEditBudget] = useState('');
+  const [editFinanceRequired, setEditFinanceRequired] = useState(false);
+  const [editSource, setEditSource] = useState('');
+
   const [salesStatus, setSalesStatus] = useState('');
   const [lostReason, setLostReason] = useState('');
   const [financeStatus, setFinanceStatus] = useState('');
 
-  // Assignment: Dealer > Executive, Bank > Finance Executive
   const [dealers, setDealers] = useState<any[]>([]);
   const [assignDealerId, setAssignDealerId] = useState('');
   const [dealerExecOptions, setDealerExecOptions] = useState<any[]>([]);
@@ -72,6 +84,7 @@ export default function LeadDetailPage() {
     loadLead();
     api.listDealers().then(setDealers).catch(() => {});
     api.listBanks().then(setBanks).catch(() => {});
+    api.getFullCatalogue().then(setCatalogue).catch(() => {});
   }, [id]);
 
   async function loadLead() {
@@ -88,6 +101,17 @@ export default function LeadDetailPage() {
       setAssignFinanceExec(data.financeExecutiveId || '');
       if (data.dealerId) loadDealerExecs(data.dealerId);
       if (data.bankId) loadFinanceExecs(data.bankId);
+
+      // seed edit form
+      setEditCustomerName(data.customer?.name || '');
+      setEditCustomerMobile(data.customer?.mobile || '');
+      setEditCity(data.customer?.city || '');
+      setEditBrandId(data.brandId || '');
+      setEditModelId(data.modelId || '');
+      setEditVariantId(data.variantId || '');
+      setEditBudget(data.budget ? String(data.budget) : '');
+      setEditFinanceRequired(!!data.financeRequired);
+      setEditSource(data.source || 'WEBSITE');
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -148,6 +172,21 @@ export default function LeadDetailPage() {
       }
     };
   }
+
+  const handleSaveLeadEdit = withSaving(async () => {
+    await api.updateLead(id, {
+      customerName: editCustomerName,
+      customerMobile: editCustomerMobile,
+      city: editCity || undefined,
+      brandId: editBrandId || undefined,
+      modelId: editModelId || undefined,
+      variantId: editVariantId || undefined,
+      budget: editBudget ? Number(editBudget) : undefined,
+      financeRequired: editFinanceRequired,
+      source: editSource || undefined,
+    });
+    setEditingLead(false);
+  });
 
   const handleAssign = withSaving(async () => {
     await api.assignLead(id, {
@@ -243,30 +282,101 @@ export default function LeadDetailPage() {
   if (error && !lead) return <p className="text-red-600 text-sm">{error}</p>;
   if (!lead) return null;
 
+  const selectedBrandModels = catalogue.find((b) => b.id === editBrandId)?.models || [];
+  const selectedModelVariants = selectedBrandModels.find((m: any) => m.id === editModelId)?.variants || [];
+
   return (
     <div className="max-w-3xl">
-      <div className="mb-6">
-        <p className="text-sm text-gray-500">{lead.leadCode}</p>
-        <h1 className="text-xl font-bold">{lead.customer?.name}</h1>
-        <p className="text-sm text-gray-500">{lead.customer?.mobile} · {lead.customer?.city || 'No city'}</p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <p className="text-sm text-gray-500">{lead.leadCode}</p>
+          <h1 className="text-xl font-bold">{lead.customer?.name}</h1>
+          <p className="text-sm text-gray-500">{lead.customer?.mobile} · {lead.customer?.city || 'No city'}</p>
+        </div>
+        {!editingLead && (
+          <button onClick={() => setEditingLead(true)} className="text-blue-600 text-sm font-medium">
+            Edit Lead Details
+          </button>
+        )}
       </div>
 
       {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
 
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-white rounded-xl border p-4">
-          <p className="text-xs text-gray-500 mb-1">Vehicle</p>
-          <p className="font-medium">{lead.brand?.name} {lead.model?.name} {lead.variant?.name}</p>
-          <p className="text-xs text-gray-500 mt-2">Budget</p>
-          <p className="font-medium">{lead.budget ? `₹${(lead.budget / 100000).toFixed(2)}L` : '—'}</p>
+      {editingLead ? (
+        <Section title="Edit Lead Details">
+          <form onSubmit={handleSaveLeadEdit} className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Customer name" value={editCustomerName} onChange={(e) => setEditCustomerName(e.target.value)} required />
+              <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Mobile" value={editCustomerMobile} onChange={(e) => setEditCustomerMobile(e.target.value)} required />
+            </div>
+            <input className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="City" value={editCity} onChange={(e) => setEditCity(e.target.value)} />
+
+            <div className="grid grid-cols-3 gap-3">
+              <select
+                className="border rounded-lg px-3 py-2 text-sm"
+                value={editBrandId}
+                onChange={(e) => { setEditBrandId(e.target.value); setEditModelId(''); setEditVariantId(''); }}
+              >
+                <option value="">Select brand</option>
+                {catalogue.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+              <select
+                className="border rounded-lg px-3 py-2 text-sm"
+                value={editModelId}
+                onChange={(e) => { setEditModelId(e.target.value); setEditVariantId(''); }}
+                disabled={!editBrandId}
+              >
+                <option value="">Select model</option>
+                {selectedBrandModels.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+              <select
+                className="border rounded-lg px-3 py-2 text-sm"
+                value={editVariantId}
+                onChange={(e) => setEditVariantId(e.target.value)}
+                disabled={!editModelId}
+              >
+                <option value="">Select variant</option>
+                {selectedModelVariants.map((v: any) => <option key={v.id} value={v.id}>{v.name}</option>)}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Budget" value={editBudget} onChange={(e) => setEditBudget(e.target.value)} />
+              <select className="border rounded-lg px-3 py-2 text-sm" value={editSource} onChange={(e) => setEditSource(e.target.value)}>
+                <option value="WEBSITE">Website</option>
+                <option value="WALK_IN">Walk-in</option>
+                <option value="REFERRAL">Referral</option>
+                <option value="PHONE">Phone</option>
+              </select>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={editFinanceRequired} onChange={(e) => setEditFinanceRequired(e.target.checked)} />
+              Finance required
+            </label>
+
+            <div className="flex gap-2">
+              <button disabled={saving} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">Save Changes</button>
+              <button type="button" onClick={() => setEditingLead(false)} className="bg-gray-100 text-gray-700 rounded-lg px-4 py-2 text-sm font-medium">Cancel</button>
+            </div>
+          </form>
+        </Section>
+      ) : (
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="bg-white rounded-xl border p-4">
+            <p className="text-xs text-gray-500 mb-1">Vehicle</p>
+            <p className="font-medium">{lead.brand?.name} {lead.model?.name} {lead.variant?.name}</p>
+            <p className="text-xs text-gray-500 mt-2">Budget</p>
+            <p className="font-medium">{lead.budget ? `₹${(lead.budget / 100000).toFixed(2)}L` : '—'}</p>
+          </div>
+          <div className="bg-white rounded-xl border p-4">
+            <p className="text-xs text-gray-500 mb-1">Source</p>
+            <p className="font-medium">{lead.source}</p>
+            <p className="text-xs text-gray-500 mt-2">Finance Required</p>
+            <p className="font-medium">{lead.financeRequired ? 'Yes' : 'No'}</p>
+          </div>
         </div>
-        <div className="bg-white rounded-xl border p-4">
-          <p className="text-xs text-gray-500 mb-1">Source</p>
-          <p className="font-medium">{lead.source}</p>
-          <p className="text-xs text-gray-500 mt-2">Finance Required</p>
-          <p className="font-medium">{lead.financeRequired ? 'Yes' : 'No'}</p>
-        </div>
-      </div>
+      )}
 
       <Section title="Sales Assignment (Dealer → Executive)">
         <p className="text-xs text-gray-500 mb-3">

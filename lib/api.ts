@@ -14,6 +14,7 @@ async function apiFetch(path: string, options: RequestInit = {}) {
 }
 
 export const api = {
+  // Catalogue
   getFullCatalogue: () => apiFetch('/catalogue/full'),
   getBrands: () => apiFetch('/catalogue/brands'),
   createBrand: (data: any) => apiFetch('/catalogue/brands', { method: 'POST', body: JSON.stringify(data) }),
@@ -21,8 +22,12 @@ export const api = {
   createModel: (data: any) => apiFetch('/catalogue/models', { method: 'POST', body: JSON.stringify(data) }),
   getVariants: (modelId?: string) => apiFetch(`/catalogue/variants${modelId ? `?modelId=${modelId}` : ''}`),
   createVariant: (data: any) => apiFetch('/catalogue/variants', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Auth (customer OTP)
   requestOtp: (mobile: string) => apiFetch('/auth/otp/request', { method: 'POST', body: JSON.stringify({ mobile }) }),
   verifyOtp: (mobile: string, code: string) => apiFetch('/auth/otp/verify', { method: 'POST', body: JSON.stringify({ mobile, code }) }),
+
+  // Leads
   createLead: (data: any) => apiFetch('/leads', { method: 'POST', body: JSON.stringify(data) }),
   listLeads: (params?: string) => apiFetch(`/leads${params ? `?${params}` : ''}`),
   getLead: (id: string) => apiFetch(`/leads/${id}`),
@@ -31,14 +36,20 @@ export const api = {
   updateSalesStatus: (id: string, data: any) => apiFetch(`/leads/${id}/sales-status`, { method: 'PUT', body: JSON.stringify(data) }),
   updateFinanceStatus: (id: string, data: any) => apiFetch(`/leads/${id}/finance-status`, { method: 'PUT', body: JSON.stringify(data) }),
   addFollowUp: (id: string, data: any) => apiFetch(`/leads/${id}/follow-ups`, { method: 'POST', body: JSON.stringify(data) }),
+
+  // Staff login (admin / dealer / finance)
   staffLogin: (mobile: string, password: string) => apiFetch('/users/login', { method: 'POST', body: JSON.stringify({ mobile, password }) }),
   listUsers: (role?: string) => apiFetch(`/users${role ? `?role=${role}` : ''}`),
   createUser: (data: any) => apiFetch('/users', { method: 'POST', body: JSON.stringify(data) }),
   updateUser: (id: string, data: any) => apiFetch(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   toggleUserActive: (id: string) => apiFetch(`/users/${id}/toggle-active`, { method: 'PUT' }),
   deleteUser: (id: string) => apiFetch(`/users/${id}`, { method: 'DELETE' }),
+
+  // Dealers / Banks
   listDealers: () => apiFetch('/dealers'),
   listBanks: () => apiFetch('/banks'),
+
+  // Quotations / Test drives / Documents / Finance cases
   listQuotations: (leadId: string) => apiFetch(`/quotations?leadId=${leadId}`),
   createQuotation: (data: any) => apiFetch('/quotations', { method: 'POST', body: JSON.stringify(data) }),
   listTestDrives: (leadId: string) => apiFetch(`/test-drives?leadId=${leadId}`),

@@ -27,6 +27,15 @@ export default function UsersAdminPage() {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('DEALER_EXECUTIVE');
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editMobile, setEditMobile] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editRole, setEditRole] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
   useEffect(() => {
     loadUsers();
   }, []);
@@ -69,6 +78,55 @@ export default function UsersAdminPage() {
       await loadUsers();
     } catch (e: any) {
       setError(e.message);
+    }
+  }
+
+  function startEdit(u: any) {
+    setEditingId(u.id);
+    setEditName(u.name);
+    setEditMobile(u.mobile);
+    setEditEmail(u.email || '');
+    setEditRole(u.role);
+    setEditPassword('');
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+  }
+
+  async function handleSaveEdit(id: string, e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    try {
+      await api.updateUser(id, {
+        name: editName,
+        mobile: editMobile,
+        email: editEmail || undefined,
+        role: editRole,
+        ...(editPassword ? { password: editPassword } : {}),
+      });
+      setEditingId(null);
+      await loadUsers();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    setSaving(true);
+    setError('');
+    try {
+      await api.deleteUser(id);
+      setDeleteConfirmId(null);
+      await loadUsers();
+    } catch (e: any) {
+      setError(e.message);
+      setDeleteConfirmId(null);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -130,41 +188,56 @@ export default function UsersAdminPage() {
       {!loading && users.length === 0 && <p className="text-gray-500 text-sm">No users yet.</p>}
 
       {!loading && users.length > 0 && (
-        <div className="bg-white rounded-xl border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b text-left">
-              <tr>
-                <th className="px-4 py-3 font-medium text-gray-600">Name</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Mobile</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Role</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Status</th>
-                <th className="px-4 py-3 font-medium text-gray-600"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.id} className="border-b last:border-0">
-                  <td className="px-4 py-3 font-medium">{u.name}</td>
-                  <td className="px-4 py-3">{u.mobile}</td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${ROLE_COLORS[u.role] || 'bg-gray-100 text-gray-700'}`}>
-                      {u.role}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${u.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                      {u.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
+        <div className="space-y-2">
+          {users.map((u) => (
+            <div key={u.id} className="bg-white rounded-xl border p-4">
+              {editingId === u.id ? (
+                <form onSubmit={(e) => handleSaveEdit(u.id, e)} className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Full name" value={editName} onChange={(e) => setEditName(e.target.value)} required />
+                    <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Mobile" value={editMobile} onChange={(e) => setEditMobile(e.target.value)} required />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
+                    <input type="password" className="border rounded-lg px-3 py-2 text-sm" placeholder="New password (optional)" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} />
+                  </div>
+                  <select className="w-full border rounded-lg px-3 py-2 text-sm" value={editRole} onChange={(e) => setEditRole(e.target.value)}>
+                    {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                  <div className="flex gap-2">
+                    <button disabled={saving} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">Save</button>
+                    <button type="button" onClick={cancelEdit} className="bg-gray-100 text-gray-700 rounded-lg px-4 py-2 text-sm font-medium">Cancel</button>
+                  </div>
+                </form>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">{u.name}</p>
+                    <p className="text-xs text-gray-500">{u.mobile}{u.email ? ` · ${u.email}` : ''}</p>
+                    <div className="flex gap-2 mt-1">
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${ROLE_COLORS[u.role] || 'bg-gray-100 text-gray-700'}`}>{u.role}</span>
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${u.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{u.status}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => startEdit(u)} className="text-blue-600 text-xs font-medium">Edit</button>
                     <button onClick={() => handleToggleActive(u.id)} className="text-blue-600 text-xs font-medium">
                       {u.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
                     </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    {deleteConfirmId === u.id ? (
+                      <span className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500">Sure?</span>
+                        <button disabled={saving} onClick={() => handleDelete(u.id)} className="text-red-600 text-xs font-medium">Yes, delete</button>
+                        <button onClick={() => setDeleteConfirmId(null)} className="text-gray-500 text-xs font-medium">Cancel</button>
+                      </span>
+                    ) : (
+                      <button onClick={() => setDeleteConfirmId(u.id)} className="text-red-600 text-xs font-medium">Delete</button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>

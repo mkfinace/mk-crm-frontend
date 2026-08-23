@@ -20,6 +20,7 @@ export default function UsersAdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
@@ -130,6 +131,12 @@ export default function UsersAdminPage() {
     }
   }
 
+  function copyId(id: string) {
+    navigator.clipboard.writeText(id);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1500);
+  }
+
   return (
     <div className="max-w-3xl">
       <h1 className="text-xl font-bold mb-6">User Management</h1>
@@ -214,6 +221,13 @@ export default function UsersAdminPage() {
                   <div>
                     <p className="font-medium">{u.name}</p>
                     <p className="text-xs text-gray-500">{u.mobile}{u.email ? ` · ${u.email}` : ''}</p>
+                    <button
+                      onClick={() => copyId(u.id)}
+                      className="text-xs text-gray-400 font-mono mt-1 hover:text-gray-600"
+                      title="Click to copy user ID"
+                    >
+                      ID: {u.id} {copiedId === u.id ? '✓ copied' : '(click to copy)'}
+                    </button>
                     <div className="flex gap-2 mt-1">
                       <span className={`text-xs px-2 py-1 rounded-full font-medium ${ROLE_COLORS[u.role] || 'bg-gray-100 text-gray-700'}`}>{u.role}</span>
                       <span className={`text-xs px-2 py-1 rounded-full font-medium ${u.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{u.status}</span>

@@ -45,12 +45,15 @@ export const api = {
   toggleUserActive: (id: string) => apiFetch(`/users/${id}/toggle-active`, { method: 'PUT' }),
   deleteUser: (id: string) => apiFetch(`/users/${id}`, { method: 'DELETE' }),
 
-  // Dealers / Banks
+  // Dealers
   listDealers: () => apiFetch('/dealers'),
   createDealer: (data: any) => apiFetch('/dealers', { method: 'POST', body: JSON.stringify(data) }),
   getDealer: (id: string) => apiFetch(`/dealers/${id}`),
   createDealerBranch: (id: string, data: any) => apiFetch(`/dealers/${id}/branches`, { method: 'POST', body: JSON.stringify(data) }),
+  assignDealerManager: (id: string, data: any) => apiFetch(`/dealers/${id}/managers`, { method: 'POST', body: JSON.stringify(data) }),
   assignDealerExecutive: (id: string, data: any) => apiFetch(`/dealers/${id}/executives`, { method: 'POST', body: JSON.stringify(data) }),
+
+  // Banks
   listBanks: () => apiFetch('/banks'),
   createBank: (data: any) => apiFetch('/banks', { method: 'POST', body: JSON.stringify(data) }),
   getBank: (id: string) => apiFetch(`/banks/${id}`),
@@ -83,4 +86,9 @@ export const api = {
   listDeliveries: (leadId: string) => apiFetch(`/deliveries?leadId=${leadId}`),
   createDelivery: (data: any) => apiFetch('/deliveries', { method: 'POST', body: JSON.stringify(data) }),
   updateDelivery: (id: string, data: any) => apiFetch(`/deliveries/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  // Notifications
+  listNotifications: (userId: string, unreadOnly?: boolean) => apiFetch(`/notifications?userId=${userId}${unreadOnly ? '&unreadOnly=true' : ''}`),
+  createNotification: (data: any) => apiFetch('/notifications', { method: 'POST', body: JSON.stringify(data) }),
+  markNotificationRead: (id: string) => apiFetch(`/notifications/${id}/read`, { method: 'PUT' }),
 };

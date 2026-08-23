@@ -17,8 +17,11 @@ export const api = {
   // Catalogue
   getFullCatalogue: () => apiFetch('/catalogue/full'),
   getBrands: () => apiFetch('/catalogue/brands'),
+  createBrand: (data: any) => apiFetch('/catalogue/brands', { method: 'POST', body: JSON.stringify(data) }),
   getModels: (brandId?: string) => apiFetch(`/catalogue/models${brandId ? `?brandId=${brandId}` : ''}`),
+  createModel: (data: any) => apiFetch('/catalogue/models', { method: 'POST', body: JSON.stringify(data) }),
   getVariants: (modelId?: string) => apiFetch(`/catalogue/variants${modelId ? `?modelId=${modelId}` : ''}`),
+  createVariant: (data: any) => apiFetch('/catalogue/variants', { method: 'POST', body: JSON.stringify(data) }),
 
   // Auth (customer OTP)
   requestOtp: (mobile: string) => apiFetch('/auth/otp/request', { method: 'POST', body: JSON.stringify({ mobile }) }),

@@ -32,25 +32,26 @@ export default function LeadDetailPage() {
   const [lostReason, setLostReason] = useState('');
   const [financeStatus, setFinanceStatus] = useState('');
 
+  const [dealerExecs, setDealerExecs] = useState<any[]>([]);
+  const [financeExecs, setFinanceExecs] = useState<any[]>([]);
+  const [assignDealerExec, setAssignDealerExec] = useState('');
+  const [assignFinanceExec, setAssignFinanceExec] = useState('');
+
   const [followUpType, setFollowUpType] = useState('CALL');
   const [followUpResult, setFollowUpResult] = useState('INTERESTED');
   const [followUpNotes, setFollowUpNotes] = useState('');
   const [followUpDate, setFollowUpDate] = useState('');
 
-  // Quotation form
   const [quotePrice, setQuotePrice] = useState('');
   const [quoteOnRoad, setQuoteOnRoad] = useState('');
   const [quoteExchange, setQuoteExchange] = useState('');
   const [quoteValidTill, setQuoteValidTill] = useState('');
 
-  // Test drive form
   const [testDriveDate, setTestDriveDate] = useState('');
 
-  // Document form
   const [docType, setDocType] = useState('Aadhaar');
   const [docUrl, setDocUrl] = useState('');
 
-  // Finance case form
   const [banks, setBanks] = useState<any[]>([]);
   const [financeBank, setFinanceBank] = useState('');
   const [loanAmount, setLoanAmount] = useState('');
@@ -59,15 +60,14 @@ export default function LeadDetailPage() {
   const [roi, setRoi] = useState('');
   const [emi, setEmi] = useState('');
 
-  // Booking form
   const [bookingAmount, setBookingAmount] = useState('');
-
-  // Delivery form
   const [deliveryDate, setDeliveryDate] = useState('');
 
   useEffect(() => {
     loadLead();
     api.listBanks().then(setBanks).catch(() => {});
+    api.listUsers('DEALER_EXECUTIVE').then(setDealerExecs).catch(() => {});
+    api.listUsers('FINANCE_EXECUTIVE').then(setFinanceExecs).catch(() => {});
   }, [id]);
 
   async function loadLead() {
@@ -78,6 +78,8 @@ export default function LeadDetailPage() {
       setLead(data);
       setSalesStatus(data.salesStatus);
       setFinanceStatus(data.financeStatus);
+      setAssignDealerExec(data.dealerExecutiveId || '');
+      setAssignFinanceExec(data.financeExecutiveId || '');
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -100,6 +102,14 @@ export default function LeadDetailPage() {
       }
     };
   }
+
+  const handleAssign = withSaving(async () => {
+    await api.assignLead(id, {
+      dealerExecutiveId: assignDealerExec || undefined,
+      financeExecutiveId: assignFinanceExec || undefined,
+      assignedBy: staff!.id,
+    });
+  });
 
   const handleSalesStatusUpdate = withSaving(async () => {
     await api.updateSalesStatus(id, {
@@ -185,6 +195,9 @@ export default function LeadDetailPage() {
   if (error && !lead) return <p className="text-red-600 text-sm">{error}</p>;
   if (!lead) return null;
 
+  const currentDealerExec = dealerExecs.find((u) => u.id === lead.dealerExecutiveId);
+  const currentFinanceExec = financeExecs.find((u) => u.id === lead.financeExecutiveId);
+
   return (
     <div className="max-w-3xl">
       <div className="mb-6">
@@ -209,6 +222,26 @@ export default function LeadDetailPage() {
           <p className="font-medium">{lead.financeRequired ? 'Yes' : 'No'}</p>
         </div>
       </div>
+
+      <Section title="Assignment">
+        <p className="text-xs text-gray-500 mb-3">
+          Currently: {currentDealerExec ? currentDealerExec.name : 'Unassigned'} (sales)
+          {lead.financeRequired && ` · ${currentFinanceExec ? currentFinanceExec.name : 'Unassigned'} (finance)`}
+        </p>
+        <form onSubmit={handleAssign} className="flex gap-2">
+          <select className="flex-1 border rounded-lg px-3 py-2 text-sm" value={assignDealerExec} onChange={(e) => setAssignDealerExec(e.target.value)}>
+            <option value="">No dealer executive</option>
+            {dealerExecs.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+          </select>
+          {lead.financeRequired && (
+            <select className="flex-1 border rounded-lg px-3 py-2 text-sm" value={assignFinanceExec} onChange={(e) => setAssignFinanceExec(e.target.value)}>
+              <option value="">No finance executive</option>
+              {financeExecs.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          )}
+          <button disabled={saving} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">Assign</button>
+        </form>
+      </Section>
 
       <Section title="Sales Status">
         <div className="flex gap-2 items-center">

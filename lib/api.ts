@@ -47,15 +47,40 @@ export const api = {
 
   // Dealers / Banks
   listDealers: () => apiFetch('/dealers'),
+  createDealer: (data: any) => apiFetch('/dealers', { method: 'POST', body: JSON.stringify(data) }),
+  getDealer: (id: string) => apiFetch(`/dealers/${id}`),
+  createDealerBranch: (id: string, data: any) => apiFetch(`/dealers/${id}/branches`, { method: 'POST', body: JSON.stringify(data) }),
+  assignDealerExecutive: (id: string, data: any) => apiFetch(`/dealers/${id}/executives`, { method: 'POST', body: JSON.stringify(data) }),
   listBanks: () => apiFetch('/banks'),
+  createBank: (data: any) => apiFetch('/banks', { method: 'POST', body: JSON.stringify(data) }),
+  getBank: (id: string) => apiFetch(`/banks/${id}`),
+  createBankBranch: (id: string, data: any) => apiFetch(`/banks/${id}/branches`, { method: 'POST', body: JSON.stringify(data) }),
+  assignFinanceExecutive: (id: string, data: any) => apiFetch(`/banks/${id}/executives`, { method: 'POST', body: JSON.stringify(data) }),
 
-  // Quotations / Test drives / Documents / Finance cases
+  // Quotations
   listQuotations: (leadId: string) => apiFetch(`/quotations?leadId=${leadId}`),
   createQuotation: (data: any) => apiFetch('/quotations', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Test drives
   listTestDrives: (leadId: string) => apiFetch(`/test-drives?leadId=${leadId}`),
   createTestDrive: (data: any) => apiFetch('/test-drives', { method: 'POST', body: JSON.stringify(data) }),
+  updateTestDrive: (id: string, data: any) => apiFetch(`/test-drives/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  // Documents
   listDocuments: (leadId: string) => apiFetch(`/documents?leadId=${leadId}`),
+  createDocument: (data: any) => apiFetch('/documents', { method: 'POST', body: JSON.stringify(data) }),
+  verifyDocument: (id: string, data: any) => apiFetch(`/documents/${id}/verify`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  // Finance cases
   getFinanceCase: (id: string) => apiFetch(`/finance-cases/${id}`),
   listFinanceCases: (leadId: string) => apiFetch(`/finance-cases?leadId=${leadId}`),
+  createFinanceCase: (data: any) => apiFetch('/finance-cases', { method: 'POST', body: JSON.stringify(data) }),
   updateFinanceStage: (id: string, data: any) => apiFetch(`/finance-cases/${id}/stage`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  // Bookings / Deliveries
+  listBookings: (leadId: string) => apiFetch(`/bookings?leadId=${leadId}`),
+  createBooking: (data: any) => apiFetch('/bookings', { method: 'POST', body: JSON.stringify(data) }),
+  listDeliveries: (leadId: string) => apiFetch(`/deliveries?leadId=${leadId}`),
+  createDelivery: (data: any) => apiFetch('/deliveries', { method: 'POST', body: JSON.stringify(data) }),
+  updateDelivery: (id: string, data: any) => apiFetch(`/deliveries/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 };

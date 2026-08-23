@@ -28,6 +28,7 @@ export const api = {
   createLead: (data: any) => apiFetch('/leads', { method: 'POST', body: JSON.stringify(data) }),
   listLeads: (params?: string) => apiFetch(`/leads${params ? `?${params}` : ''}`),
   getLead: (id: string) => apiFetch(`/leads/${id}`),
+  updateLead: (id: string, data: any) => apiFetch(`/leads/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   assignLead: (id: string, data: any) => apiFetch(`/leads/${id}/assign`, { method: 'PUT', body: JSON.stringify(data) }),
   updateSalesStatus: (id: string, data: any) => apiFetch(`/leads/${id}/sales-status`, { method: 'PUT', body: JSON.stringify(data) }),
   updateFinanceStatus: (id: string, data: any) => apiFetch(`/leads/${id}/finance-status`, { method: 'PUT', body: JSON.stringify(data) }),
@@ -37,4 +38,18 @@ export const api = {
   staffLogin: (mobile: string, password: string) => apiFetch('/users/login', { method: 'POST', body: JSON.stringify({ mobile, password }) }),
   listUsers: (role?: string) => apiFetch(`/users${role ? `?role=${role}` : ''}`),
   createUser: (data: any) => apiFetch('/users', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Dealers / Banks
+  listDealers: () => apiFetch('/dealers'),
+  listBanks: () => apiFetch('/banks'),
+
+  // Quotations / Test drives / Documents / Finance cases
+  listQuotations: (leadId: string) => apiFetch(`/quotations?leadId=${leadId}`),
+  createQuotation: (data: any) => apiFetch('/quotations', { method: 'POST', body: JSON.stringify(data) }),
+  listTestDrives: (leadId: string) => apiFetch(`/test-drives?leadId=${leadId}`),
+  createTestDrive: (data: any) => apiFetch('/test-drives', { method: 'POST', body: JSON.stringify(data) }),
+  listDocuments: (leadId: string) => apiFetch(`/documents?leadId=${leadId}`),
+  getFinanceCase: (id: string) => apiFetch(`/finance-cases/${id}`),
+  listFinanceCases: (leadId: string) => apiFetch(`/finance-cases?leadId=${leadId}`),
+  updateFinanceStage: (id: string, data: any) => apiFetch(`/finance-cases/${id}/stage`, { method: 'PUT', body: JSON.stringify(data) }),
 };

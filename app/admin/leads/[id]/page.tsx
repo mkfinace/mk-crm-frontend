@@ -32,9 +32,14 @@ export default function LeadDetailPage() {
   const [lostReason, setLostReason] = useState('');
   const [financeStatus, setFinanceStatus] = useState('');
 
-  const [dealerExecs, setDealerExecs] = useState<any[]>([]);
-  const [financeExecs, setFinanceExecs] = useState<any[]>([]);
+  // Assignment: Dealer > Executive, Bank > Finance Executive
+  const [dealers, setDealers] = useState<any[]>([]);
+  const [assignDealerId, setAssignDealerId] = useState('');
+  const [dealerExecOptions, setDealerExecOptions] = useState<any[]>([]);
   const [assignDealerExec, setAssignDealerExec] = useState('');
+
+  const [assignBankId, setAssignBankId] = useState('');
+  const [financeExecOptions, setFinanceExecOptions] = useState<any[]>([]);
   const [assignFinanceExec, setAssignFinanceExec] = useState('');
 
   const [followUpType, setFollowUpType] = useState('CALL');
@@ -65,9 +70,8 @@ export default function LeadDetailPage() {
 
   useEffect(() => {
     loadLead();
+    api.listDealers().then(setDealers).catch(() => {});
     api.listBanks().then(setBanks).catch(() => {});
-    api.listUsers('DEALER_EXECUTIVE').then(setDealerExecs).catch(() => {});
-    api.listUsers('FINANCE_EXECUTIVE').then(setFinanceExecs).catch(() => {});
   }, [id]);
 
   async function loadLead() {
@@ -78,13 +82,55 @@ export default function LeadDetailPage() {
       setLead(data);
       setSalesStatus(data.salesStatus);
       setFinanceStatus(data.financeStatus);
+      setAssignDealerId(data.dealerId || '');
       setAssignDealerExec(data.dealerExecutiveId || '');
+      setAssignBankId(data.bankId || '');
       setAssignFinanceExec(data.financeExecutiveId || '');
+      if (data.dealerId) loadDealerExecs(data.dealerId);
+      if (data.bankId) loadFinanceExecs(data.bankId);
     } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function loadDealerExecs(dealerId: string) {
+    if (!dealerId) {
+      setDealerExecOptions([]);
+      return;
+    }
+    try {
+      const d = await api.getDealer(dealerId);
+      setDealerExecOptions(d.executives || []);
+    } catch {
+      setDealerExecOptions([]);
+    }
+  }
+
+  async function loadFinanceExecs(bankId: string) {
+    if (!bankId) {
+      setFinanceExecOptions([]);
+      return;
+    }
+    try {
+      const b = await api.getBank(bankId);
+      setFinanceExecOptions(b.executives || []);
+    } catch {
+      setFinanceExecOptions([]);
+    }
+  }
+
+  function handleDealerChange(dealerId: string) {
+    setAssignDealerId(dealerId);
+    setAssignDealerExec('');
+    loadDealerExecs(dealerId);
+  }
+
+  function handleBankChange(bankId: string) {
+    setAssignBankId(bankId);
+    setAssignFinanceExec('');
+    loadFinanceExecs(bankId);
   }
 
   function withSaving(fn: () => Promise<void>) {
@@ -105,7 +151,9 @@ export default function LeadDetailPage() {
 
   const handleAssign = withSaving(async () => {
     await api.assignLead(id, {
+      dealerId: assignDealerId || undefined,
       dealerExecutiveId: assignDealerExec || undefined,
+      bankId: assignBankId || undefined,
       financeExecutiveId: assignFinanceExec || undefined,
       assignedBy: staff!.id,
     });
@@ -195,9 +243,6 @@ export default function LeadDetailPage() {
   if (error && !lead) return <p className="text-red-600 text-sm">{error}</p>;
   if (!lead) return null;
 
-  const currentDealerExec = dealerExecs.find((u) => u.id === lead.dealerExecutiveId);
-  const currentFinanceExec = financeExecs.find((u) => u.id === lead.financeExecutiveId);
-
   return (
     <div className="max-w-3xl">
       <div className="mb-6">
@@ -223,25 +268,45 @@ export default function LeadDetailPage() {
         </div>
       </div>
 
-      <Section title="Assignment">
+      <Section title="Sales Assignment (Dealer → Executive)">
         <p className="text-xs text-gray-500 mb-3">
-          Currently: {currentDealerExec ? currentDealerExec.name : 'Unassigned'} (sales)
-          {lead.financeRequired && ` · ${currentFinanceExec ? currentFinanceExec.name : 'Unassigned'} (finance)`}
+          Currently: {lead.dealer?.name || 'No dealer'} → {lead.dealerExecutive?.name || 'Unassigned'}
         </p>
-        <form onSubmit={handleAssign} className="flex gap-2">
-          <select className="flex-1 border rounded-lg px-3 py-2 text-sm" value={assignDealerExec} onChange={(e) => setAssignDealerExec(e.target.value)}>
-            <option value="">No dealer executive</option>
-            {dealerExecs.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          <select className="border rounded-lg px-3 py-2 text-sm" value={assignDealerId} onChange={(e) => handleDealerChange(e.target.value)}>
+            <option value="">Select dealer</option>
+            {dealers.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
-          {lead.financeRequired && (
-            <select className="flex-1 border rounded-lg px-3 py-2 text-sm" value={assignFinanceExec} onChange={(e) => setAssignFinanceExec(e.target.value)}>
-              <option value="">No finance executive</option>
-              {financeExecs.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
-          )}
-          <button disabled={saving} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">Assign</button>
-        </form>
+          <select className="border rounded-lg px-3 py-2 text-sm" value={assignDealerExec} onChange={(e) => setAssignDealerExec(e.target.value)} disabled={!assignDealerId}>
+            <option value="">{assignDealerId ? 'Select executive' : 'Select a dealer first'}</option>
+            {dealerExecOptions.map((ex) => <option key={ex.id} value={ex.user?.id}>{ex.user?.name}</option>)}
+          </select>
+        </div>
+        <button disabled={saving} onClick={handleAssign} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">
+          Save Assignment
+        </button>
       </Section>
+
+      {lead.financeRequired && (
+        <Section title="Finance Assignment (Bank → Finance Executive)">
+          <p className="text-xs text-gray-500 mb-3">
+            Currently: {lead.bank?.name || 'No bank'} → {lead.financeExecutive?.name || 'Unassigned'}
+          </p>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <select className="border rounded-lg px-3 py-2 text-sm" value={assignBankId} onChange={(e) => handleBankChange(e.target.value)}>
+              <option value="">Select bank</option>
+              {banks.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+            <select className="border rounded-lg px-3 py-2 text-sm" value={assignFinanceExec} onChange={(e) => setAssignFinanceExec(e.target.value)} disabled={!assignBankId}>
+              <option value="">{assignBankId ? 'Select executive' : 'Select a bank first'}</option>
+              {financeExecOptions.map((ex) => <option key={ex.id} value={ex.user?.id}>{ex.user?.name}</option>)}
+            </select>
+          </div>
+          <button disabled={saving} onClick={handleAssign} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">
+            Save Assignment
+          </button>
+        </Section>
+      )}
 
       <Section title="Sales Status">
         <div className="flex gap-2 items-center">

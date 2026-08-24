@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Manrope } from 'next/font/google';
 import { getStaffUser, clearStaffUser, StaffUser } from '@/lib/auth';
 import {
-  IconGrid, IconUsers, IconCar, IconBuilding, IconBank, IconUser, IconBell, IconLogout,
+  IconGrid, IconUsers, IconCar, IconBuilding, IconBank, IconUser, IconBell, IconLogout, IconLayers,
 } from '@/components/AdminIcons';
 
 const manrope = Manrope({ subsets: ['latin'], weight: ['500', '600', '700', '800'], variable: '--font-display' });
@@ -50,6 +50,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin', label: 'Dashboard', exact: true, icon: IconGrid },
     { href: '/admin/leads', label: 'Leads', icon: IconUsers },
     { href: '/admin/catalogue', label: 'Catalogue', icon: IconCar },
+    { href: '/admin/field-builder', label: 'Field Builder', icon: IconLayers },
     { href: '/admin/dealers', label: 'Dealers', icon: IconBuilding },
     { href: '/admin/banks', label: 'Banks', icon: IconBank },
     { href: '/admin/users', label: 'Users', icon: IconUser },
@@ -82,7 +83,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         <div className="mx-5 h-px bg-white/[0.06]" />
 
-        <nav className="flex-1 px-3 py-4 space-y-0.5">
+        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {navItems.map((item) => {
             const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
             const Icon = item.icon;

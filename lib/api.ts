@@ -95,4 +95,15 @@ export const api = {
   // Messages
   listMessages: (leadId: string) => apiFetch(`/messages?leadId=${leadId}`),
   createMessage: (data: any) => apiFetch('/messages', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Dynamic Fields
+  listFieldCategories: () => apiFetch('/field-categories'),
+  createFieldCategory: (data: any) => apiFetch('/field-categories', { method: 'POST', body: JSON.stringify(data) }),
+  updateFieldCategory: (id: string, data: any) => apiFetch(`/field-categories/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  listFieldDefinitions: (categoryId?: string) => apiFetch(`/field-definitions${categoryId ? `?categoryId=${categoryId}` : ''}`),
+  createFieldDefinition: (data: any) => apiFetch('/field-definitions', { method: 'POST', body: JSON.stringify(data) }),
+  updateFieldDefinition: (id: string, data: any) => apiFetch(`/field-definitions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  archiveFieldDefinition: (id: string) => apiFetch(`/field-definitions/${id}/archive`, { method: 'PUT' }),
+  listFieldValuesForVariant: (variantId: string) => apiFetch(`/field-values?variantId=${variantId}`),
+  setFieldValue: (data: any) => apiFetch('/field-values', { method: 'POST', body: JSON.stringify(data) }),
 };

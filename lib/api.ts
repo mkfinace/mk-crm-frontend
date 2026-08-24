@@ -106,4 +106,8 @@ export const api = {
   archiveFieldDefinition: (id: string) => apiFetch(`/field-definitions/${id}/archive`, { method: 'PUT' }),
   listFieldValuesForVariant: (variantId: string) => apiFetch(`/field-values?variantId=${variantId}`),
   setFieldValue: (data: any) => apiFetch('/field-values', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Vehicles (colours + images per variant)
+  getVehicleByVariant: (variantId: string) => apiFetch(`/vehicles/${variantId}`),
+  upsertVehicle: (variantId: string, data: any) => apiFetch(`/vehicles/${variantId}`, { method: 'PUT', body: JSON.stringify(data) }),
 };

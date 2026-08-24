@@ -50,6 +50,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin', label: 'Dashboard', exact: true, icon: IconGrid },
     { href: '/admin/leads', label: 'Leads', icon: IconUsers },
     { href: '/admin/catalogue', label: 'Catalogue', icon: IconCar },
+    { href: '/admin/car-data', label: 'Car Data', icon: IconCar },
     { href: '/admin/field-builder', label: 'Field Builder', icon: IconLayers },
     { href: '/admin/dealers', label: 'Dealers', icon: IconBuilding },
     { href: '/admin/banks', label: 'Banks', icon: IconBank },

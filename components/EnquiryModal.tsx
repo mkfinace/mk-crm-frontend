@@ -4,20 +4,8 @@ import { useState } from 'react';
 import { api } from '@/lib/api';
 
 export default function EnquiryModal({
-  open,
-  onClose,
-  brandId,
-  modelId,
-  variantId,
-  vehicleLabel,
-}: {
-  open: boolean;
-  onClose: () => void;
-  brandId?: string;
-  modelId?: string;
-  variantId?: string;
-  vehicleLabel?: string;
-}) {
+  open, onClose, prefillVehicle,
+}: { open: boolean; onClose: () => void; prefillVehicle?: string }) {
   const [step, setStep] = useState<'form' | 'otp' | 'done'>('form');
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
@@ -29,16 +17,17 @@ export default function EnquiryModal({
 
   if (!open) return null;
 
-  async function handleSendOtp() {
-    setError('');
+  async function handleRequestOtp(e: React.FormEvent) {
+    e.preventDefault();
     if (!name.trim() || !/^\d{10}$/.test(mobile)) {
-      setError('Enter your name and a valid 10-digit mobile number.');
+      setError('Please enter your name and a valid 10-digit mobile number.');
       return;
     }
+    setError('');
     setLoading(true);
     try {
       const res = await api.requestOtp(mobile);
-      setDevOtp(res.devOtp || ''); // dev-mode only; remove once real SMS gateway is wired up
+      setDevOtp(res.devOtp || '');
       setStep('otp');
     } catch (e: any) {
       setError(e.message);
@@ -47,22 +36,16 @@ export default function EnquiryModal({
     }
   }
 
-  async function handleVerifyAndSubmit() {
+  async function handleVerifyAndSubmit(e: React.FormEvent) {
+    e.preventDefault();
     setError('');
-    if (otp.length !== 6) {
-      setError('Enter the 6-digit OTP.');
-      return;
-    }
     setLoading(true);
     try {
       await api.verifyOtp(mobile, otp);
       await api.createLead({
         customerName: name,
         customerMobile: mobile,
-        city,
-        brandId,
-        modelId,
-        variantId,
+        city: city || undefined,
         source: 'WEBSITE',
       });
       setStep('done');
@@ -73,50 +56,98 @@ export default function EnquiryModal({
     }
   }
 
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-sm w-full p-6 relative">
-        <button onClick={onClose} className="absolute top-3 right-4 text-gray-400 text-xl">✕</button>
+  function handleClose() {
+    setStep('form');
+    setName(''); setMobile(''); setCity(''); setOtp(''); setDevOtp(''); setError('');
+    onClose();
+  }
 
-        {vehicleLabel && <p className="text-xs text-gray-500 mb-1">Enquiring about</p>}
-        {vehicleLabel && <p className="font-semibold mb-3">{vehicleLabel}</p>}
+  return (
+    <div
+      className="fixed inset-0 bg-black/75 z-[300] flex items-center justify-center p-5"
+      onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
+    >
+      <div className="bg-[#141414] border border-white/10 rounded-xl max-w-[420px] w-full p-7 relative">
+        <button
+          onClick={handleClose}
+          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 border border-white/10 text-white flex items-center justify-center text-sm"
+        >
+          ✕
+        </button>
 
         {step === 'form' && (
           <>
-            <h3 className="text-lg font-bold mb-4">Get a Callback</h3>
-            <input className="w-full border rounded-lg p-3 mb-3" placeholder="Your Name" value={name} onChange={e => setName(e.target.value)} />
-            <input className="w-full border rounded-lg p-3 mb-3" placeholder="Mobile Number" value={mobile} onChange={e => setMobile(e.target.value)} maxLength={10} />
-            <input className="w-full border rounded-lg p-3 mb-3" placeholder="City (optional)" value={city} onChange={e => setCity(e.target.value)} />
-            {error && <p className="text-red-600 text-sm mb-2">{error}</p>}
-            <button disabled={loading} onClick={handleSendOtp} className="w-full bg-blue-600 text-white rounded-lg p-3 font-semibold disabled:opacity-60">
-              {loading ? 'Sending...' : 'Send OTP'}
-            </button>
+            <h3 className="text-white text-xl font-bold mb-1">Get a Quote</h3>
+            <p className="text-white/50 text-sm mb-5">
+              {prefillVehicle ? `Interested in: ${prefillVehicle}` : 'Share your details — our team will call you shortly.'}
+            </p>
+            <form onSubmit={handleRequestOtp} className="space-y-3">
+              <input
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-md text-white text-sm placeholder:text-white/30 outline-none focus:border-[#1a6e8e]/60"
+                placeholder="Your Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+              <input
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-md text-white text-sm placeholder:text-white/30 outline-none focus:border-[#1a6e8e]/60"
+                placeholder="Mobile Number"
+                maxLength={10}
+                value={mobile}
+                onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))}
+              />
+              <input
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-md text-white text-sm placeholder:text-white/30 outline-none focus:border-[#1a6e8e]/60"
+                placeholder="City (optional)"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+              />
+              {error && <p className="text-[#e63030] text-xs">{error}</p>}
+              <button
+                disabled={loading}
+                className="w-full py-3 bg-[#1a6e8e] hover:bg-[#0d4d6b] text-white rounded-md font-bold text-sm transition-colors disabled:opacity-60"
+              >
+                {loading ? 'Sending OTP…' : 'Send OTP →'}
+              </button>
+            </form>
           </>
         )}
 
         {step === 'otp' && (
           <>
-            <h3 className="text-lg font-bold mb-2">Verify OTP</h3>
-            <p className="text-sm text-gray-500 mb-3">OTP sent to {mobile}</p>
+            <h3 className="text-white text-xl font-bold mb-1">Verify Mobile</h3>
+            <p className="text-white/50 text-sm mb-5">Enter the OTP sent to {mobile}.</p>
             {devOtp && (
-              <p className="text-xs bg-yellow-50 border border-yellow-200 rounded p-2 mb-3">
-                Dev mode — no SMS gateway connected yet. Your OTP is: <b>{devOtp}</b>
+              <p className="text-[13px] text-[#2a8aad] bg-[#1a6e8e]/10 border border-[#1a6e8e]/25 rounded-md px-3 py-2 mb-4">
+                Dev mode — your OTP is <strong>{devOtp}</strong>
               </p>
             )}
-            <input className="w-full border rounded-lg p-3 mb-3 tracking-widest text-center text-lg" placeholder="000000" value={otp} onChange={e => setOtp(e.target.value)} maxLength={6} />
-            {error && <p className="text-red-600 text-sm mb-2">{error}</p>}
-            <button disabled={loading} onClick={handleVerifyAndSubmit} className="w-full bg-blue-600 text-white rounded-lg p-3 font-semibold disabled:opacity-60">
-              {loading ? 'Submitting...' : 'Verify & Submit'}
-            </button>
+            <form onSubmit={handleVerifyAndSubmit} className="space-y-3">
+              <input
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-md text-white text-sm tracking-[6px] text-center placeholder:text-white/30 outline-none focus:border-[#1a6e8e]/60"
+                placeholder="••••"
+                maxLength={6}
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+              />
+              {error && <p className="text-[#e63030] text-xs">{error}</p>}
+              <button
+                disabled={loading}
+                className="w-full py-3 bg-[#e63030] hover:bg-[#b01c1c] text-white rounded-md font-bold text-sm transition-colors disabled:opacity-60"
+              >
+                {loading ? 'Verifying…' : 'Verify & Submit →'}
+              </button>
+            </form>
           </>
         )}
 
         {step === 'done' && (
-          <div className="text-center py-6">
-            <div className="text-4xl mb-3">✅</div>
-            <h3 className="text-lg font-bold mb-2">Thank you, {name}!</h3>
-            <p className="text-sm text-gray-500 mb-4">Our team will contact you shortly.</p>
-            <button onClick={onClose} className="bg-gray-100 rounded-lg px-4 py-2 font-medium">Close</button>
+          <div className="text-center py-4">
+            <div className="w-14 h-14 rounded-full bg-[#1a6e8e]/15 border border-[#1a6e8e]/30 flex items-center justify-center mx-auto mb-4 text-2xl">✓</div>
+            <h3 className="text-white text-xl font-bold mb-2">Thank You!</h3>
+            <p className="text-white/50 text-sm mb-5">Our team will contact you within 24 hours.</p>
+            <button onClick={handleClose} className="px-6 py-2.5 bg-[#1a6e8e] text-white rounded-md text-sm font-bold">
+              Close
+            </button>
           </div>
         )}
       </div>

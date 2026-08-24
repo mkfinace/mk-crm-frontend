@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { inputCls, selectCls, primaryBtnCls, secondaryBtnCls, dangerTextBtnCls, cardCls } from '@/components/adminStyles';
-import { IconCar, IconChevronDown, IconPlus } from '@/components/AdminIcons';
+import { inputCls, selectCls, primaryBtnCls, secondaryBtnCls, cardCls } from '@/components/adminStyles';
+import { IconCar, IconChevronDown } from '@/components/AdminIcons';
 
 type FieldVal = { valueText?: string; valueNumber?: number; valueBoolean?: boolean; applicability: string };
 
-const APPLICABILITY = ['STANDARD', 'OPTIONAL', 'NOT_AVAILABLE', 'PACKAGE', 'ACCESSORY'];
+function slugify(name: string) {
+  return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
 
 function FieldInput({
   field, value, onChange,
@@ -74,7 +76,6 @@ function FieldInput({
   if (t === 'LONG_TEXT') {
     return <textarea className={`${inputCls} w-full`} rows={2} value={value.valueText || ''} onChange={(e) => onChange({ ...value, valueText: e.target.value })} />;
   }
-  // TEXT, URL, IMAGE
   return <input className={inputCls} placeholder={t === 'URL' || t === 'IMAGE' ? 'https://…' : ''} value={value.valueText || ''} onChange={(e) => onChange({ ...value, valueText: e.target.value })} />;
 }
 
@@ -98,6 +99,13 @@ export default function CarDataPage() {
   const [error, setError] = useState('');
   const [savedMsg, setSavedMsg] = useState('');
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
+
+  // Bulk import
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [bulkText, setBulkText] = useState('');
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const [bulkLog, setBulkLog] = useState<string[]>([]);
+  const [bulkProgress, setBulkProgress] = useState('');
 
   useEffect(() => {
     Promise.all([api.getFullCatalogue(), api.listFieldCategories()])
@@ -134,6 +142,12 @@ export default function CarDataPage() {
     }
   }
 
+  async function refreshCategories() {
+    const cats = await api.listFieldCategories();
+    setCategories(cats);
+    return cats;
+  }
+
   const models = catalogue.find((b) => b.id === brandId)?.models || [];
   const variants = models.find((m: any) => m.id === modelId)?.variants || [];
   const selectedVariant = variants.find((v: any) => v.id === variantId);
@@ -167,19 +181,137 @@ export default function CarDataPage() {
     setColours((prev) => [...prev, { name: colourName.trim(), hex: colourHex }]);
     setColourName('');
   }
-
   function removeColour(idx: number) {
     setColours((prev) => prev.filter((_, i) => i !== idx));
   }
-
   function addImage() {
     if (!imageUrl.trim()) return;
     setImages((prev) => [...prev, imageUrl.trim()]);
     setImageUrl('');
   }
-
   function removeImage(idx: number) {
     setImages((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  // ---- Bulk import: paste a category-wise spec sheet, auto-create everything ----
+  function parseSpecSheet(text: string) {
+    const lines = text.split('\n').map((l) => l.replace(/\r$/, ''));
+    const groups: { category: string; fields: { name: string; value: string }[] }[] = [];
+    let current: { category: string; fields: { name: string; value: string }[] } | null = null;
+
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line) continue;
+      const tabIdx = raw.indexOf('\t');
+      if (tabIdx === -1) {
+        // No tab → treat as a category header
+        current = { category: line, fields: [] };
+        groups.push(current);
+      } else {
+        const name = raw.slice(0, tabIdx).trim();
+        const value = raw.slice(tabIdx + 1).trim();
+        if (!name) continue;
+        if (!current) {
+          current = { category: 'General', fields: [] };
+          groups.push(current);
+        }
+        current.fields.push({ name, value });
+      }
+    }
+    return groups;
+  }
+
+  async function handleBulkImport() {
+    if (!variantId) { setError('Select a variant first.'); return; }
+    const groups = parseSpecSheet(bulkText);
+    if (groups.length === 0) { setError('Nothing to import — paste some text first.'); return; }
+
+    setBulkRunning(true);
+    setBulkLog([]);
+    setError('');
+    const log: string[] = [];
+
+    try {
+      let liveCategories = await refreshCategories();
+      let liveFields = await api.listFieldDefinitions();
+
+      let created = 0, reused = 0, valuesSet = 0, skipped = 0;
+
+      for (const group of groups) {
+        setBulkProgress(`Category: ${group.category}`);
+        let category = liveCategories.find((c: any) => c.name.toLowerCase() === group.category.toLowerCase());
+        if (!category) {
+          try {
+            category = await api.createFieldCategory({ name: group.category, displayOrder: liveCategories.length });
+            liveCategories = [...liveCategories, category];
+            log.push(`✓ Created category "${group.category}"`);
+          } catch (e: any) {
+            log.push(`✗ Could not create category "${group.category}": ${e.message}`);
+            skipped += group.fields.length;
+            continue;
+          }
+        }
+
+        for (const { name, value } of group.fields) {
+          setBulkProgress(`${group.category} → ${name}`);
+          const key = slugify(name);
+          let field = liveFields.find((f: any) => f.key === key);
+
+          if (!field) {
+            const isBlank = value === '';
+            const isNumeric = !isBlank && /^-?\d+(\.\d+)?$/.test(value.replace(/,/g, ''));
+            const dataType = isBlank ? 'BOOLEAN' : isNumeric ? 'NUMBER' : 'TEXT';
+            try {
+              field = await api.createFieldDefinition({
+                categoryId: category.id,
+                name,
+                key,
+                dataType,
+                customerVisible: true,
+                filterEnabled: false,
+                comparisonEnabled: false,
+                required: false,
+              });
+              liveFields = [...liveFields, field];
+              created++;
+            } catch (e: any) {
+              log.push(`✗ Skipped "${name}": ${e.message}`);
+              skipped++;
+              continue;
+            }
+          } else {
+            reused++;
+          }
+
+          try {
+            const payload: any = { fieldId: field.id, variantId, applicability: 'STANDARD' };
+            if (field.dataType === 'BOOLEAN') {
+              payload.valueBoolean = value === '' ? true : /^(yes|true|y)$/i.test(value);
+            } else if (['NUMBER', 'INTEGER', 'DECIMAL', 'CURRENCY', 'PERCENTAGE', 'VALUE_UNIT'].includes(field.dataType)) {
+              const num = parseFloat(value.replace(/,/g, ''));
+              if (!isNaN(num)) payload.valueNumber = num; else payload.valueText = value;
+            } else {
+              payload.valueText = value || 'Yes';
+            }
+            await api.setFieldValue(payload);
+            valuesSet++;
+          } catch (e: any) {
+            log.push(`✗ Could not set value for "${name}": ${e.message}`);
+          }
+        }
+      }
+
+      log.unshift(`Done: ${created} field${created === 1 ? '' : 's'} created, ${reused} reused, ${valuesSet} value${valuesSet === 1 ? '' : 's'} saved, ${skipped} skipped.`);
+      setBulkLog(log);
+      await refreshCategories();
+      await loadVariantData(variantId);
+      setBulkText('');
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setBulkRunning(false);
+      setBulkProgress('');
+    }
   }
 
   return (
@@ -226,6 +358,44 @@ export default function CarDataPage() {
 
       {variantId && !loadingVariant && (
         <>
+          <div className={`${cardCls} p-5 mb-4`}>
+            <button onClick={() => setShowBulkImport(!showBulkImport)} className="w-full flex items-center justify-between">
+              <div className="text-left">
+                <p className="text-[13px] font-semibold text-slate-700">Bulk Import Specification Sheet</p>
+                <p className="text-[12px] text-slate-400 mt-0.5">Paste a category-wise spec table — categories, fields and values are created automatically</p>
+              </div>
+              <IconChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${showBulkImport ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showBulkImport && (
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                <p className="text-[12px] text-slate-500 mb-2">
+                  Format: a category name on its own line, then one field per line as <span className="font-mono bg-slate-100 px-1 rounded">Field Name[TAB]Value</span> (leave value blank for a yes/no feature).
+                </p>
+                <textarea
+                  className={`${inputCls} w-full font-mono text-[12px]`}
+                  rows={8}
+                  placeholder={'Engine & Transmission\nEngine Type\tmStallion (TGDi)\nDisplacement\t2198 cc\n\nSafety\nNo. of Airbags\t6\nABS\t'}
+                  value={bulkText}
+                  onChange={(e) => setBulkText(e.target.value)}
+                />
+                <div className="flex items-center gap-3 mt-3">
+                  <button disabled={bulkRunning} onClick={handleBulkImport} className={primaryBtnCls}>
+                    {bulkRunning ? 'Importing…' : 'Import'}
+                  </button>
+                  {bulkRunning && bulkProgress && <span className="text-[12px] text-slate-400">{bulkProgress}</span>}
+                </div>
+                {bulkLog.length > 0 && (
+                  <div className="mt-3 bg-slate-50 rounded-lg p-3 max-h-48 overflow-y-auto space-y-1">
+                    {bulkLog.map((l, i) => (
+                      <p key={i} className={`text-[11.5px] font-mono ${l.startsWith('✗') ? 'text-red-500' : l.startsWith('✓') ? 'text-emerald-600' : 'text-slate-600 font-semibold'}`}>{l}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className={`${cardCls} p-5 mb-4`}>
             <p className="text-[13px] font-semibold text-slate-700 mb-3.5">Colours</p>
             <div className="flex flex-wrap gap-2 mb-3">
@@ -274,9 +444,9 @@ export default function CarDataPage() {
                   </button>
                   {isOpen && (
                     <div className="px-5 pb-5 pt-1 border-t border-slate-100 space-y-3">
-                      {(!cat.fields || cat.fields.length === 0) && <p className="text-[13px] text-slate-400 pt-2">No fields in this category yet — add some in Field Builder.</p>}
+                      {(!cat.fields || cat.fields.length === 0) && <p className="text-[13px] text-slate-400 pt-2">No fields in this category yet.</p>}
                       {cat.fields?.map((field: any) => (
-                        <div key={field.id} className="grid grid-cols-[180px_1fr] gap-3 items-center">
+                        <div key={field.id} className="grid grid-cols-[200px_1fr] gap-3 items-center">
                           <label className="text-[12.5px] text-slate-600">{field.name}{field.required && <span className="text-red-500">*</span>}</label>
                           <FieldInput field={field} value={values[field.id] || { applicability: 'STANDARD' }} onChange={(v) => updateFieldValue(field.id, v)} />
                         </div>

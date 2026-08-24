@@ -51,6 +51,8 @@ export default function FieldBuilderPage() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const [catName, setCatName] = useState('');
 
@@ -64,6 +66,14 @@ export default function FieldBuilderPage() {
   const [filterEnabled, setFilterEnabled] = useState(false);
   const [comparisonEnabled, setComparisonEnabled] = useState(false);
   const [required, setRequired] = useState(false);
+
+  // Edit form state
+  const [editName, setEditName] = useState('');
+  const [editUnit, setEditUnit] = useState('');
+  const [editCustomerVisible, setEditCustomerVisible] = useState(true);
+  const [editFilterEnabled, setEditFilterEnabled] = useState(false);
+  const [editComparisonEnabled, setEditComparisonEnabled] = useState(false);
+  const [editRequired, setEditRequired] = useState(false);
 
   useEffect(() => {
     loadAll();
@@ -139,6 +149,38 @@ export default function FieldBuilderPage() {
     }
   }
 
+  function startEdit(f: any) {
+    setEditingField(f.id);
+    setEditName(f.name);
+    setEditUnit(f.unit || '');
+    setEditCustomerVisible(f.customerVisible);
+    setEditFilterEnabled(f.filterEnabled);
+    setEditComparisonEnabled(f.comparisonEnabled);
+    setEditRequired(f.required);
+  }
+
+  async function handleSaveEdit(id: string, e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    try {
+      await api.updateFieldDefinition(id, {
+        name: editName,
+        unit: editUnit || undefined,
+        customerVisible: editCustomerVisible,
+        filterEnabled: editFilterEnabled,
+        comparisonEnabled: editComparisonEnabled,
+        required: editRequired,
+      });
+      setEditingField(null);
+      await loadAll();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function handleArchiveField(id: string) {
     setError('');
     try {
@@ -156,6 +198,21 @@ export default function FieldBuilderPage() {
       await loadAll();
     } catch (e: any) {
       setError(e.message);
+    }
+  }
+
+  async function handleDeleteField(id: string) {
+    setSaving(true);
+    setError('');
+    try {
+      await api.deleteFieldDefinition(id);
+      setDeleteConfirmId(null);
+      await loadAll();
+    } catch (e: any) {
+      setError(e.message);
+      setDeleteConfirmId(null);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -220,23 +277,64 @@ export default function FieldBuilderPage() {
                   {cat.fields?.length > 0 && (
                     <div className="mb-4 space-y-1.5">
                       {cat.fields.map((f: any) => (
-                        <div key={f.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <span className={`text-[10.5px] px-2 py-0.5 rounded-full font-medium shrink-0 ${TYPE_BADGE[f.dataType] || 'bg-slate-100 text-slate-600'}`}>
-                              {DATA_TYPES.find((t) => t.value === f.dataType)?.label || f.dataType}
-                            </span>
-                            <p className="text-[13px] text-slate-700 truncate">{f.name}</p>
-                            {f.unit && <span className="text-[11.5px] text-slate-400 shrink-0">({f.unit})</span>}
-                            <span className="text-[11px] text-slate-300 font-mono shrink-0">{f.key}</span>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0 pl-2">
-                            {f.filterEnabled && <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-50 text-sky-600">Filter</span>}
-                            {f.comparisonEnabled && <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-600">Compare</span>}
-                            {f.required && <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-600">Required</span>}
-                            <button onClick={() => handleArchiveField(f.id)} className="text-[12px] text-slate-400 hover:text-red-600 transition-colors">
-                              Archive
-                            </button>
-                          </div>
+                        <div key={f.id} className="rounded-lg hover:bg-slate-50">
+                          {editingField === f.id ? (
+                            <form onSubmit={(e) => handleSaveEdit(f.id, e)} className="p-3 bg-slate-50/70 rounded-lg space-y-2.5">
+                              <div className="grid grid-cols-2 gap-2.5">
+                                <input className={inputCls} value={editName} onChange={(e) => setEditName(e.target.value)} required />
+                                <input className={inputCls} placeholder="Unit" value={editUnit} onChange={(e) => setEditUnit(e.target.value)} />
+                              </div>
+                              <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                                <label className="flex items-center gap-1.5 text-[12px] text-slate-600 cursor-pointer select-none">
+                                  <input type="checkbox" checked={editCustomerVisible} onChange={(e) => setEditCustomerVisible(e.target.checked)} className="accent-[#B4872E]" />
+                                  Show to customers
+                                </label>
+                                <label className="flex items-center gap-1.5 text-[12px] text-slate-600 cursor-pointer select-none">
+                                  <input type="checkbox" checked={editFilterEnabled} onChange={(e) => setEditFilterEnabled(e.target.checked)} className="accent-[#B4872E]" />
+                                  Filter
+                                </label>
+                                <label className="flex items-center gap-1.5 text-[12px] text-slate-600 cursor-pointer select-none">
+                                  <input type="checkbox" checked={editComparisonEnabled} onChange={(e) => setEditComparisonEnabled(e.target.checked)} className="accent-[#B4872E]" />
+                                  Compare
+                                </label>
+                                <label className="flex items-center gap-1.5 text-[12px] text-slate-600 cursor-pointer select-none">
+                                  <input type="checkbox" checked={editRequired} onChange={(e) => setEditRequired(e.target.checked)} className="accent-[#B4872E]" />
+                                  Required
+                                </label>
+                              </div>
+                              <div className="flex gap-2">
+                                <button disabled={saving} className={primaryBtnCls}>Save</button>
+                                <button type="button" onClick={() => setEditingField(null)} className={secondaryBtnCls}>Cancel</button>
+                              </div>
+                            </form>
+                          ) : (
+                            <div className="flex items-center justify-between py-2 px-3">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <span className={`text-[10.5px] px-2 py-0.5 rounded-full font-medium shrink-0 ${TYPE_BADGE[f.dataType] || 'bg-slate-100 text-slate-600'}`}>
+                                  {DATA_TYPES.find((t) => t.value === f.dataType)?.label || f.dataType}
+                                </span>
+                                <p className="text-[13px] text-slate-700 truncate">{f.name}</p>
+                                {f.unit && <span className="text-[11.5px] text-slate-400 shrink-0">({f.unit})</span>}
+                                <span className="text-[11px] text-slate-300 font-mono shrink-0">{f.key}</span>
+                              </div>
+                              <div className="flex items-center gap-3 shrink-0 pl-2">
+                                {f.filterEnabled && <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-50 text-sky-600">Filter</span>}
+                                {f.comparisonEnabled && <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-600">Compare</span>}
+                                {f.required && <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-600">Required</span>}
+                                <button onClick={() => startEdit(f)} className="text-[12px] font-medium text-[#B4872E] hover:text-[#96701F] transition-colors">Edit</button>
+                                <button onClick={() => handleArchiveField(f.id)} className="text-[12px] text-slate-400 hover:text-slate-600 transition-colors">Archive</button>
+                                {deleteConfirmId === f.id ? (
+                                  <span className="flex items-center gap-1.5">
+                                    <span className="text-[11.5px] text-slate-400">Sure?</span>
+                                    <button disabled={saving} onClick={() => handleDeleteField(f.id)} className="text-[12px] font-medium text-red-600 hover:text-red-700 transition-colors">Yes</button>
+                                    <button onClick={() => setDeleteConfirmId(null)} className="text-[12px] text-slate-400 hover:text-slate-600 transition-colors">No</button>
+                                  </span>
+                                ) : (
+                                  <button onClick={() => setDeleteConfirmId(f.id)} className="text-[12px] text-red-500 hover:text-red-700 transition-colors">Delete</button>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -319,9 +417,20 @@ export default function FieldBuilderPage() {
                     <span className="text-[11px] text-slate-300 font-mono shrink-0">{f.key}</span>
                     <span className="text-[11px] text-slate-400 shrink-0">· {f.category?.name}</span>
                   </div>
-                  <button onClick={() => handleRestoreField(f.id)} className="text-[12px] font-medium text-[#B4872E] hover:text-[#96701F] transition-colors shrink-0 pl-2">
-                    Restore
-                  </button>
+                  <div className="flex items-center gap-3 shrink-0 pl-2">
+                    <button onClick={() => handleRestoreField(f.id)} className="text-[12px] font-medium text-[#B4872E] hover:text-[#96701F] transition-colors">
+                      Restore
+                    </button>
+                    {deleteConfirmId === f.id ? (
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-[11.5px] text-slate-400">Sure?</span>
+                        <button disabled={saving} onClick={() => handleDeleteField(f.id)} className="text-[12px] font-medium text-red-600 hover:text-red-700 transition-colors">Yes</button>
+                        <button onClick={() => setDeleteConfirmId(null)} className="text-[12px] text-slate-400 hover:text-slate-600 transition-colors">No</button>
+                      </span>
+                    ) : (
+                      <button onClick={() => setDeleteConfirmId(f.id)} className="text-[12px] text-red-500 hover:text-red-700 transition-colors">Delete</button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

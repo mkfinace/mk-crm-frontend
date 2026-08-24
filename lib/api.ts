@@ -104,6 +104,8 @@ export const api = {
   createFieldDefinition: (data: any) => apiFetch('/field-definitions', { method: 'POST', body: JSON.stringify(data) }),
   updateFieldDefinition: (id: string, data: any) => apiFetch(`/field-definitions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   archiveFieldDefinition: (id: string) => apiFetch(`/field-definitions/${id}/archive`, { method: 'PUT' }),
+  restoreFieldDefinition: (id: string) => apiFetch(`/field-definitions/${id}/restore`, { method: 'PUT' }),
+  listArchivedFieldDefinitions: () => apiFetch('/field-definitions/archived'),
   listFieldValuesForVariant: (variantId: string) => apiFetch(`/field-values?variantId=${variantId}`),
   setFieldValue: (data: any) => apiFetch('/field-values', { method: 'POST', body: JSON.stringify(data) }),
 

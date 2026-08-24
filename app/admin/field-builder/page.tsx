@@ -45,6 +45,8 @@ function slugify(name: string) {
 
 export default function FieldBuilderPage() {
   const [categories, setCategories] = useState<any[]>([]);
+  const [archived, setArchived] = useState<any[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -64,18 +66,20 @@ export default function FieldBuilderPage() {
   const [required, setRequired] = useState(false);
 
   useEffect(() => {
-    loadCategories();
+    loadAll();
   }, []);
 
   useEffect(() => {
     if (!keyTouched) setFieldKey(slugify(fieldName));
   }, [fieldName, keyTouched]);
 
-  async function loadCategories() {
+  async function loadAll() {
     setLoading(true);
     setError('');
     try {
-      setCategories(await api.listFieldCategories());
+      const [cats, arch] = await Promise.all([api.listFieldCategories(), api.listArchivedFieldDefinitions()]);
+      setCategories(cats);
+      setArchived(arch);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -90,7 +94,7 @@ export default function FieldBuilderPage() {
     try {
       await api.createFieldCategory({ name: catName, displayOrder: categories.length });
       setCatName('');
-      await loadCategories();
+      await loadAll();
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -127,7 +131,7 @@ export default function FieldBuilderPage() {
         options,
       });
       resetFieldForm();
-      await loadCategories();
+      await loadAll();
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -139,7 +143,17 @@ export default function FieldBuilderPage() {
     setError('');
     try {
       await api.archiveFieldDefinition(id);
-      await loadCategories();
+      await loadAll();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  }
+
+  async function handleRestoreField(id: string) {
+    setError('');
+    try {
+      await api.restoreFieldDefinition(id);
+      await loadAll();
     } catch (e: any) {
       setError(e.message);
     }
@@ -286,6 +300,34 @@ export default function FieldBuilderPage() {
           );
         })}
       </div>
+
+      {archived.length > 0 && (
+        <div className="mt-6">
+          <button onClick={() => setShowArchived(!showArchived)} className="flex items-center gap-1.5 text-[13px] font-medium text-slate-500 hover:text-slate-700 transition-colors mb-3">
+            Archived fields ({archived.length})
+            <IconChevronDown className={`w-3.5 h-3.5 transition-transform ${showArchived ? 'rotate-180' : ''}`} />
+          </button>
+          {showArchived && (
+            <div className={`${cardCls} p-2`}>
+              {archived.map((f) => (
+                <div key={f.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className={`text-[10.5px] px-2 py-0.5 rounded-full font-medium shrink-0 ${TYPE_BADGE[f.dataType] || 'bg-slate-100 text-slate-600'}`}>
+                      {DATA_TYPES.find((t) => t.value === f.dataType)?.label || f.dataType}
+                    </span>
+                    <p className="text-[13px] text-slate-500 truncate">{f.name}</p>
+                    <span className="text-[11px] text-slate-300 font-mono shrink-0">{f.key}</span>
+                    <span className="text-[11px] text-slate-400 shrink-0">· {f.category?.name}</span>
+                  </div>
+                  <button onClick={() => handleRestoreField(f.id)} className="text-[12px] font-medium text-[#B4872E] hover:text-[#96701F] transition-colors shrink-0 pl-2">
+                    Restore
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { api } from '@/lib/api';
 import { inputCls, selectCls, primaryBtnCls, secondaryBtnCls, dangerTextBtnCls, linkBtnCls, cardCls } from '@/components/adminStyles';
 
@@ -430,6 +431,12 @@ export default function CatalogueAdminPage() {
                             {v.name} · {v.fuelType} · {v.transmission} · <span className="font-medium text-slate-700">₹{(v.exShowroomPrice / 100000).toFixed(2)}L</span>
                           </span>
                           <div className="flex items-center gap-2 pl-2">
+                            <Link
+                              href={`/admin/car-data?brand=${brand.id}&model=${model.id}&variant=${v.id}`}
+                              className="text-[10.5px] font-medium text-sky-600 hover:text-sky-700"
+                            >
+                              Specs →
+                            </Link>
                             <button onClick={() => copyId(v.id)} className="text-[10.5px] font-mono text-slate-400 hover:text-slate-600" title="Copy variant ID">
                               {copiedId === v.id ? '✓ copied' : 'id'}
                             </button>

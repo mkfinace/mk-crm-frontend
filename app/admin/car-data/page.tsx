@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { inputCls, selectCls, primaryBtnCls, secondaryBtnCls, cardCls } from '@/components/adminStyles';
 import { IconCar, IconChevronDown } from '@/components/AdminIcons';
@@ -80,6 +81,7 @@ function FieldInput({
 }
 
 export default function CarDataPage() {
+  const searchParams = useSearchParams();
   const [catalogue, setCatalogue] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [brandId, setBrandId] = useState('');
@@ -109,7 +111,18 @@ export default function CarDataPage() {
 
   useEffect(() => {
     Promise.all([api.getFullCatalogue(), api.listFieldCategories()])
-      .then(([cat, cats]) => { setCatalogue(cat); setCategories(cats); setExpandedCat(cats[0]?.id || null); })
+      .then(([cat, cats]) => {
+        setCatalogue(cat);
+        setCategories(cats);
+        setExpandedCat(cats[0]?.id || null);
+
+        const brandParam = searchParams.get('brand');
+        const modelParam = searchParams.get('model');
+        const variantParam = searchParams.get('variant');
+        if (brandParam) setBrandId(brandParam);
+        if (modelParam) setModelId(modelParam);
+        if (variantParam) setVariantId(variantParam);
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
@@ -193,7 +206,9 @@ export default function CarDataPage() {
     setImages((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  // ---- Bulk import: paste a category-wise spec sheet, auto-create everything ----
+  // ---- Bulk import: paste a category-wise spec sheet, auto-create everything.
+  // Works with or without a variant selected — without one, it just builds
+  // the category/field schema; with one, it also saves values for that variant.
   function parseSpecSheet(text: string) {
     const lines = text.split('\n').map((l) => l.replace(/\r$/, ''));
     const groups: { category: string; fields: { name: string; value: string }[] }[] = [];
@@ -204,7 +219,6 @@ export default function CarDataPage() {
       if (!line) continue;
       const tabIdx = raw.indexOf('\t');
       if (tabIdx === -1) {
-        // No tab → treat as a category header
         current = { category: line, fields: [] };
         groups.push(current);
       } else {
@@ -222,7 +236,6 @@ export default function CarDataPage() {
   }
 
   async function handleBulkImport() {
-    if (!variantId) { setError('Select a variant first.'); return; }
     const groups = parseSpecSheet(bulkText);
     if (groups.length === 0) { setError('Nothing to import — paste some text first.'); return; }
 
@@ -235,7 +248,7 @@ export default function CarDataPage() {
       let liveCategories = await refreshCategories();
       let liveFields = await api.listFieldDefinitions();
 
-      let created = 0, reused = 0, valuesSet = 0, skipped = 0;
+      let categoriesCreated = 0, created = 0, reused = 0, valuesSet = 0, skipped = 0;
 
       for (const group of groups) {
         setBulkProgress(`Category: ${group.category}`);
@@ -244,6 +257,7 @@ export default function CarDataPage() {
           try {
             category = await api.createFieldCategory({ name: group.category, displayOrder: liveCategories.length });
             liveCategories = [...liveCategories, category];
+            categoriesCreated++;
             log.push(`✓ Created category "${group.category}"`);
           } catch (e: any) {
             log.push(`✗ Could not create category "${group.category}": ${e.message}`);
@@ -283,6 +297,8 @@ export default function CarDataPage() {
             reused++;
           }
 
+          if (!variantId) continue; // schema-only mode — no variant to save a value against
+
           try {
             const payload: any = { fieldId: field.id, variantId, applicability: 'STANDARD' };
             if (field.dataType === 'BOOLEAN') {
@@ -301,10 +317,13 @@ export default function CarDataPage() {
         }
       }
 
-      log.unshift(`Done: ${created} field${created === 1 ? '' : 's'} created, ${reused} reused, ${valuesSet} value${valuesSet === 1 ? '' : 's'} saved, ${skipped} skipped.`);
+      const summary = variantId
+        ? `Done: ${categoriesCreated} categor${categoriesCreated === 1 ? 'y' : 'ies'} created, ${created} field${created === 1 ? '' : 's'} created, ${reused} reused, ${valuesSet} value${valuesSet === 1 ? '' : 's'} saved, ${skipped} skipped.`
+        : `Done: ${categoriesCreated} categor${categoriesCreated === 1 ? 'y' : 'ies'} created, ${created} field${created === 1 ? '' : 's'} created, ${reused} already existed, ${skipped} skipped. (No variant selected — only the field schema was created; select a variant to also enter values.)`;
+      log.unshift(summary);
       setBulkLog(log);
       await refreshCategories();
-      await loadVariantData(variantId);
+      if (variantId) await loadVariantData(variantId);
       setBulkText('');
     } catch (e: any) {
       setError(e.message);
@@ -325,8 +344,9 @@ export default function CarDataPage() {
 
       {error && <p className="text-red-600 text-sm mb-4 bg-red-50 border border-red-100 rounded-lg px-3.5 py-2.5">{error}</p>}
 
-      <div className={`${cardCls} p-5 mb-6`}>
+      <div className={`${cardCls} p-5 mb-4`}>
         <p className="text-[13px] font-semibold text-slate-700 mb-3.5">Select Variant</p>
+        <p className="text-[12px] text-slate-400 mb-3">Optional for Bulk Import below — pick one only if you also want to save values, not just build the field list.</p>
         <div className="grid grid-cols-3 gap-2.5">
           <select className={selectCls} value={brandId} onChange={(e) => { setBrandId(e.target.value); setModelId(''); setVariantId(''); }}>
             <option value="">Select brand</option>
@@ -343,12 +363,50 @@ export default function CarDataPage() {
         </div>
       </div>
 
+      <div className={`${cardCls} p-5 mb-6`}>
+        <button onClick={() => setShowBulkImport(!showBulkImport)} className="w-full flex items-center justify-between">
+          <div className="text-left">
+            <p className="text-[13px] font-semibold text-slate-700">Bulk Import Specification Sheet</p>
+            <p className="text-[12px] text-slate-400 mt-0.5">Paste a category-wise spec table — categories and fields are created automatically. Select a variant above too if you want values saved, not just the field list.</p>
+          </div>
+          <IconChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${showBulkImport ? 'rotate-180' : ''}`} />
+        </button>
+
+        {showBulkImport && (
+          <div className="mt-4 pt-4 border-t border-slate-100">
+            <p className="text-[12px] text-slate-500 mb-2">
+              Format: a category name on its own line, then one field per line as <span className="font-mono bg-slate-100 px-1 rounded">Field Name[TAB]Value</span> (leave value blank for a yes/no feature — that's also fine if you're only building the field list).
+            </p>
+            <textarea
+              className={`${inputCls} w-full font-mono text-[12px]`}
+              rows={8}
+              placeholder={'Engine & Transmission\nEngine Type\t\nDisplacement\t\n\nSafety\nNo. of Airbags\t\nABS\t'}
+              value={bulkText}
+              onChange={(e) => setBulkText(e.target.value)}
+            />
+            <div className="flex items-center gap-3 mt-3">
+              <button disabled={bulkRunning} onClick={handleBulkImport} className={primaryBtnCls}>
+                {bulkRunning ? 'Importing…' : 'Import'}
+              </button>
+              {bulkRunning && bulkProgress && <span className="text-[12px] text-slate-400">{bulkProgress}</span>}
+            </div>
+            {bulkLog.length > 0 && (
+              <div className="mt-3 bg-slate-50 rounded-lg p-3 max-h-48 overflow-y-auto space-y-1">
+                {bulkLog.map((l, i) => (
+                  <p key={i} className={`text-[11.5px] font-mono ${l.startsWith('✗') ? 'text-red-500' : l.startsWith('✓') ? 'text-emerald-600' : 'text-slate-600 font-semibold'}`}>{l}</p>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {!variantId && (
         <div className={`${cardCls} px-5 py-10 text-center`}>
           <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
             <IconCar className="w-5 h-5 text-slate-400" />
           </div>
-          <p className="text-sm text-slate-500">Pick a brand, model and variant above to enter its data.</p>
+          <p className="text-sm text-slate-500">Pick a brand, model and variant above to enter its colours, images and spec values — or use Bulk Import above to build the field list first.</p>
         </div>
       )}
 
@@ -358,44 +416,6 @@ export default function CarDataPage() {
 
       {variantId && !loadingVariant && (
         <>
-          <div className={`${cardCls} p-5 mb-4`}>
-            <button onClick={() => setShowBulkImport(!showBulkImport)} className="w-full flex items-center justify-between">
-              <div className="text-left">
-                <p className="text-[13px] font-semibold text-slate-700">Bulk Import Specification Sheet</p>
-                <p className="text-[12px] text-slate-400 mt-0.5">Paste a category-wise spec table — categories, fields and values are created automatically</p>
-              </div>
-              <IconChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${showBulkImport ? 'rotate-180' : ''}`} />
-            </button>
-
-            {showBulkImport && (
-              <div className="mt-4 pt-4 border-t border-slate-100">
-                <p className="text-[12px] text-slate-500 mb-2">
-                  Format: a category name on its own line, then one field per line as <span className="font-mono bg-slate-100 px-1 rounded">Field Name[TAB]Value</span> (leave value blank for a yes/no feature).
-                </p>
-                <textarea
-                  className={`${inputCls} w-full font-mono text-[12px]`}
-                  rows={8}
-                  placeholder={'Engine & Transmission\nEngine Type\tmStallion (TGDi)\nDisplacement\t2198 cc\n\nSafety\nNo. of Airbags\t6\nABS\t'}
-                  value={bulkText}
-                  onChange={(e) => setBulkText(e.target.value)}
-                />
-                <div className="flex items-center gap-3 mt-3">
-                  <button disabled={bulkRunning} onClick={handleBulkImport} className={primaryBtnCls}>
-                    {bulkRunning ? 'Importing…' : 'Import'}
-                  </button>
-                  {bulkRunning && bulkProgress && <span className="text-[12px] text-slate-400">{bulkProgress}</span>}
-                </div>
-                {bulkLog.length > 0 && (
-                  <div className="mt-3 bg-slate-50 rounded-lg p-3 max-h-48 overflow-y-auto space-y-1">
-                    {bulkLog.map((l, i) => (
-                      <p key={i} className={`text-[11.5px] font-mono ${l.startsWith('✗') ? 'text-red-500' : l.startsWith('✓') ? 'text-emerald-600' : 'text-slate-600 font-semibold'}`}>{l}</p>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
           <div className={`${cardCls} p-5 mb-4`}>
             <p className="text-[13px] font-semibold text-slate-700 mb-3.5">Colours</p>
             <div className="flex flex-wrap gap-2 mb-3">

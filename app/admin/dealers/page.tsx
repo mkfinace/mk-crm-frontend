@@ -24,6 +24,29 @@ export default function DealersAdminPage() {
   const [branchCity, setBranchCity] = useState('');
   const [execUserId, setExecUserId] = useState('');
   const [execBranchId, setExecBranchId] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  function copyId(id: string) {
+    navigator.clipboard.writeText(id);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1500);
+  }
+
+  async function handleDeleteDealer(id: string) {
+    setSaving(true);
+    setError('');
+    try {
+      await api.deleteDealer(id);
+      setDeleteConfirmId(null);
+      await loadDealers();
+    } catch (e: any) {
+      setError(e.message);
+      setDeleteConfirmId(null);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   useEffect(() => {
     loadDealers();
@@ -144,6 +167,20 @@ export default function DealersAdminPage() {
               </div>
               <span className="text-[12.5px] font-medium text-[#B4872E]">{expanded === d.id ? 'Hide' : 'Manage'}</span>
             </button>
+            <div className="flex items-center gap-3 mt-2 pl-12">
+              <button onClick={() => copyId(d.id)} className="text-[10.5px] font-mono text-slate-400 hover:text-slate-600">
+                {copiedId === d.id ? '✓ id copied' : 'copy id'}
+              </button>
+              {deleteConfirmId === d.id ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="text-[11.5px] text-slate-400">Delete dealer?</span>
+                  <button disabled={saving} onClick={() => handleDeleteDealer(d.id)} className="text-[12px] font-medium text-red-600 hover:text-red-700">Yes</button>
+                  <button onClick={() => setDeleteConfirmId(null)} className="text-[12px] text-slate-400 hover:text-slate-600">No</button>
+                </span>
+              ) : (
+                <button onClick={() => setDeleteConfirmId(d.id)} className="text-[11.5px] text-red-500 hover:text-red-700">Delete</button>
+              )}
+            </div>
 
             {expanded === d.id && detail && (
               <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">

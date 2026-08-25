@@ -35,6 +35,47 @@ export default function LeadsListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [search, setSearch] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  function copyId(e: React.MouseEvent, id: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    navigator.clipboard.writeText(id);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1500);
+  }
+
+  async function handleDeleteLead(e: React.MouseEvent, id: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDeleting(true);
+    setError('');
+    try {
+      await api.deleteLead(id);
+      setDeleteConfirmId(null);
+      await loadLeads();
+    } catch (err: any) {
+      setError(err.message);
+      setDeleteConfirmId(null);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  const filteredLeads = leads.filter((l) => {
+    if (!search.trim()) return true;
+    const q = search.trim().toLowerCase();
+    return (
+      l.leadCode?.toLowerCase().includes(q) ||
+      l.customer?.name?.toLowerCase().includes(q) ||
+      l.customer?.mobile?.includes(q) ||
+      l.brand?.name?.toLowerCase().includes(q) ||
+      l.model?.name?.toLowerCase().includes(q)
+    );
+  });
 
   useEffect(() => {
     loadLeads();
@@ -64,6 +105,12 @@ export default function LeadsListPage() {
           <p className="text-[13px] text-slate-500 mt-0.5">{leads.length} lead{leads.length === 1 ? '' : 's'}{statusFilter ? ` · ${STATUS_LABEL[statusFilter]}` : ''}</p>
         </div>
         <div className="flex items-center gap-2.5">
+          <input
+            className="border border-slate-200 rounded-lg px-3 py-2 text-[13px] text-slate-700 bg-white w-52"
+            placeholder="🔍 Search leads…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
           <select
             className="border border-slate-200 rounded-lg px-3 py-2 text-[13px] text-slate-700 bg-white"
             value={statusFilter}
@@ -105,10 +152,11 @@ export default function LeadsListPage() {
                 <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Status</th>
                 <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Budget</th>
                 <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Created</th>
+                <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wide"></th>
               </tr>
             </thead>
             <tbody>
-              {leads.map((lead) => {
+              {filteredLeads.map((lead) => {
                 const badge = BADGE_STYLE[lead.salesStatus] || BADGE_STYLE.NEW;
                 return (
                   <tr key={lead.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/70 transition-colors">
@@ -135,6 +183,21 @@ export default function LeadsListPage() {
                       {lead.budget ? `₹${(lead.budget / 100000).toFixed(2)}L` : <span className="text-slate-300">—</span>}
                     </td>
                     <td className="px-5 py-3.5 text-slate-400">{new Date(lead.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-3 justify-end">
+                        <button onClick={(e) => copyId(e, lead.id)} className="text-[10.5px] font-mono text-slate-400 hover:text-slate-600 whitespace-nowrap">
+                          {copiedId === lead.id ? '✓ copied' : 'copy id'}
+                        </button>
+                        {deleteConfirmId === lead.id ? (
+                          <span className="flex items-center gap-1.5 whitespace-nowrap">
+                            <button disabled={deleting} onClick={(e) => handleDeleteLead(e, lead.id)} className="text-[12px] font-medium text-red-600 hover:text-red-700">Yes</button>
+                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteConfirmId(null); }} className="text-[12px] text-slate-400 hover:text-slate-600">No</button>
+                          </span>
+                        ) : (
+                          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteConfirmId(lead.id); }} className="text-[11.5px] text-red-500 hover:text-red-700 whitespace-nowrap">Delete</button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 );
               })}

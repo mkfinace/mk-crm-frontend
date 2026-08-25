@@ -8,29 +8,37 @@ import EnquiryModal from '@/components/EnquiryModal';
 const rajdhani = Rajdhani({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--font-heading' });
 const montserrat = Montserrat({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700', '800'], variable: '--font-body' });
 
+const COMMERCIAL_CATEGORIES = ['TRUCK', 'TEMPO', 'PICKUP', 'TRACTOR', 'BUS', 'CONSTRUCTION'];
+const CATEGORY_LABEL: Record<string, string> = {
+  TRUCK: 'Trucks', TEMPO: 'Tempo / Mini Trucks', PICKUP: 'Pickup', TRACTOR: 'Tractors', BUS: 'Buses', CONSTRUCTION: 'Construction',
+};
+const CATEGORY_ICON: Record<string, string> = {
+  TRUCK: '🚚', TEMPO: '🚐', PICKUP: '🛻', TRACTOR: '🚜', BUS: '🚌', CONSTRUCTION: '🏗️',
+};
+
 function formatLakh(n: number) {
   return '₹' + (n / 100000).toFixed(2) + ' L';
 }
 
-function CarCard({ car, onOpen }: { car: any; onOpen: () => void }) {
+function VehicleCard({ v, onOpen }: { v: any; onOpen: () => void }) {
   return (
     <div
       onClick={onOpen}
       className="bg-[#141414] border border-white/[0.08] rounded-lg overflow-hidden cursor-pointer transition-all hover:border-[#1a6e8e]/40 hover:-translate-y-1 hover:shadow-2xl"
     >
       <div className="h-[170px] bg-[#1a6e8e]/[0.06] border-b border-white/[0.08] flex items-center justify-center text-5xl relative overflow-hidden">
-        🚗
+        {v.icon}
         <span className="absolute top-2.5 left-2.5 bg-black/70 backdrop-blur px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide text-white/70 border border-white/[0.08]">
-          {car.brand}
+          {v.brand}
         </span>
         <span className="absolute top-2.5 right-2.5 bg-white text-black px-2.5 py-1 rounded-md text-[9px] font-extrabold tracking-wide uppercase">
           New
         </span>
       </div>
       <div className="p-5">
-        <h4 className="text-[1.05rem] font-bold mb-1" style={{ fontFamily: 'var(--font-heading)' }}>{car.model}</h4>
-        <p className="text-xs text-white/40 mb-3">{car.fuelType} · {car.transmission}</p>
-        <p className="text-[1.3rem] font-bold text-[#2a8aad] mb-3" style={{ fontFamily: 'var(--font-heading)' }}>{car.price}</p>
+        <h4 className="text-[1.05rem] font-bold mb-1" style={{ fontFamily: 'var(--font-heading)' }}>{v.model}</h4>
+        <p className="text-xs text-white/40 mb-3">{v.fuelType} · {v.transmission}</p>
+        <p className="text-[1.3rem] font-bold text-[#2a8aad] mb-3" style={{ fontFamily: 'var(--font-heading)' }}>{v.price}</p>
         <button
           onClick={(e) => { e.stopPropagation(); onOpen(); }}
           className="w-full py-2.5 border border-[#e63030] text-[#e63030] hover:bg-[#e63030] hover:text-white rounded-md text-xs font-bold uppercase tracking-wide transition-colors"
@@ -47,10 +55,11 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [prefillVehicle, setPrefillVehicle] = useState('');
-  const [selectedCar, setSelectedCar] = useState<any | null>(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<any | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'cars' | 'commercial'>('cars');
+  const [activeCommercialCat, setActiveCommercialCat] = useState<string | null>(null);
 
-  // EMI calculator state
   const [price, setPrice] = useState(1000000);
   const [downPay, setDownPay] = useState(200000);
   const [rate, setRate] = useState(8.5);
@@ -60,18 +69,21 @@ export default function HomePage() {
     api.getFullCatalogue().then(setCatalogue).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
-  const cars = useMemo(() => {
+  const allVehicles = useMemo(() => {
     const list: any[] = [];
     for (const brand of catalogue) {
       for (const model of brand.models || []) {
         const variants = model.variants || [];
         if (variants.length === 0) continue;
-        const sorted = [...variants].sort((a, b) => a.exShowroomPrice - b.exShowroomPrice);
+        const sorted = [...variants].sort((a: any, b: any) => a.exShowroomPrice - b.exShowroomPrice);
         const min = sorted[0].exShowroomPrice;
         const max = sorted[sorted.length - 1].exShowroomPrice;
+        const category = model.category || 'CAR';
         list.push({
           brand: brand.name,
           model: model.name,
+          category,
+          icon: category === 'CAR' ? '🚗' : CATEGORY_ICON[category] || '🚛',
           price: min === max ? formatLakh(min) : `${formatLakh(min)} - ${formatLakh(max)}`,
           fuelType: [...new Set(sorted.map((v: any) => v.fuelType))].join('/'),
           transmission: [...new Set(sorted.map((v: any) => v.transmission))].join('/'),
@@ -82,7 +94,18 @@ export default function HomePage() {
     return list;
   }, [catalogue]);
 
-  const brands = useMemo(() => [...new Set(cars.map((c) => c.brand))], [cars]);
+  const cars = useMemo(() => allVehicles.filter((v) => v.category === 'CAR'), [allVehicles]);
+  const commercial = useMemo(() => allVehicles.filter((v) => v.category !== 'CAR'), [allVehicles]);
+  const commercialByCategory = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    for (const v of commercial) {
+      if (!map[v.category]) map[v.category] = [];
+      map[v.category].push(v);
+    }
+    return map;
+  }, [commercial]);
+
+  const brands = useMemo(() => [...new Set(allVehicles.map((c) => c.brand))], [allVehicles]);
 
   const loan = price - downPay;
   const r = rate / 12 / 100;
@@ -111,6 +134,7 @@ export default function HomePage() {
         <ul className={`${menuOpen ? 'flex' : 'hidden'} md:flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 fixed md:static top-[70px] left-0 right-0 md:top-auto bg-black/98 md:bg-transparent p-6 md:p-0 border-b md:border-0 border-white/[0.08] list-none`}>
           <li><button onClick={() => scrollTo('vehicles')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Vehicles</button></li>
           <li><button onClick={() => scrollTo('loans')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Loans</button></li>
+          <li><button onClick={() => scrollTo('insurance')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Insurance</button></li>
           <li><button onClick={() => scrollTo('brands')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Brands</button></li>
           <li><button onClick={() => scrollTo('contact')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Contact</button></li>
           <li><button onClick={() => openEnquiry()} className="bg-[#e63030] hover:bg-[#b01c1c] text-white px-5 py-2 rounded text-[13px] font-semibold">Get Quote</button></li>
@@ -133,7 +157,7 @@ export default function HomePage() {
               <span className="text-[0.5em] text-white/85">Vehicle &amp; Loan Solutions</span>
             </h1>
             <p className="text-white/60 leading-[1.8] mb-8 max-w-[440px] text-[15px]">
-              Buy new cars, take a vehicle loan, get insurance — all brands, all at one place.
+              Buy new cars, commercial vehicles, trucks, tempos, and tractors — take a loan, get insurance. All at one place.
             </p>
             <div className="flex gap-4 flex-wrap mb-6">
               <button onClick={() => scrollTo('vehicles')} className="bg-[#e63030] hover:bg-[#b01c1c] px-8 py-3.5 rounded font-semibold text-sm">Browse Vehicles</button>
@@ -141,7 +165,7 @@ export default function HomePage() {
             </div>
             <div className="flex gap-8 pt-6 border-t border-white/[0.08] mt-6">
               <div>
-                <div className="text-[2rem] font-bold text-[#2a8aad]" style={{ fontFamily: 'var(--font-heading)' }}>{cars.length}<span className="text-[#e63030]">+</span></div>
+                <div className="text-[2rem] font-bold text-[#2a8aad]" style={{ fontFamily: 'var(--font-heading)' }}>{allVehicles.length}<span className="text-[#e63030]">+</span></div>
                 <div className="text-[11px] text-white/50 tracking-wide">Vehicles Listed</div>
               </div>
               <div>
@@ -174,12 +198,12 @@ export default function HomePage() {
         </div>
         <div className="max-w-[1200px] mx-auto grid md:grid-cols-3 gap-px">
           {[
-            { icon: '🚗', title: 'New Car Sales', desc: 'Maruti, Hyundai, Tata, Mahindra and more — best price guarantee.', action: () => scrollTo('vehicles') },
+            { icon: '🚗', title: 'New Car Sales', desc: 'Maruti, Hyundai, Tata, Mahindra and more — best price guarantee.', action: () => { setActiveTab('cars'); scrollTo('vehicles'); } },
+            { icon: '🚛', title: 'Commercial Vehicles', desc: 'Trucks, Tempos, Pickup, Tractors — full range of business vehicles.', action: () => { setActiveTab('commercial'); scrollTo('vehicles'); } },
             { icon: '💰', title: 'Vehicle Loan', desc: 'Fast approval, minimum documents. Starting at 7.5% p.a.', action: () => scrollTo('loans') },
             { icon: '🔄', title: 'Refinance & Top-Up', desc: 'Switch to a better rate or get a fresh loan on your vehicle.', action: () => scrollTo('loans') },
             { icon: '🛡️', title: 'Vehicle Insurance', desc: 'Compare plans from every insurer for the best premium.', action: () => scrollTo('contact') },
             { icon: '📋', title: 'Document Assistance', desc: 'RC Transfer, NOC, Insurance renewal — full paperwork support.', action: () => scrollTo('contact') },
-            { icon: '📞', title: 'Talk to Us', desc: 'Have a question? Our team responds within 24 hours.', action: () => openEnquiry() },
           ].map((s, i) => (
             <div
               key={i}
@@ -196,28 +220,78 @@ export default function HomePage() {
 
       {/* VEHICLES */}
       <section id="vehicles" className="py-24 px-6 md:px-8 bg-[#0a0a0a]">
-        <div className="max-w-[1200px] mx-auto mb-10">
+        <div className="max-w-[1200px] mx-auto mb-8">
           <div className="flex items-center gap-2 text-[11px] tracking-[3px] uppercase text-[#2a8aad] font-semibold mb-3">
             <span className="w-6 h-0.5 bg-[#2a8aad]" /> Our Stock
           </div>
-          <h2 className="text-[2.2rem] md:text-[3rem] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>
+          <h2 className="text-[2.2rem] md:text-[3rem] font-bold mb-8" style={{ fontFamily: 'var(--font-heading)' }}>
             Browse <span className="text-[#e63030]">Vehicles</span>
           </h2>
+          <div className="inline-flex border border-white/[0.08] rounded-md overflow-hidden">
+            <button
+              onClick={() => { setActiveTab('cars'); setActiveCommercialCat(null); }}
+              className={`px-7 py-3 text-[13px] font-semibold tracking-wide transition-colors ${activeTab === 'cars' ? 'bg-[#1a6e8e] text-white' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}
+            >
+              🚗 Cars
+            </button>
+            <button
+              onClick={() => setActiveTab('commercial')}
+              className={`px-7 py-3 text-[13px] font-semibold tracking-wide transition-colors ${activeTab === 'commercial' ? 'bg-[#1a6e8e] text-white' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}
+            >
+              🚛 Commercial
+            </button>
+          </div>
         </div>
+
         <div className="max-w-[1200px] mx-auto">
           {loading && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {[0, 1, 2, 3].map((i) => <div key={i} className="h-[320px] bg-white/[0.03] border border-white/[0.08] rounded-lg animate-pulse" />)}
             </div>
           )}
-          {!loading && cars.length === 0 && (
-            <p className="text-center text-white/40 py-12">No vehicles listed yet — check back soon.</p>
+
+          {!loading && activeTab === 'cars' && (
+            cars.length === 0
+              ? <p className="text-center text-white/40 py-12">No cars listed yet — check back soon.</p>
+              : (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  {cars.map((v, i) => <VehicleCard key={i} v={v} onOpen={() => setSelectedVehicle(v)} />)}
+                </div>
+              )
           )}
-          {!loading && cars.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {cars.map((c, i) => (
-                <CarCard key={i} car={c} onOpen={() => setSelectedCar(c)} />
-              ))}
+
+          {!loading && activeTab === 'commercial' && !activeCommercialCat && (
+            <div className="grid md:grid-cols-3 gap-6">
+              {COMMERCIAL_CATEGORIES.map((cat) => {
+                const count = (commercialByCategory[cat] || []).length;
+                return (
+                  <div
+                    key={cat}
+                    onClick={() => count > 0 && setActiveCommercialCat(cat)}
+                    className={`bg-[#141414] border border-white/[0.08] rounded-lg p-6 flex gap-4 items-center transition-all ${count > 0 ? 'cursor-pointer hover:border-[#1a6e8e]/30 hover:bg-[#1a6e8e]/[0.04]' : 'opacity-50'}`}
+                  >
+                    <div className="text-4xl shrink-0">{CATEGORY_ICON[cat]}</div>
+                    <div>
+                      <h4 className="text-[1.05rem] font-bold mb-1" style={{ fontFamily: 'var(--font-heading)' }}>{CATEGORY_LABEL[cat]}</h4>
+                      <p className="text-xs text-white/45">{count > 0 ? `${count} listed` : 'Contact us for availability'}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {!loading && activeTab === 'commercial' && activeCommercialCat && (
+            <div>
+              <div className="flex items-center gap-4 mb-6">
+                <button onClick={() => setActiveCommercialCat(null)} className="text-[13px] border border-white/20 text-white/70 hover:text-white px-4 py-2 rounded-md">← All Categories</button>
+                <h3 className="text-xl font-bold" style={{ fontFamily: 'var(--font-heading)' }}>{CATEGORY_LABEL[activeCommercialCat]}</h3>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                {(commercialByCategory[activeCommercialCat] || []).map((v, i) => (
+                  <VehicleCard key={i} v={v} onOpen={() => setSelectedVehicle(v)} />
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -292,6 +366,7 @@ export default function HomePage() {
           <div className="space-y-4">
             {[
               { icon: '🚗', name: 'New Car Loan', desc: 'Up to 90% financing on brand new vehicles.', rate: '7.5%' },
+              { icon: '🚛', name: 'Commercial Vehicle Loan', desc: 'Business loans on trucks, tempos, and tractors.', rate: '8.5%' },
               { icon: '🔄', name: 'Refinance Loan', desc: 'Switch to a better rate and close your old loan.', rate: '9%' },
               { icon: '📈', name: 'Top-Up Loan', desc: 'Additional loan on your existing vehicle loan.', rate: '10%' },
             ].map((l, i) => (
@@ -307,6 +382,83 @@ export default function HomePage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* INSURANCE */}
+      <section id="insurance" className="py-24 px-6 md:px-8 bg-[#0a0a0a]">
+        <div className="max-w-[1200px] mx-auto mb-12">
+          <div className="flex items-center gap-2 text-[11px] tracking-[3px] uppercase text-[#2a8aad] font-semibold mb-3">
+            <span className="w-6 h-0.5 bg-[#2a8aad]" /> Protection Plans
+          </div>
+          <h2 className="text-[2.2rem] md:text-[3rem] font-bold mb-2" style={{ fontFamily: 'var(--font-heading)' }}>
+            Vehicle <span className="text-[#e63030]">Insurance</span>
+          </h2>
+          <p className="text-white/45 text-[14px] max-w-[560px]">
+            Compare plans from every insurance company for every vehicle brand. Best premium, fastest claims.
+          </p>
+        </div>
+        <div className="max-w-[1200px] mx-auto grid md:grid-cols-3 gap-6">
+          {[
+            {
+              icon: '🛡️', accent: '#1a6e8e', title: 'Comprehensive Cover',
+              desc: 'Own damage + third party — full protection against accident, theft, fire and calamity.',
+              features: ['Own Damage Cover', 'Third Party Liability', 'Personal Accident Cover', 'Road Side Assistance'],
+            },
+            {
+              icon: '🔰', accent: '#e63030', title: 'Zero Depreciation',
+              desc: 'No depreciation deduction at claim time — full replacement value. Best for new cars.',
+              features: ['Nil Depreciation on Parts', 'Full Claim Settlement', 'Bumper to Bumper Cover', 'Return to Invoice Option'],
+            },
+            {
+              icon: '📜', accent: '#4ecb70', title: 'Third Party Only',
+              desc: 'Legally mandatory cover — liability for damage or injury to another party. Most affordable.',
+              features: ['Third Party Property Damage', 'Bodily Injury Liability', 'Personal Accident (Owner)', 'Legal Compliance'],
+            },
+            {
+              icon: '🚛', accent: '#f0c040', title: 'Commercial Vehicle Insurance',
+              desc: 'Specialized plans for trucks, tempos, buses, and tractors used commercially.',
+              features: ['Goods in Transit Cover', 'Passenger Liability', 'Fleet Insurance Available', 'Driver & Cleaner Cover'],
+            },
+            {
+              icon: '🌊', accent: '#8b5cf6', title: 'Add-On Covers',
+              desc: 'Extra protection layers — optional riders for customized protection.',
+              features: ['Engine Protection Cover', 'Tyre Damage Cover', 'Key Replacement Cover', 'Consumables Cover'],
+            },
+          ].map((ins, i) => (
+            <div
+              key={i}
+              onClick={() => scrollTo('contact')}
+              className="bg-[#141414] border border-white/[0.08] rounded-lg p-7 cursor-pointer transition-all hover:-translate-y-1 hover:border-white/20 relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ backgroundColor: ins.accent }} />
+              <div className="text-3xl mb-4">{ins.icon}</div>
+              <h3 className="text-[1.25rem] font-bold mb-2" style={{ fontFamily: 'var(--font-heading)' }}>{ins.title}</h3>
+              <p className="text-xs text-white/45 leading-[1.7] mb-5">{ins.desc}</p>
+              <ul className="space-y-1.5">
+                {ins.features.map((f, j) => (
+                  <li key={j} className="text-xs text-white/50 py-1.5 border-b border-white/[0.05] flex items-center gap-2 last:border-0">
+                    <span className="text-[#2a8aad] font-bold">✓</span> {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+
+          <div
+            onClick={() => scrollTo('contact')}
+            className="bg-[#1a6e8e]/[0.08] border border-[#1a6e8e]/25 rounded-lg p-7 cursor-pointer transition-all hover:-translate-y-1"
+          >
+            <div className="text-3xl mb-4">⚡</div>
+            <h3 className="text-[1.25rem] font-bold mb-2" style={{ fontFamily: 'var(--font-heading)' }}>Insurance Partners</h3>
+            <p className="text-xs text-white/45 leading-[1.7] mb-5">20+ insurance companies. Best premium comparison. Instant policy issuance.</p>
+            <div className="grid grid-cols-2 gap-1.5 mb-5">
+              {['HDFC Ergo', 'ICICI Lombard', 'Bajaj Allianz', 'Tata AIG', 'New India', 'Digit'].map((co) => (
+                <span key={co} className="text-[10px] px-2.5 py-1.5 rounded-full bg-[#1a6e8e]/10 border border-[#1a6e8e]/20 text-[#2a8aad] font-medium text-center">{co}</span>
+              ))}
+            </div>
+            <button className="w-full py-2.5 bg-[#1a6e8e] hover:bg-[#0d4d6b] rounded-md font-bold text-xs">Get Insurance Quote →</button>
           </div>
         </div>
       </section>
@@ -336,7 +488,7 @@ export default function HomePage() {
               MK Finance <span className="text-[#e63030]">Advantage</span>
             </h2>
             {[
-              { n: '01', t: 'All Brands, One Platform', d: 'Every brand of vehicle, every loan option, every insurance — all in one place.' },
+              { n: '01', t: 'All Brands, One Platform', d: 'Cars, trucks, tractors — every brand, every loan, every insurance — all in one place.' },
               { n: '02', t: 'Fastest Loan Approval', d: 'Loan approval within 24 hours with minimum documentation.' },
               { n: '03', t: 'Doorstep Service', d: 'We come to you for document collection, delivery, and paperwork.' },
             ].map((f, i) => (
@@ -386,7 +538,8 @@ export default function HomePage() {
           <div>
             <h5 className="text-xs font-bold tracking-[1.5px] uppercase text-white/30 mb-5">Quick Links</h5>
             <ul className="space-y-2.5">
-              <li><button onClick={() => scrollTo('vehicles')} className="text-[13px] text-white/50 hover:text-[#2a8aad]">Browse Vehicles</button></li>
+              <li><button onClick={() => { setActiveTab('cars'); scrollTo('vehicles'); }} className="text-[13px] text-white/50 hover:text-[#2a8aad]">Cars</button></li>
+              <li><button onClick={() => { setActiveTab('commercial'); scrollTo('vehicles'); }} className="text-[13px] text-white/50 hover:text-[#2a8aad]">Commercial Vehicles</button></li>
               <li><button onClick={() => scrollTo('loans')} className="text-[13px] text-white/50 hover:text-[#2a8aad]">EMI Calculator</button></li>
               <li><button onClick={() => scrollTo('contact')} className="text-[13px] text-white/50 hover:text-[#2a8aad]">Contact Us</button></li>
             </ul>
@@ -403,7 +556,6 @@ export default function HomePage() {
         </div>
       </footer>
 
-      {/* WhatsApp floating button */}
       <a
         href="https://wa.me/919824742356"
         target="_blank"
@@ -412,23 +564,22 @@ export default function HomePage() {
         💬
       </a>
 
-      {/* Vehicle detail modal */}
-      {selectedCar && (
+      {selectedVehicle && (
         <div
           className="fixed inset-0 bg-black/75 z-[290] flex items-center justify-center p-5"
-          onClick={(e) => { if (e.target === e.currentTarget) setSelectedCar(null); }}
+          onClick={(e) => { if (e.target === e.currentTarget) setSelectedVehicle(null); }}
         >
           <div className="bg-[#141414] border border-white/10 rounded-xl max-w-[520px] w-full max-h-[85vh] overflow-y-auto relative">
-            <button onClick={() => setSelectedCar(null)} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 border border-white/10 text-white flex items-center justify-center z-10">✕</button>
-            <div className="h-[220px] bg-[#1a6e8e]/[0.08] flex items-center justify-center text-7xl">🚗</div>
+            <button onClick={() => setSelectedVehicle(null)} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 border border-white/10 text-white flex items-center justify-center z-10">✕</button>
+            <div className="h-[220px] bg-[#1a6e8e]/[0.08] flex items-center justify-center text-7xl">{selectedVehicle.icon}</div>
             <div className="p-6">
-              <h2 className="text-2xl font-bold mb-1" style={{ fontFamily: 'var(--font-heading)' }}>{selectedCar.brand} {selectedCar.model}</h2>
-              <p className="text-white/50 text-sm mb-4">{selectedCar.fuelType} · {selectedCar.transmission}</p>
-              <p className="text-2xl font-bold text-[#2a8aad] mb-5" style={{ fontFamily: 'var(--font-heading)' }}>{selectedCar.price}</p>
+              <h2 className="text-2xl font-bold mb-1" style={{ fontFamily: 'var(--font-heading)' }}>{selectedVehicle.brand} {selectedVehicle.model}</h2>
+              <p className="text-white/50 text-sm mb-4">{selectedVehicle.fuelType} · {selectedVehicle.transmission}</p>
+              <p className="text-2xl font-bold text-[#2a8aad] mb-5" style={{ fontFamily: 'var(--font-heading)' }}>{selectedVehicle.price}</p>
 
               <p className="text-xs font-semibold text-white/40 uppercase tracking-wide mb-2">Variants</p>
               <div className="space-y-1.5 mb-5">
-                {selectedCar.variants.map((v: any) => (
+                {selectedVehicle.variants.map((v: any) => (
                   <div key={v.id} className="flex justify-between text-sm bg-white/[0.03] border border-white/[0.06] rounded-md px-3 py-2">
                     <span className="text-white/70">{v.name} <span className="text-white/30">· {v.transmission} · {v.fuelType}</span></span>
                     <span className="font-semibold text-[#2a8aad]">{formatLakh(v.exShowroomPrice)}</span>
@@ -438,7 +589,7 @@ export default function HomePage() {
 
               <div className="grid grid-cols-2 gap-2.5">
                 <button
-                  onClick={() => { openEnquiry(`${selectedCar.brand} ${selectedCar.model}`); setSelectedCar(null); }}
+                  onClick={() => { openEnquiry(`${selectedVehicle.brand} ${selectedVehicle.model}`); setSelectedVehicle(null); }}
                   className="py-3 bg-[#1a6e8e] hover:bg-[#0d4d6b] rounded-md font-bold text-sm"
                 >
                   Get Quote →

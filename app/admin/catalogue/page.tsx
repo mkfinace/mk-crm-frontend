@@ -163,6 +163,7 @@ export default function CatalogueAdminPage() {
   const [newColourHex, setNewColourHex] = useState('#1E3A5F');
   const [newImageUrl, setNewImageUrl] = useState('');
   const [openSpecCat, setOpenSpecCat] = useState<string | null>(null);
+  const [showAddMore, setShowAddMore] = useState(false);
 
   useEffect(() => {
     loadCatalogue();
@@ -292,6 +293,7 @@ export default function CatalogueAdminPage() {
     }
     setExpandedVariant(variantId);
     setSpecsSavedMsg('');
+    setShowAddMore(false);
     setLoadingSpecs(true);
     setOpenSpecCat(fieldCategories[0]?.id || null);
     try {
@@ -583,39 +585,84 @@ export default function CatalogueAdminPage() {
                                     </div>
                                   </div>
 
-                                  {/* Specifications by category */}
+                                  {/* Specifications — compact grouped view of fields that already have values */}
                                   <p className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Specifications</p>
-                                  <div className="space-y-1.5 mb-4">
-                                    {fieldCategories.map((cat) => {
-                                      const isOpen = openSpecCat === cat.id;
-                                      return (
-                                        <div key={cat.id} className="border border-slate-100 rounded-lg">
-                                          <button
-                                            type="button"
-                                            onClick={() => setOpenSpecCat(isOpen ? null : cat.id)}
-                                            className="w-full flex items-center justify-between px-3 py-2 text-[12px] font-medium text-slate-600"
-                                          >
-                                            {cat.name}
-                                            <span className="text-slate-400">{isOpen ? '▲' : '▼'}</span>
-                                          </button>
-                                          {isOpen && (
-                                            <div className="px-3 pb-3 space-y-1.5 border-t border-slate-50 pt-2">
-                                              {(!cat.fields || cat.fields.length === 0) && <p className="text-[11.5px] text-slate-400">No fields in this category.</p>}
-                                              {cat.fields?.map((field: any) => (
-                                                <div key={field.id} className="grid grid-cols-[140px_1fr] gap-2 items-center">
-                                                  <label className="text-[11.5px] text-slate-500">{field.name}</label>
-                                                  <SpecFieldInput field={field} value={specValues[field.id] || { applicability: 'STANDARD' }} onChange={(v) => updateSpecValue(field.id, v)} />
-                                                </div>
-                                              ))}
+                                  {(() => {
+                                    const populatedCats = fieldCategories
+                                      .map((cat) => ({
+                                        ...cat,
+                                        fields: (cat.fields || []).filter((f: any) => {
+                                          const v = specValues[f.id];
+                                          return v && (v.valueText !== undefined || v.valueNumber !== undefined || v.valueBoolean !== undefined);
+                                        }),
+                                      }))
+                                      .filter((cat) => cat.fields.length > 0);
+
+                                    return (
+                                      <>
+                                        {populatedCats.length === 0 && (
+                                          <p className="text-[12px] text-slate-400 mb-3">No specifications entered yet.</p>
+                                        )}
+                                        <div className="space-y-3 mb-3">
+                                          {populatedCats.map((cat) => (
+                                            <div key={cat.id}>
+                                              <p className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{cat.name}</p>
+                                              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                                                {cat.fields.map((field: any) => (
+                                                  <div key={field.id} className="grid grid-cols-[110px_1fr] gap-2 items-center">
+                                                    <label className="text-[11.5px] text-slate-500 truncate">{field.name}</label>
+                                                    <SpecFieldInput field={field} value={specValues[field.id] || { applicability: 'STANDARD' }} onChange={(v) => updateSpecValue(field.id, v)} />
+                                                  </div>
+                                                ))}
+                                              </div>
                                             </div>
-                                          )}
+                                          ))}
                                         </div>
-                                      );
-                                    })}
-                                    {fieldCategories.length === 0 && (
-                                      <p className="text-[11.5px] text-slate-400">No spec categories yet — add some in Field Builder.</p>
-                                    )}
-                                  </div>
+                                      </>
+                                    );
+                                  })()}
+
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowAddMore(!showAddMore)}
+                                    className="text-[11.5px] text-sky-600 font-medium mb-3"
+                                  >
+                                    {showAddMore ? '▲ Hide' : '+ Add more specifications'}
+                                  </button>
+
+                                  {showAddMore && (
+                                    <div className="space-y-1.5 mb-4 border-t border-slate-100 pt-3">
+                                      {fieldCategories.map((cat) => {
+                                        const isOpen = openSpecCat === cat.id;
+                                        return (
+                                          <div key={cat.id} className="border border-slate-100 rounded-lg">
+                                            <button
+                                              type="button"
+                                              onClick={() => setOpenSpecCat(isOpen ? null : cat.id)}
+                                              className="w-full flex items-center justify-between px-3 py-2 text-[12px] font-medium text-slate-600"
+                                            >
+                                              {cat.name}
+                                              <span className="text-slate-400">{isOpen ? '▲' : '▼'}</span>
+                                            </button>
+                                            {isOpen && (
+                                              <div className="px-3 pb-3 space-y-1.5 border-t border-slate-50 pt-2">
+                                                {(!cat.fields || cat.fields.length === 0) && <p className="text-[11.5px] text-slate-400">No fields in this category.</p>}
+                                                {cat.fields?.map((field: any) => (
+                                                  <div key={field.id} className="grid grid-cols-[140px_1fr] gap-2 items-center">
+                                                    <label className="text-[11.5px] text-slate-500">{field.name}</label>
+                                                    <SpecFieldInput field={field} value={specValues[field.id] || { applicability: 'STANDARD' }} onChange={(v) => updateSpecValue(field.id, v)} />
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                      {fieldCategories.length === 0 && (
+                                        <p className="text-[11.5px] text-slate-400">No spec categories yet — add some in Field Builder.</p>
+                                      )}
+                                    </div>
+                                  )}
 
                                   <div className="flex items-center gap-3">
                                     <button disabled={savingSpecs} onClick={() => saveVariantSpecs(v.id)} className={primaryBtnCls}>

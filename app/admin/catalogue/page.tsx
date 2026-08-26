@@ -162,7 +162,6 @@ export default function CatalogueAdminPage() {
   const [newColourName, setNewColourName] = useState('');
   const [newColourHex, setNewColourHex] = useState('#1E3A5F');
   const [newImageUrl, setNewImageUrl] = useState('');
-  const [openSpecCat, setOpenSpecCat] = useState<string | null>(null);
   const [showAddMore, setShowAddMore] = useState(false);
   const [editingFieldIds, setEditingFieldIds] = useState<Set<string>>(new Set());
 
@@ -315,7 +314,6 @@ export default function CatalogueAdminPage() {
     setShowAddMore(false);
     setEditingFieldIds(new Set());
     setLoadingSpecs(true);
-    setOpenSpecCat(fieldCategories[0]?.id || null);
     try {
       const [values, vehicle] = await Promise.all([
         api.listFieldValuesForVariant(variantId),
@@ -664,30 +662,36 @@ export default function CatalogueAdminPage() {
                                   </button>
 
                                   {showAddMore && (
-                                    <div className="space-y-1.5 mb-4 border-t border-slate-100 pt-3">
+                                    <div className="space-y-3 mb-4 border-t border-slate-100 pt-3">
                                       {fieldCategories.map((cat) => {
-                                        const isOpen = openSpecCat === cat.id;
+                                        const unfilledFields = (cat.fields || []).filter((f: any) => {
+                                          const v = specValues[f.id];
+                                          return !(v && (v.valueText !== undefined || v.valueNumber !== undefined || v.valueBoolean !== undefined));
+                                        });
+                                        if (unfilledFields.length === 0) return null;
                                         return (
-                                          <div key={cat.id} className="border border-slate-100 rounded-lg">
-                                            <button
-                                              type="button"
-                                              onClick={() => setOpenSpecCat(isOpen ? null : cat.id)}
-                                              className="w-full flex items-center justify-between px-3 py-2 text-[12px] font-medium text-slate-600"
-                                            >
-                                              {cat.name}
-                                              <span className="text-slate-400">{isOpen ? '▲' : '▼'}</span>
-                                            </button>
-                                            {isOpen && (
-                                              <div className="px-3 pb-3 space-y-1.5 border-t border-slate-50 pt-2">
-                                                {(!cat.fields || cat.fields.length === 0) && <p className="text-[11.5px] text-slate-400">No fields in this category.</p>}
-                                                {cat.fields?.map((field: any) => (
-                                                  <div key={field.id} className="grid grid-cols-[140px_1fr] gap-2 items-center">
-                                                    <label className="text-[11.5px] text-slate-500">{field.name}</label>
-                                                    <SpecFieldInput field={field} value={specValues[field.id] || { applicability: 'STANDARD' }} onChange={(v) => updateSpecValue(field.id, v)} />
-                                                  </div>
-                                                ))}
-                                              </div>
-                                            )}
+                                          <div key={cat.id}>
+                                            <p className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{cat.name}</p>
+                                            <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                                              {unfilledFields.map((field: any) => (
+                                                <div key={field.id} className="flex items-center justify-between text-[12px] py-1.5 border-b border-slate-50">
+                                                  <span className="text-slate-500">{field.name}</span>
+                                                  {editingFieldIds.has(field.id) ? (
+                                                    <div className="w-[55%]">
+                                                      <SpecFieldInput field={field} value={specValues[field.id] || { applicability: 'STANDARD' }} onChange={(v) => updateSpecValue(field.id, v)} />
+                                                    </div>
+                                                  ) : (
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => startEditField(field.id)}
+                                                      className="text-slate-400 italic hover:bg-[#FBF3E1] hover:text-[#96701F] rounded px-1.5 py-0.5 -mr-1.5 transition-colors text-right"
+                                                    >
+                                                      + add
+                                                    </button>
+                                                  )}
+                                                </div>
+                                              ))}
+                                            </div>
                                           </div>
                                         );
                                       })}

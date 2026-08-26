@@ -153,7 +153,12 @@ export default function CarDataPage() {
       ]);
       const v: Record<string, FieldVal> = {};
       for (const fv of fieldValues) {
-        v[fv.fieldId] = { valueText: fv.valueText, valueNumber: fv.valueNumber, valueBoolean: fv.valueBoolean, applicability: fv.applicability };
+        v[fv.fieldId] = {
+          valueText: fv.valueText ?? undefined,
+          valueNumber: fv.valueNumber ?? undefined,
+          valueBoolean: fv.valueBoolean ?? undefined,
+          applicability: fv.applicability,
+        };
       }
       setValues(v);
       setColours(vehicle.colours || []);
@@ -171,6 +176,22 @@ export default function CarDataPage() {
 
   function updateFieldValue(fieldId: string, v: FieldVal) {
     setValues((prev) => ({ ...prev, [fieldId]: v }));
+  }
+  async function clearFieldValue(fieldId: string) {
+    if (!variantId) return;
+    setSaving(true);
+    try {
+      await api.deleteFieldValue(fieldId, variantId);
+      setValues((prev) => {
+        const next = { ...prev };
+        delete next[fieldId];
+        return next;
+      });
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
   }
   function startEditField(id: string) {
     setEditingFieldIds((prev) => new Set(prev).add(id));
@@ -456,8 +477,11 @@ export default function CarDataPage() {
                       <div key={field.id} className="flex items-center justify-between text-[12px] py-1.5 border-b border-slate-50">
                         <span className="text-slate-500">{field.name}</span>
                         {editingFieldIds.has(field.id) ? (
-                          <div className="w-[55%]">
-                            <SpecFieldInput field={field} value={values[field.id] || { applicability: 'STANDARD' }} onChange={(v) => updateFieldValue(field.id, v)} />
+                          <div className="flex items-center gap-1.5 w-[60%]">
+                            <div className="flex-1">
+                              <SpecFieldInput field={field} value={values[field.id] || { applicability: 'STANDARD' }} onChange={(v) => updateFieldValue(field.id, v)} />
+                            </div>
+                            <button type="button" onClick={() => clearFieldValue(field.id)} title="Clear this value" className="text-slate-300 hover:text-red-500 text-[13px] shrink-0">×</button>
                           </div>
                         ) : (
                           <button

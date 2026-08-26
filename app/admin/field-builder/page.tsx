@@ -70,6 +70,7 @@ export default function FieldBuilderPage() {
   // Edit form state
   const [editName, setEditName] = useState('');
   const [editUnit, setEditUnit] = useState('');
+  const [editDataType, setEditDataType] = useState('TEXT');
   const [editCustomerVisible, setEditCustomerVisible] = useState(true);
   const [editFilterEnabled, setEditFilterEnabled] = useState(false);
   const [editComparisonEnabled, setEditComparisonEnabled] = useState(false);
@@ -153,6 +154,7 @@ export default function FieldBuilderPage() {
     setEditingField(f.id);
     setEditName(f.name);
     setEditUnit(f.unit || '');
+    setEditDataType(f.dataType);
     setEditCustomerVisible(f.customerVisible);
     setEditFilterEnabled(f.filterEnabled);
     setEditComparisonEnabled(f.comparisonEnabled);
@@ -167,6 +169,7 @@ export default function FieldBuilderPage() {
       await api.updateFieldDefinition(id, {
         name: editName,
         unit: editUnit || undefined,
+        dataType: editDataType,
         customerVisible: editCustomerVisible,
         filterEnabled: editFilterEnabled,
         comparisonEnabled: editComparisonEnabled,
@@ -283,6 +286,12 @@ export default function FieldBuilderPage() {
                               <div className="grid grid-cols-2 gap-2.5">
                                 <input className={inputCls} value={editName} onChange={(e) => setEditName(e.target.value)} required />
                                 <input className={inputCls} placeholder="Unit" value={editUnit} onChange={(e) => setEditUnit(e.target.value)} />
+                              </div>
+                              <div>
+                                <p className="text-[10.5px] text-amber-600 mb-1">⚠️ Changing type fixes fields wrongly created (e.g. as Yes/No when they should be Text/Number)</p>
+                                <select className={selectCls + ' w-full'} value={editDataType} onChange={(e) => setEditDataType(e.target.value)}>
+                                  {DATA_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                                </select>
                               </div>
                               <div className="flex flex-wrap gap-x-4 gap-y-1.5">
                                 <label className="flex items-center gap-1.5 text-[12px] text-slate-600 cursor-pointer select-none">

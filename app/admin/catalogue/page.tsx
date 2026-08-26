@@ -321,7 +321,12 @@ export default function CatalogueAdminPage() {
       ]);
       const v: Record<string, FieldVal> = {};
       for (const fv of values) {
-        v[fv.fieldId] = { valueText: fv.valueText, valueNumber: fv.valueNumber, valueBoolean: fv.valueBoolean, applicability: fv.applicability };
+        v[fv.fieldId] = {
+          valueText: fv.valueText ?? undefined,
+          valueNumber: fv.valueNumber ?? undefined,
+          valueBoolean: fv.valueBoolean ?? undefined,
+          applicability: fv.applicability,
+        };
       }
       setSpecValues(v);
       setSpecColours(vehicle.colours || []);
@@ -337,6 +342,21 @@ export default function CatalogueAdminPage() {
 
   function updateSpecValue(fieldId: string, v: FieldVal) {
     setSpecValues((prev) => ({ ...prev, [fieldId]: v }));
+  }
+  async function clearSpecValue(fieldId: string, variantId: string) {
+    setSavingSpecs(true);
+    try {
+      await api.deleteFieldValue(fieldId, variantId);
+      setSpecValues((prev) => {
+        const next = { ...prev };
+        delete next[fieldId];
+        return next;
+      });
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSavingSpecs(false);
+    }
   }
   function addColour() {
     if (!newColourName.trim()) return;
@@ -630,15 +650,24 @@ export default function CatalogueAdminPage() {
                                                   <div key={field.id} className="flex items-center justify-between text-[12px] py-1.5 border-b border-slate-50">
                                                     <span className="text-slate-500">{field.name}</span>
                                                     {editingFieldIds.has(field.id) ? (
-                                                      <div className="w-[55%]">
-                                                        <SpecFieldInput field={field} value={specValues[field.id] || { applicability: 'STANDARD' }} onChange={(v) => updateSpecValue(field.id, v)} />
+                                                      <div className="flex items-center gap-1.5 w-[60%]">
+                                                        <div className="flex-1">
+                                                          <SpecFieldInput field={field} value={specValues[field.id] || { applicability: 'STANDARD' }} onChange={(v) => updateSpecValue(field.id, v)} />
+                                                        </div>
+                                                        <button
+                                                          type="button"
+                                                          onClick={() => clearSpecValue(field.id, v.id)}
+                                                          title="Clear this value"
+                                                          className="text-slate-300 hover:text-red-500 text-[13px] shrink-0"
+                                                        >
+                                                          ×
+                                                        </button>
                                                       </div>
                                                     ) : (
                                                       <button
                                                         type="button"
                                                         onClick={() => startEditField(field.id)}
                                                         className="text-slate-700 font-medium hover:bg-[#FBF3E1] hover:text-[#96701F] rounded px-1.5 py-0.5 -mr-1.5 transition-colors text-right"
-                                                        title="Click to edit"
                                                       >
                                                         {formatSpecValue(field, specValues[field.id])}
                                                       </button>

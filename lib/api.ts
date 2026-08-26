@@ -120,6 +120,7 @@ export const api = {
   listArchivedFieldDefinitions: () => apiFetch('/field-definitions/archived'),
   listFieldValuesForVariant: (variantId: string) => apiFetch(`/field-values?variantId=${variantId}`),
   setFieldValue: (data: any) => apiFetch('/field-values', { method: 'POST', body: JSON.stringify(data) }),
+  deleteFieldValue: (fieldId: string, variantId: string) => apiFetch(`/field-values?fieldId=${fieldId}&variantId=${variantId}`, { method: 'DELETE' }),
 
   // Vehicles (colours + images per variant)
   getVehicleByVariant: (variantId: string) => apiFetch(`/vehicles/${variantId}`),

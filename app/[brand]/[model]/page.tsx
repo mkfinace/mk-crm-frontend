@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
@@ -64,6 +64,46 @@ export default function ModelDetailPage() {
 
   useEffect(() => {
     setActiveCat(specsByCategory[0]?.name || null);
+  }, [specsByCategory]);
+
+  // Scrollspy: right-hand specs pane is one continuous scroll, sidebar tab
+  // highlight follows whichever category section is currently in view.
+  const specsScrollRef = useRef<HTMLDivElement | null>(null);
+  const specSectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  function scrollToCat(name: string) {
+    const container = specsScrollRef.current;
+    const target = specSectionRefs.current[name];
+    if (!container || !target) return;
+    container.scrollTo({ top: target.offsetTop - container.offsetTop - 8, behavior: 'smooth' });
+    setActiveCat(name);
+  }
+
+  useEffect(() => {
+    const container = specsScrollRef.current;
+    if (!container || specsByCategory.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Pick the entry closest to the top of the scroll pane that's still visible
+        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible.length > 0) {
+          const name = (visible[0].target as HTMLElement).dataset.cat;
+          if (name) setActiveCat(name);
+        }
+      },
+      { root: container, rootMargin: '-10% 0px -70% 0px', threshold: 0 }
+    );
+
+    specsByCategory.forEach((cat) => {
+      const el = specSectionRefs.current[cat.name];
+      if (el) {
+        el.dataset.cat = cat.name;
+        observer.observe(el);
+      }
+    });
+
+    return () => observer.disconnect();
   }, [specsByCategory]);
 
   const hasTransData = (data?.variants || []).some((v: any) => v.transmission);
@@ -142,8 +182,12 @@ export default function ModelDetailPage() {
         .vpage .specs-tab-item{padding:14px 18px;font-size:13px;color:#c3d0d5;cursor:pointer;border-bottom:1px solid var(--line);border-left:3px solid transparent;background:none;width:100%;text-align:left;display:block}
         .vpage .specs-tab-item:hover{color:#fff}
         .vpage .specs-tab-item.active{background:#0d2029;color:var(--blue);font-weight:700;border-left:3px solid var(--blue)}
-        .vpage .specs-tab-content{padding:20px 24px}
-        .vpage .specs-tab-content h3{font-size:16px;color:#fff;margin-bottom:14px}
+        .vpage .specs-tab-content{padding:20px 24px;max-height:460px;overflow-y:auto;scroll-behavior:smooth}
+        .vpage .specs-tab-content::-webkit-scrollbar{width:8px}
+        .vpage .specs-tab-content::-webkit-scrollbar-thumb{background:rgba(21,154,196,.35);border-radius:4px}
+        .vpage .specs-tab-section{margin-bottom:28px}
+        .vpage .specs-tab-section:last-child{margin-bottom:0}
+        .vpage .specs-tab-content h3{font-size:16px;color:#fff;margin-bottom:14px;position:sticky;top:-20px;background:#0b1b23;padding-top:4px;z-index:1}
         .vpage .specs-tab-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);font-size:13px}
         .vpage .specs-tab-row:last-child{border-bottom:0}
         .vpage .specs-tab-row span:first-child{color:var(--muted)}
@@ -347,18 +391,22 @@ export default function ModelDetailPage() {
                         <button
                           key={cat.name}
                           className={`specs-tab-item ${activeCat === cat.name ? 'active' : ''}`}
-                          onClick={() => setActiveCat(cat.name)}
+                          onClick={() => scrollToCat(cat.name)}
                         >
                           {cat.name}
                         </button>
                       ))}
                     </div>
-                    <div className="specs-tab-content">
-                      <h3>{activeCat}</h3>
-                      {specsByCategory.find((c) => c.name === activeCat)?.items.map((s: any, i: number) => (
-                        <div key={i} className="specs-tab-row">
-                          <span>{s.fieldName}</span>
-                          <span>{formatSpecValue(s)}</span>
+                    <div className="specs-tab-content" ref={specsScrollRef}>
+                      {specsByCategory.map((cat) => (
+                        <div key={cat.name} ref={(el) => { specSectionRefs.current[cat.name] = el; }} className="specs-tab-section">
+                          <h3>{cat.name}</h3>
+                          {cat.items.map((s: any, i: number) => (
+                            <div key={i} className="specs-tab-row">
+                              <span>{s.fieldName}</span>
+                              <span>{formatSpecValue(s)}</span>
+                            </div>
+                          ))}
                         </div>
                       ))}
                     </div>

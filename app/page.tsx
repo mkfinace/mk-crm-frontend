@@ -151,6 +151,9 @@ export default function HomePage() {
 
       {/* HERO */}
       <section className="min-h-screen flex items-center pt-[70px] relative overflow-hidden bg-gradient-to-br from-[#050e14] via-[#0a1a24] to-[#0d1010]">
+        <div className="absolute inset-0 opacity-[0.35]" style={{ backgroundImage: 'radial-gradient(circle, rgba(42,138,173,0.35) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
+        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-[#1a6e8e]/[0.12] rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-15%] left-[-10%] w-[400px] h-[400px] bg-[#e63030]/[0.08] rounded-full blur-[120px]" />
         <div className="max-w-[1200px] mx-auto px-6 md:px-8 py-16 grid md:grid-cols-2 gap-12 items-center relative z-10">
           <div>
             <div className="flex items-center gap-2 text-[11px] tracking-[3px] uppercase text-[#2a8aad] font-semibold mb-6">
@@ -165,8 +168,13 @@ export default function HomePage() {
               Buy new cars, commercial vehicles, trucks, tempos, and tractors — take a loan, get insurance. All at one place.
             </p>
             <div className="flex gap-4 flex-wrap mb-6">
-              <button onClick={() => scrollTo('vehicles')} className="bg-[#e63030] hover:bg-[#b01c1c] px-8 py-3.5 rounded font-semibold text-sm">Browse Vehicles</button>
-              <button onClick={() => scrollTo('loans')} className="border-2 border-white/30 hover:border-[#2a8aad] hover:text-[#2a8aad] px-8 py-3.5 rounded font-semibold text-sm">Calculate EMI</button>
+              <Link href="/cars" className="bg-[#e63030] hover:bg-[#b01c1c] px-8 py-3.5 rounded font-semibold text-sm transition-colors">Browse Vehicles</Link>
+              <button onClick={() => scrollTo('loans')} className="border-2 border-white/30 hover:border-[#2a8aad] hover:text-[#2a8aad] px-8 py-3.5 rounded font-semibold text-sm transition-colors">Calculate EMI</button>
+            </div>
+            <div className="flex flex-wrap gap-x-5 gap-y-2 mb-6 text-[12px] text-white/50">
+              <span className="flex items-center gap-1.5"><span className="text-[#4ecb70]">✓</span> Fast Approval</span>
+              <span className="flex items-center gap-1.5"><span className="text-[#4ecb70]">✓</span> Minimum Documents</span>
+              <span className="flex items-center gap-1.5"><span className="text-[#4ecb70]">✓</span> No Hidden Charges</span>
             </div>
             <div className="flex gap-8 pt-6 border-t border-white/[0.08] mt-6">
               <div>
@@ -177,15 +185,27 @@ export default function HomePage() {
                 <div className="text-[2rem] font-bold text-[#2a8aad]" style={{ fontFamily: 'var(--font-heading)' }}>98<span className="text-[#e63030]">%</span></div>
                 <div className="text-[11px] text-white/50 tracking-wide">Loan Approval Rate</div>
               </div>
+              <div>
+                <div className="text-[2rem] font-bold text-[#2a8aad]" style={{ fontFamily: 'var(--font-heading)' }}>24-48<span className="text-[#e63030] text-[1.1rem]">hr</span></div>
+                <div className="text-[11px] text-white/50 tracking-wide">Approval Time</div>
+              </div>
             </div>
           </div>
           <div className="hidden md:flex items-center justify-center relative">
-            <div className="w-[380px] h-[280px] bg-[#1a6e8e]/[0.08] border border-[#1a6e8e]/20 rounded-xl flex items-center justify-center relative overflow-hidden">
-              <span className="text-8xl">🚗</span>
+            <div className="w-[400px] h-[300px] bg-gradient-to-br from-[#0d1f28] to-[#0a151c] border border-[#1a6e8e]/25 rounded-2xl flex items-center justify-center relative overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.45)]">
+              <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'radial-gradient(circle, rgba(42,138,173,0.25) 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
+              <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#e63030]/10 rounded-full blur-3xl" />
+              <div className="relative w-44 h-44 rounded-full bg-[#1a6e8e]/10 border border-[#1a6e8e]/20 flex items-center justify-center">
+                <span className="text-8xl drop-shadow-[0_12px_20px_rgba(0,0,0,0.5)]">🚗</span>
+              </div>
             </div>
-            <div className="absolute bottom-5 -left-5 bg-black/95 border border-[#1a6e8e]/30 rounded-lg px-4 py-3 text-xs">
+            <div className="absolute bottom-5 -left-6 bg-black/95 border border-[#1a6e8e]/30 rounded-lg px-4 py-3 text-xs shadow-lg backdrop-blur">
               <div className="text-white/40 mb-0.5">Today's Best Rate</div>
               <div className="font-bold text-[#2a8aad] text-base">7.5% p.a.</div>
+            </div>
+            <div className="absolute top-6 -right-4 bg-black/95 border border-[#e63030]/30 rounded-lg px-4 py-3 text-xs shadow-lg backdrop-blur">
+              <div className="text-white/40 mb-0.5">Customer Rating</div>
+              <div className="font-bold text-white text-base">⭐ 4.8 / 5</div>
             </div>
           </div>
         </div>

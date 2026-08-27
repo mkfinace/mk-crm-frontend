@@ -224,9 +224,12 @@ export default function ModelDetailPage() {
     { label: 'Engine', re: /engine type|displacement/i },
     { label: 'Max Power', re: /max power|power$/i },
     { label: 'Max Torque', re: /max torque|torque$/i },
+    { label: 'Payload Capacity', re: /payload/i },
+    { label: 'Gross Vehicle Weight', re: /gross vehicle weight|\bgvw\b/i },
     { label: 'Mileage', re: /mileage/i },
     { label: 'Seating Capacity', re: /seating capacity/i },
     { label: 'Boot Space', re: /boot space/i },
+    { label: 'Deck Length', re: /deck length/i },
     { label: 'Fuel Tank Capacity', re: /fuel tank/i },
     { label: 'Ground Clearance', re: /ground clearance/i },
   ];

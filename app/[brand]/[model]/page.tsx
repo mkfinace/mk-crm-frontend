@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
@@ -66,6 +66,8 @@ export default function ModelDetailPage() {
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [compareList, setCompareList] = useState<any[]>([]);
+  const [compareVariantIds, setCompareVariantIds] = useState<string[]>([]);
+  const [compareModalOpen, setCompareModalOpen] = useState(false);
 
   // Placeholder fields not yet on the CRM's Model/Vehicle schema — shown so
   // the page matches the live mkfinance-website layout. Swap for real data
@@ -237,6 +239,37 @@ export default function ModelDetailPage() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   }
 
+  function toggleCompareVariant(id: string) {
+    setCompareVariantIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : prev.length >= 4 ? prev : [...prev, id]));
+  }
+
+  const compareVariants = useMemo(
+    () => (data?.variants || []).filter((v: any) => compareVariantIds.includes(v.id)),
+    [data, compareVariantIds]
+  );
+
+  // Builds the side-by-side rows for the compare modal: union of every
+  // category/field across the selected variants, one column per variant.
+  const compareTable = useMemo(() => {
+    const catMap: Record<string, { order: number; fields: Record<string, { fieldName: string; order: number; values: Record<string, string> }> }> = {};
+    for (const v of compareVariants) {
+      for (const s of v.specs || []) {
+        if (!catMap[s.categoryName]) catMap[s.categoryName] = { order: s.categoryOrder ?? 0, fields: {} };
+        if (!catMap[s.categoryName].fields[s.fieldKey]) {
+          catMap[s.categoryName].fields[s.fieldKey] = { fieldName: s.fieldName, order: s.displayOrder ?? 0, values: {} };
+        }
+        catMap[s.categoryName].fields[s.fieldKey].values[v.id] = formatSpecValue(s);
+      }
+    }
+    return Object.entries(catMap)
+      .map(([name, v]) => ({
+        name,
+        order: v.order,
+        fields: Object.values(v.fields).sort((a, b) => a.order - b.order),
+      }))
+      .sort((a, b) => a.order - b.order);
+  }, [compareVariants]);
+
   return (
     <div className="vpage">
       <style>{`
@@ -253,7 +286,7 @@ export default function ModelDetailPage() {
         .vpage .top-links{margin-left:auto;display:flex;gap:20px;font-size:13px;color:#a8b7be;align-items:center}
         .vpage .city{font-weight:600;color:#fff}
         .vpage .top-links a.call{font-weight:700;color:var(--blue)}
-        .vpage .mainnav{border-bottom:1px solid var(--line);background:#081820}
+        .vpage .mainnav{border-bottom:1px solid var(--line);background:#081820;position:sticky;top:68px;z-index:950}
         .vpage .mainnav .nav{height:46px;display:flex;align-items:center;gap:26px;overflow:auto;white-space:nowrap}
         .vpage .mainnav button{background:none;border:0;font-size:13px;color:#b5c2c8;cursor:pointer}.vpage .mainnav button:hover{color:var(--blue)}
         .vpage .subnav{background:#07151c;border-bottom:1px solid var(--line);position:sticky;top:114px;z-index:900}
@@ -296,8 +329,30 @@ export default function ModelDetailPage() {
         .vpage .variant-filter-bar{display:flex;align-items:center;gap:18px;padding:14px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
         .vpage .vfilter-opt{display:flex;align-items:center;gap:6px;font-size:13px;color:#c3d0d5;cursor:pointer}
         .vpage .vfilter-opt input{accent-color:var(--blue)}
-        .vpage .variant-table-head{display:grid;grid-template-columns:2fr 1fr 1fr;padding:10px 18px;background:#0d2029;font-size:11px;text-transform:uppercase;color:#8299a3;letter-spacing:.4px}
-        .vpage .variant-row{display:grid;grid-template-columns:2fr 1fr 1fr;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .15s}
+        .vpage .variant-table-head{display:grid;grid-template-columns:2fr 1fr 1fr 70px;padding:10px 18px;background:#0d2029;font-size:11px;text-transform:uppercase;color:#8299a3;letter-spacing:.4px}
+        .vpage .variant-table-head span:last-child{text-align:center}
+        .vpage .variant-row{display:grid;grid-template-columns:2fr 1fr 1fr 70px;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .15s}
+        .vpage .vcheck{display:flex;justify-content:center}
+        .vpage .vcheck input{width:17px;height:17px;accent-color:var(--blue);cursor:pointer}
+        .vpage .variant-compare-bar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:1500;padding:14px 20px;background:#0b1b23;border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(0,0,0,.4);align-items:center;gap:14px;flex-wrap:wrap}
+        .vpage .vcb-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+        .vpage .vcb-chips{display:flex;gap:9px;flex-wrap:wrap;flex:1}
+        .vpage .vcb-chip{display:flex;align-items:center;gap:7px;background:#0d2029;border:1px solid var(--line);border-radius:8px;padding:7px 11px;font-size:12px}
+        .vpage .vcb-chip .vcb-name{font-weight:700;color:#fff;font-size:12px}
+        .vpage .vcb-chip .vcb-price{color:var(--blue);font-size:11px;margin-left:6px}
+        .vpage .vcb-chip .vcb-x{cursor:pointer;color:var(--muted);font-size:13px;margin-left:2px}
+        .vpage .vcb-chip .vcb-x:hover{color:var(--red)}
+        .vpage .vcb-actions{display:flex;gap:8px;margin-left:auto}
+        .vpage .btn.secondary{background:transparent;border:1px solid var(--line);color:#c3d0d5}
+        .vpage .compare-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;display:flex;align-items:flex-start;justify-content:center;padding:50px 20px;overflow:auto}
+        .vpage .compare-modal{background:#0b1b23;border:1px solid var(--line);border-radius:12px;max-width:960px;width:100%;padding:22px;max-height:85vh;overflow:auto}
+        .vpage .compare-modal-close{float:right;cursor:pointer;color:var(--muted);font-size:20px}
+        .vpage .compare-table{width:100%;border-collapse:collapse;margin-top:14px;font-size:12.5px}
+        .vpage .compare-table th,.vpage .compare-table td{border:1px solid var(--line);padding:10px 12px;text-align:left}
+        .vpage .compare-table th{background:#0d2029;color:#fff;font-size:12px}
+        .vpage .compare-table td:first-child{color:var(--muted);white-space:nowrap}
+        .vpage .compare-table td{color:#dbe4e8}
+        .vpage .compare-cat-row td{background:#081820;color:var(--blue);font-weight:700;font-size:12px}
         .vpage .variant-row:hover{background:#0d2029}
         .vpage .variant-row.active{background:#0d2029;box-shadow:inset 3px 0 0 var(--blue)}
         .vpage .variant-row:last-child{border-bottom:0}
@@ -489,7 +544,7 @@ export default function ModelDetailPage() {
                   </div>
                 )}
                 {hasTransData && (
-                  <div className="variant-table-head"><span>Variant</span><span>Transmission / Fuel</span><span>Ex-Showroom Price</span></div>
+                  <div className="variant-table-head"><span>Variant</span><span>Transmission / Fuel</span><span>Ex-Showroom Price</span><span>Compare</span></div>
                 )}
                 <div>
                   {filteredVariants.length === 0 ? (
@@ -506,6 +561,14 @@ export default function ModelDetailPage() {
                           <div className="vname">{v.name}</div>
                           <div className="vtrans">{[v.transmission, v.fuelType].filter(Boolean).join(' • ') || '-'}</div>
                           <div className="vprice">{formatPrice(v.exShowroomPrice)}</div>
+                          <div className="vcheck">
+                            <input
+                              type="checkbox"
+                              checked={compareVariantIds.includes(v.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={() => toggleCompareVariant(v.id)}
+                            />
+                          </div>
                         </div>
                       );
                     })
@@ -672,7 +735,7 @@ export default function ModelDetailPage() {
         </main>
       )}
 
-      <footer>
+      <footer style={compareVariantIds.length > 0 ? { paddingBottom: 90 } : undefined}>
         <div className="container">
           <div className="footer-grid">
             <div>
@@ -697,6 +760,66 @@ export default function ModelDetailPage() {
           <div className="copyright"><span>© 2026 MK Finance. All Rights Reserved.</span><span>Call: 9824742356</span></div>
         </div>
       </footer>
+
+      {compareVariantIds.length > 0 && (
+        <div className="variant-compare-bar">
+          <span className="vcb-label">My Comparison</span>
+          <div className="vcb-chips">
+            {compareVariants.map((v: any) => (
+              <div key={v.id} className="vcb-chip">
+                <span className="vcb-name">{v.name}</span>
+                <span className="vcb-price">{formatPrice(v.exShowroomPrice)}</span>
+                <span className="vcb-x" onClick={() => toggleCompareVariant(v.id)}>✕</span>
+              </div>
+            ))}
+          </div>
+          <div className="vcb-actions">
+            <button className="btn secondary small" onClick={() => setCompareVariantIds([])}>Clear</button>
+            <button className="btn small" disabled={compareVariantIds.length < 2} onClick={() => setCompareModalOpen(true)}>Compare Now →</button>
+          </div>
+        </div>
+      )}
+
+      {compareModalOpen && (
+        <div className="compare-modal-overlay" onClick={() => setCompareModalOpen(false)}>
+          <div className="compare-modal" onClick={(e) => e.stopPropagation()}>
+            <span className="compare-modal-close" onClick={() => setCompareModalOpen(false)}>✕</span>
+            <h3 style={{ fontSize: 18, marginBottom: 4 }}>{data?.brand.name} {data?.model.name} — Variant Comparison</h3>
+            <p style={{ fontSize: 12, color: 'var(--muted)' }}>Comparing {compareVariants.length} variants</p>
+            {compareTable.length === 0 ? (
+              <p style={{ marginTop: 16, fontSize: 13, color: 'var(--muted)' }}>No specs added for these variants yet.</p>
+            ) : (
+              <table className="compare-table">
+                <thead>
+                  <tr>
+                    <th>Spec</th>
+                    {compareVariants.map((v: any) => (
+                      <th key={v.id}>{v.name}<br /><span style={{ color: 'var(--blue)', fontWeight: 400 }}>{formatPrice(v.exShowroomPrice)}</span></th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {compareTable.map((cat) => (
+                    <Fragment key={cat.name}>
+                      <tr className="compare-cat-row">
+                        <td colSpan={compareVariants.length + 1}>{cat.name}</td>
+                      </tr>
+                      {cat.fields.map((f, i) => (
+                        <tr key={i}>
+                          <td>{f.fieldName}</td>
+                          {compareVariants.map((v: any) => (
+                            <td key={v.id}>{f.values[v.id] ?? '—'}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </Fragment>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
 
       <EnquiryModal
         open={modalOpen}

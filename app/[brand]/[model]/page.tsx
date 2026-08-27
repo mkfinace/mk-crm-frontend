@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { slugify } from '@/lib/slugify';
 import EnquiryModal from '@/components/EnquiryModal';
 
 function formatPrice(n: number | null | undefined) {
@@ -20,6 +21,39 @@ function formatSpecValue(spec: any): string {
   return spec.valueText || '—';
 }
 
+// Rough EMI estimate — 80% loan, 9% p.a., 60-month tenure. Shown as an
+// approximate "starting from" figure since price/EMI details aren't yet
+// a stored field on Vehicle; replace with real admin-entered EMI later.
+function estimateEmi(price: number) {
+  const loan = price * 0.8;
+  const r = 0.09 / 12;
+  const n = 60;
+  const emi = (loan * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+  return Math.round(emi / 100) * 100;
+}
+
+function priceRangeOf(variants: any[]) {
+  const prices = variants.map((v) => v.exShowroomPrice).filter((p) => p && p > 0);
+  if (prices.length === 0) return { min: 0, max: 0, text: 'Price on request' };
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  const text = min === max ? formatPrice(min) : `${formatPrice(min)} - ${formatPrice(max)}`;
+  return { min, max, text };
+}
+
+// Pull a real spec value (from the currently active variant) matching a
+// keyword, for the Expert Opinion blurb — so it never invents a number.
+function findSpec(specsByCategory: { items: any[] }[], keyword: RegExp) {
+  for (const cat of specsByCategory) {
+    for (const s of cat.items) {
+      if (keyword.test(s.fieldName) && s.applicability !== 'NOT_AVAILABLE') {
+        return formatSpecValue(s);
+      }
+    }
+  }
+  return null;
+}
+
 export default function ModelDetailPage() {
   const params = useParams<{ brand: string; model: string }>();
   const [data, setData] = useState<any | null>(null);
@@ -31,6 +65,13 @@ export default function ModelDetailPage() {
   const [imageIdx, setImageIdx] = useState(0);
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [compareList, setCompareList] = useState<any[]>([]);
+
+  // Placeholder fields not yet on the CRM's Model/Vehicle schema — shown so
+  // the page matches the live mkfinance-website layout. Swap for real data
+  // once Category/Model Year become actual fields.
+  const CATEGORY = 'Car';
+  const MODEL_YEAR = 'New';
 
   useEffect(() => {
     setLoading(true);
@@ -45,6 +86,31 @@ export default function ModelDetailPage() {
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
   }, [params.brand, params.model]);
+
+  // "Compare More Options" — real other models from the catalogue (not dummy)
+  useEffect(() => {
+    if (!data) return;
+    api
+      .getFullCatalogue()
+      .then((brands: any[]) => {
+        const others: any[] = [];
+        for (const b of brands) {
+          for (const m of b.models || []) {
+            if (m.id === data.model.id) continue;
+            const variants = m.variants || [];
+            const prices = variants.map((v: any) => v.exShowroomPrice).filter((p: number) => p > 0);
+            others.push({
+              brandName: b.name,
+              modelName: m.name,
+              priceText: prices.length ? formatPrice(Math.min(...prices)) : 'Price on request',
+              fuelTypes: Array.from(new Set(variants.map((v: any) => v.fuelType).filter(Boolean))).join('/'),
+            });
+          }
+        }
+        setCompareList(others.slice(0, 3));
+      })
+      .catch(() => setCompareList([]));
+  }, [data]);
 
   const variant = data?.variants?.[variantIdx];
   const images: string[] = variant?.vehicle?.images || [];
@@ -109,6 +175,64 @@ export default function ModelDetailPage() {
   const hasTransData = (data?.variants || []).some((v: any) => v.transmission);
   const filteredVariants = (data?.variants || []).filter((v: any) => transFilter === 'All' || v.transmission === transFilter);
 
+  const priceRange = useMemo(() => (data ? priceRangeOf(data.variants) : { min: 0, max: 0, text: '' }), [data]);
+  const startingEmi = useMemo(() => (priceRange.min ? estimateEmi(priceRange.min) : null), [priceRange]);
+
+  const expertOpinion = useMemo(() => {
+    if (!data || !variant) return '';
+    const fuelTypes = Array.from(new Set(data.variants.map((v: any) => v.fuelType).filter(Boolean))).join('/');
+    const transTypes = Array.from(new Set(data.variants.map((v: any) => v.transmission).filter(Boolean))).join('/');
+    const power = findSpec(specsByCategory, /power/i);
+    const mileage = findSpec(specsByCategory, /mileage/i);
+    const engine = findSpec(specsByCategory, /engine type|displacement/i);
+    const parts: string[] = [];
+    parts.push(
+      `The ${data.brand.name} ${data.model.name} is available in ${data.variants.length} variant${data.variants.length > 1 ? 's' : ''}${fuelTypes ? ` across ${fuelTypes}` : ''}${transTypes ? ` with ${transTypes} transmission options` : ''}.`
+    );
+    if (engine || power) {
+      parts.push(`It's powered by ${engine ? engine : 'a well-tuned engine'}${power ? `, producing ${power}` : ''}.`);
+    }
+    if (mileage) parts.push(`Fuel efficiency is rated at ${mileage}, among the strong points in its segment.`);
+    parts.push(
+      `MK Finance Verdict: for buyers prioritising reliability, low running costs and easy financing, the ${data.model.name} remains a solid choice — and with vehicle loans and insurance available directly through us, getting on the road is straightforward.`
+    );
+    return parts.join(' ');
+  }, [data, variant, specsByCategory]);
+
+  const faqs = useMemo(() => {
+    if (!data || !variant) return [];
+    const items: { q: string; a: string }[] = [];
+    items.push({
+      q: `What is the price of ${data.brand.name} ${data.model.name}?`,
+      a: `The ${data.brand.name} ${data.model.name} is priced at ${priceRange.text} (ex-showroom estimate).`,
+    });
+    if (startingEmi) {
+      items.push({
+        q: `What is the EMI for ${data.brand.name} ${data.model.name}?`,
+        a: `${data.brand.name} ${data.model.name} EMI starts at approx. ₹${startingEmi.toLocaleString('en-IN')}/mo (80% loan, 9% p.a., 60 months). Contact MK Finance for a personalised quote based on your down payment and tenure.`,
+      });
+    }
+    items.push({
+      q: `What type of vehicle is the ${data.brand.name} ${data.model.name}?`,
+      a: `The ${data.brand.name} ${data.model.name} is a ${CATEGORY.toLowerCase()}${variant.fuelType ? `, available in ${variant.fuelType}` : ''}.`,
+    });
+    items.push({
+      q: `How many variants does the ${data.brand.name} ${data.model.name} have?`,
+      a: `The ${data.brand.name} ${data.model.name} is available in ${data.variants.length} variant${data.variants.length > 1 ? 's' : ''}: ${data.variants.map((v: any) => v.name).join(', ')}.`,
+    });
+    if (colours.length > 0) {
+      items.push({
+        q: `What colours are available for ${data.brand.name} ${data.model.name}?`,
+        a: `The ${data.brand.name} ${data.model.name} is available in ${colours.length} colour${colours.length > 1 ? 's' : ''}: ${colours.map((c) => c.name).join(', ')}.`,
+      });
+    }
+    items.push({
+      q: `Can I get a loan for ${data.brand.name} ${data.model.name} through MK Finance?`,
+      a: `Yes, MK Finance offers vehicle loans and insurance for the ${data.brand.name} ${data.model.name}. Contact us for a personalised EMI quote.`,
+    });
+    return items;
+  }, [data, variant, priceRange, startingEmi, colours]);
+
   function scrollToSec(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   }
@@ -129,7 +253,10 @@ export default function ModelDetailPage() {
         .vpage .top-links{margin-left:auto;display:flex;gap:20px;font-size:13px;color:#a8b7be;align-items:center}
         .vpage .city{font-weight:600;color:#fff}
         .vpage .top-links a.call{font-weight:700;color:var(--blue)}
-        .vpage .subnav{background:#07151c;border-bottom:1px solid var(--line);position:sticky;top:68px;z-index:900}
+        .vpage .mainnav{border-bottom:1px solid var(--line);background:#081820}
+        .vpage .mainnav .nav{height:46px;display:flex;align-items:center;gap:26px;overflow:auto;white-space:nowrap}
+        .vpage .mainnav button{background:none;border:0;font-size:13px;color:#b5c2c8;cursor:pointer}.vpage .mainnav button:hover{color:var(--blue)}
+        .vpage .subnav{background:#07151c;border-bottom:1px solid var(--line);position:sticky;top:114px;z-index:900}
         .vpage section[id]{scroll-margin-top:130px}
         .vpage .subnav .nav{height:50px;display:flex;align-items:center;gap:25px;overflow:auto;white-space:nowrap}
         .vpage .subnav button{background:none;border:0;font-size:13px;font-weight:600;color:#aebbc1;padding:16px 0;cursor:pointer}
@@ -209,7 +336,20 @@ export default function ModelDetailPage() {
         .vpage .footer-desc{font-size:12px;color:#9ca3af;max-width:300px;margin-top:8px}
         .vpage .copyright{border-top:1px solid #374151;margin-top:28px;padding-top:17px;font-size:11px;color:#9ca3af;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
         .vpage .loading-state,.vpage .notfound-state{text-align:center;padding:100px 20px;color:var(--muted)}
-        @media(max-width:900px){.vpage .top-links{display:none}.vpage .hero-grid,.vpage .price-layout{grid-template-columns:1fr}.vpage .spec-strip{grid-template-columns:repeat(2,1fr)}.vpage .gallery{height:320px}.vpage .footer-grid{grid-template-columns:1fr 1fr}.vpage .gallery-grid{grid-template-columns:repeat(2,1fr)}}
+        .vpage .expert-card{padding:22px}
+        .vpage .expert-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+        .vpage .expert-badge{background:var(--green);color:#fff;padding:5px 10px;border-radius:5px;font-weight:800;font-size:12px}
+        .vpage .expert-card p{font-size:13px;color:#c3d0d5;line-height:1.8}
+        .vpage .compare{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+        .vpage .compare-card{padding:15px;cursor:pointer}
+        .vpage .compare-img{height:70px;border-radius:7px;background:#081820;display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:10px}
+        .vpage .compare-card h3{font-size:14px;color:#fff}.vpage .compare-card p{font-size:12px;color:var(--muted);margin:4px 0 10px}
+        .vpage .compare-price{font-weight:800;font-size:13px;color:var(--blue)}
+        .vpage .faq-item{padding:15px 0;border-bottom:1px solid var(--line)}
+        .vpage .faq-item:last-child{border-bottom:0}
+        .vpage .faq-q{font-size:13px;font-weight:700;color:#fff}.vpage .faq-a{font-size:12px;color:var(--muted);margin-top:5px}
+        .vpage .coming-soon{padding:32px 20px;text-align:center;color:var(--muted);font-size:13px}
+        @media(max-width:900px){.vpage .top-links{display:none}.vpage .hero-grid,.vpage .price-layout{grid-template-columns:1fr}.vpage .spec-strip{grid-template-columns:repeat(2,1fr)}.vpage .gallery{height:320px}.vpage .footer-grid{grid-template-columns:1fr 1fr}.vpage .gallery-grid{grid-template-columns:repeat(2,1fr)}.vpage .compare{grid-template-columns:1fr}}
         @media(max-width:600px){.vpage .topbar{height:auto;padding:10px 0}.vpage .vehicle-title h1{font-size:25px}.vpage .cta{flex-direction:column;align-items:flex-start}.vpage .footer-grid{grid-template-columns:1fr}.vpage .copyright{flex-direction:column;gap:6px}.vpage .specs-tab-layout{grid-template-columns:1fr}.vpage .specs-tab-sidebar{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line)}.vpage .specs-tab-item{white-space:nowrap;border-bottom:0;border-right:1px solid var(--line)}.vpage .specs-tab-item.active{border-left:0;border-bottom:3px solid var(--blue)}}
       `}</style>
 
@@ -223,6 +363,15 @@ export default function ModelDetailPage() {
         </div>
       </header>
 
+      <nav className="mainnav">
+        <div className="container nav">
+          <Link href="/">New Cars</Link>
+          <a href="tel:9824742356">Car Loans</a>
+          <a href="tel:9824742356">Insurance</a>
+          <button onClick={() => scrollToSec('reviews')}>Reviews</button>
+        </div>
+      </nav>
+
       {!loading && !notFound && data && variant && (
         <nav className="subnav">
           <div className="container nav">
@@ -230,8 +379,12 @@ export default function ModelDetailPage() {
             <button onClick={() => scrollToSec('price')}>Price & EMI</button>
             <button onClick={() => scrollToSec('variants')}>Variants</button>
             {images.length > 0 && <button onClick={() => scrollToSec('images')}>Images</button>}
+            <button onClick={() => scrollToSec('expert')}>Expert Opinion</button>
             <button onClick={() => scrollToSec('specs')}>Specs</button>
             {colours.length > 0 && <button onClick={() => scrollToSec('colors')}>Colours</button>}
+            {compareList.length > 0 && <button onClick={() => scrollToSec('compare')}>Compare</button>}
+            <button onClick={() => scrollToSec('reviews')}>Reviews</button>
+            <button onClick={() => scrollToSec('vfaq')}>FAQs</button>
           </div>
         </nav>
       )}
@@ -278,7 +431,7 @@ export default function ModelDetailPage() {
                     <span className="tag-chip">Brand New</span>
                     <span className="tag-chip">{variant.fuelType}</span>
                   </div>
-                  <div className="price">{formatPrice(variant.exShowroomPrice)}*</div>
+                  <div className="price">{priceRange.text}*</div>
                   <div className="price-note">*Ex-showroom price estimate — loan/EMI available through MK Finance</div>
                   <div className="btn-row">
                     <button className="btn" onClick={() => setModalOpen(true)}>Get Finance Quote</button>
@@ -289,9 +442,9 @@ export default function ModelDetailPage() {
               </div>
               <div className="spec-strip">
                 <div className="spec"><div className="spec-label">Brand</div><div className="spec-value">{data.brand.name}</div></div>
+                <div className="spec"><div className="spec-label">Model Year</div><div className="spec-value">{MODEL_YEAR}</div></div>
                 <div className="spec"><div className="spec-label">Fuel Type</div><div className="spec-value">{variant.fuelType || '-'}</div></div>
-                <div className="spec"><div className="spec-label">Transmission</div><div className="spec-value">{variant.transmission || '-'}</div></div>
-                <div className="spec"><div className="spec-label">Variants</div><div className="spec-value">{data.variants.length} Available</div></div>
+                <div className="spec"><div className="spec-label">Category</div><div className="spec-value">{CATEGORY}</div></div>
               </div>
             </div>
           </section>
@@ -302,15 +455,17 @@ export default function ModelDetailPage() {
               <p className="section-sub">Estimated on-road price ane EMI details.</p>
               <div className="price-layout">
                 <div className="card side-card">
-                  <h3>Vehicle Price — {variant.name}</h3>
-                  <div className="emi-row"><span>Ex-showroom Price</span><strong>{formatPrice(variant.exShowroomPrice)}</strong></div>
+                  <h3>Vehicle Price</h3>
+                  <div className="emi-row"><span>Ex-showroom Price</span><strong>{priceRange.text}</strong></div>
                   <div className="emi-row"><span>Fuel Type</span><strong>{variant.fuelType || '-'}</strong></div>
-                  <div className="emi-row"><span>Transmission</span><strong>{variant.transmission || '-'}</strong></div>
+                  <div className="emi-row"><span>Model Year</span><strong>{MODEL_YEAR}</strong></div>
+                  <div className="emi-row"><span>Category</span><strong>{CATEGORY}</strong></div>
                   <p style={{ marginTop: 14 }}>Contact us for the exact on-road price (including RTO + Insurance) — we&apos;ll get you the best deal.</p>
                 </div>
                 <div className="card side-card">
                   <h3>EMI Estimate</h3>
-                  <p>Get a personalised monthly payment plan based on your profile.</p>
+                  <p>Approximate monthly payment.</p>
+                  <div className="emi-row"><span>Starting EMI</span><strong>{startingEmi ? `Starting ₹${startingEmi.toLocaleString('en-IN')}/mo` : '-'}</strong></div>
                   <div className="emi-row"><span>Loan Tenure</span><strong>Upto 84 Months</strong></div>
                   <div className="emi-row"><span>Processing</span><strong>24-48 Hours</strong></div>
                   <button className="btn full" onClick={() => setModalOpen(true)}>Get Personalised EMI</button>
@@ -374,7 +529,20 @@ export default function ModelDetailPage() {
             </section>
           )}
 
-          <section className="section alt" id="specs">
+          {expertOpinion && (
+            <section className="section alt" id="expert">
+              <div className="container">
+                <h2 className="section-title">{data.brand.name} {data.model.name} Expert Opinion</h2>
+                <p className="section-sub">Our team&apos;s opinion on this vehicle.</p>
+                <div className="card expert-card">
+                  <div className="expert-head"><span className="expert-badge">⭐ MK Verified</span></div>
+                  <p>{expertOpinion}</p>
+                </div>
+              </div>
+            </section>
+          )}
+
+          <section className="section" id="specs">
             <div className="container">
               <h2 className="section-title">{data.brand.name} {data.model.name} Specifications</h2>
               <p className="section-sub">All the vehicle&apos;s details in one place.</p>
@@ -417,7 +585,7 @@ export default function ModelDetailPage() {
           </section>
 
           {colours.length > 0 && (
-            <section className="section" id="colors">
+            <section className="section alt" id="colors">
               <div className="container">
                 <h2 className="section-title">{data.brand.name} {data.model.name} Colours</h2>
                 <p className="section-sub">Colours available for this vehicle.</p>
@@ -433,7 +601,64 @@ export default function ModelDetailPage() {
             </section>
           )}
 
+          {compareList.length > 0 && (
+            <section className="section" id="compare">
+              <div className="container">
+                <h2 className="section-title">Compare More Options</h2>
+                <p className="section-sub">Explore other vehicles available from MK Finance.</p>
+                <div className="compare">
+                  {compareList.map((c, i) => (
+                    <Link key={i} href={`/${slugify(c.brandName)}/${slugify(c.modelName)}`} className="card compare-card">
+                      <div className="compare-img">🚗</div>
+                      <h3>{c.brandName} {c.modelName}</h3>
+                      <p>{c.fuelTypes || '-'}</p>
+                      <div className="compare-price">{c.priceText}</div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
+          <section className="section alt" id="reviews">
+            <div className="container">
+              <h2 className="section-title">Customer Reviews</h2>
+              <p className="section-sub">Real customers na experiences.</p>
+              <div className="card coming-soon">⭐ We&apos;re collecting reviews — we&apos;ll reach out on WhatsApp for your review after vehicle delivery.</div>
+            </div>
+          </section>
+
+          {faqs.length > 0 && (
+            <section className="section" id="vfaq">
+              <div className="container">
+                <h2 className="section-title">{data.brand.name} {data.model.name} FAQs</h2>
+                <p className="section-sub">Quick answers about this vehicle.</p>
+                <div className="card" style={{ padding: '0 20px' }}>
+                  {faqs.map((item, i) => (
+                    <div key={i} className="faq-item">
+                      <div className="faq-q">{item.q}</div>
+                      <div className="faq-a">{item.a}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
           <section className="section alt">
+            <div className="container">
+              <h2 className="section-title">Loan & Finance FAQs</h2>
+              <p className="section-sub">Common questions about the loan and purchase process.</p>
+              <div className="card" style={{ padding: '0 20px' }}>
+                <div className="faq-item"><div className="faq-q">What documents are needed for a loan?</div><div className="faq-a">Aadhar card, PAN card, income proof (salary slip/ITR), address proof, and bank statement — the MK Finance team will give you the exact list based on your profile.</div></div>
+                <div className="faq-item"><div className="faq-q">How long does loan approval take?</div><div className="faq-a">With the right documents, approval is usually granted within 24-48 hours.</div></div>
+                <div className="faq-item"><div className="faq-q">How much down payment is required?</div><div className="faq-a">This depends on the vehicle&apos;s ex-showroom price and your eligibility — contact us for the exact amount.</div></div>
+                <div className="faq-item"><div className="faq-q">Can I also get insurance through MK Finance?</div><div className="faq-a">Yes, MK Finance provides insurance alongside your vehicle loan.</div></div>
+              </div>
+            </div>
+          </section>
+
+          <section className="section">
             <div className="container">
               <div className="cta">
                 <div>
@@ -458,6 +683,7 @@ export default function ModelDetailPage() {
               <h4>Finance</h4>
               <a href="tel:9824742356">Car Loan</a>
               <a href="tel:9824742356">Commercial Vehicle Loan</a>
+              <a href="tel:9824742356">EMI Calculator</a>
               <a href="tel:9824742356">Insurance</a>
             </div>
             <div>

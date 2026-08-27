@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
 import { Rajdhani, Montserrat } from 'next/font/google';
 import { api } from '@/lib/api';
 import EnquiryModal from '@/components/EnquiryModal';
@@ -10,282 +9,317 @@ import EnquiryModal from '@/components/EnquiryModal';
 const rajdhani = Rajdhani({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--font-heading' });
 const montserrat = Montserrat({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700', '800'], variable: '--font-body' });
 
+function slugify(text: string) {
+  return String(text).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
 function formatLakh(n: number) {
   return '₹' + (n / 100000).toFixed(2) + ' L';
 }
-
-function formatSpecValue(spec: any): string {
-  if (spec.applicability === 'NOT_AVAILABLE') return '—';
-  if (spec.dataType === 'BOOLEAN') return spec.valueBoolean ? 'Yes' : 'No';
-  if (spec.valueNumber !== null && spec.valueNumber !== undefined) {
-    return `${spec.valueNumber}${spec.unit ? ' ' + spec.unit : ''}`;
-  }
-  return spec.valueText || '—';
+function estimateEmi(price: number) {
+  const loan = price * 0.8; // rough 80% financed estimate
+  const r = 8.5 / 12 / 100;
+  const months = 84;
+  const emi = (loan * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
+  return Math.round(emi);
 }
 
-const APPLICABILITY_BADGE: Record<string, { label: string; className: string }> = {
-  STANDARD: { label: 'Standard', className: 'bg-[#1a6e8e]/15 text-[#2a8aad] border-[#1a6e8e]/30' },
-  OPTIONAL: { label: 'Optional', className: 'bg-white/[0.06] text-white/50 border-white/10' },
-  PACKAGE: { label: 'Package', className: 'bg-[#e63030]/10 text-[#e63030] border-[#e63030]/30' },
-  ACCESSORY: { label: 'Accessory', className: 'bg-white/[0.06] text-white/50 border-white/10' },
-  NOT_AVAILABLE: { label: 'Not Available', className: 'bg-white/[0.03] text-white/25 border-white/5' },
-};
+const TABS = ['Price & EMI', 'Variants', 'Images', 'Specs', 'Colours'];
 
-export default function ModelDetailPage() {
-  const params = useParams<{ brand: string; model: string }>();
-  const [data, setData] = useState<any | null>(null);
+export default function VehicleDetailPage() {
+  const params = useParams();
+  const brandSlug = params.brand as string;
+  const modelSlug = params.model as string;
+
+  const [catalogue, setCatalogue] = useState<any[]>([]);
+  const [fieldCategories, setFieldCategories] = useState<any[]>([]);
+  const [specValues, setSpecValues] = useState<any[]>([]);
+  const [colours, setColours] = useState<{ name: string; hex: string }[]>([]);
+  const [images, setImages] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState('Price & EMI');
+  const [activeImg, setActiveImg] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
-  const [variantIdx, setVariantIdx] = useState(0);
-  const [colourIdx, setColourIdx] = useState(0);
-  const [imageIdx, setImageIdx] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
-    setNotFound(false);
-    api
-      .getModelDetail(params.brand as string, params.model as string)
-      .then((res) => {
-        setData(res);
-        setVariantIdx(0);
-        setColourIdx(0);
-        setImageIdx(0);
-      })
-      .catch(() => setNotFound(true))
-      .finally(() => setLoading(false));
-  }, [params.brand, params.model]);
+    api.getFullCatalogue().then(setCatalogue).catch(() => {}).finally(() => setLoading(false));
+    api.listFieldCategories().then(setFieldCategories).catch(() => {});
+  }, []);
 
-  const variant = data?.variants?.[variantIdx];
+  const match = useMemo(() => {
+    for (const brand of catalogue) {
+      if (slugify(brand.name) !== brandSlug) continue;
+      for (const model of brand.models || []) {
+        if (slugify(model.name) === modelSlug) return { brand, model };
+      }
+    }
+    return null;
+  }, [catalogue, brandSlug, modelSlug]);
+
+  const variants = match?.model.variants || [];
+  const sortedVariants = [...variants].sort((a: any, b: any) => a.exShowroomPrice - b.exShowroomPrice);
+  const topVariant = sortedVariants[sortedVariants.length - 1];
+  const minPrice = sortedVariants[0]?.exShowroomPrice;
+  const maxPrice = sortedVariants[sortedVariants.length - 1]?.exShowroomPrice;
+  const priceLabel = minPrice ? (minPrice === maxPrice ? formatLakh(minPrice) : `${formatLakh(minPrice)} - ${formatLakh(maxPrice)}`) : '';
+  const fuels = [...new Set(sortedVariants.map((v: any) => v.fuelType))].join('/');
+  const transmissions = [...new Set(sortedVariants.map((v: any) => v.transmission))].join('/');
+
+  useEffect(() => {
+    if (!topVariant) return;
+    Promise.all([api.listFieldValuesForVariant(topVariant.id), api.getVehicleByVariant(topVariant.id)])
+      .then(([values, vehicle]) => {
+        setSpecValues(values);
+        setColours(vehicle.colours || []);
+        setImages(vehicle.images || []);
+      })
+      .catch(() => {});
+  }, [topVariant?.id]);
 
   const specsByCategory = useMemo(() => {
-    if (!variant?.specs) return [];
-    const map: Record<string, { order: number; items: any[] }> = {};
-    for (const s of variant.specs) {
-      if (!map[s.categoryName]) map[s.categoryName] = { order: s.categoryOrder ?? 0, items: [] };
-      map[s.categoryName].items.push(s);
+    const fieldMeta: Record<string, any> = {};
+    for (const cat of fieldCategories) {
+      for (const f of cat.fields || []) fieldMeta[f.id] = { ...f, categoryName: cat.name };
     }
-    return Object.entries(map)
-      .map(([name, v]) => ({ name, order: v.order, items: v.items.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)) }))
-      .sort((a, b) => a.order - b.order);
-  }, [variant]);
+    const grouped: Record<string, { name: string; value: string }[]> = {};
+    for (const v of specValues) {
+      const meta = fieldMeta[v.fieldId];
+      if (!meta) continue;
+      let display = '';
+      if (v.valueBoolean !== null && v.valueBoolean !== undefined) display = v.valueBoolean ? 'Yes' : 'No';
+      else if (v.valueNumber !== null && v.valueNumber !== undefined) display = `${v.valueNumber}${meta.unit ? ' ' + meta.unit : ''}`;
+      else if (v.valueText) display = v.valueText;
+      if (!display) continue;
+      if (!grouped[meta.categoryName]) grouped[meta.categoryName] = [];
+      grouped[meta.categoryName].push({ name: meta.name, value: display });
+    }
+    return grouped;
+  }, [specValues, fieldCategories]);
 
-  const images: string[] = variant?.vehicle?.images || [];
-  const colours: { name: string; hex: string }[] = variant?.vehicle?.colours || [];
-
-  function selectVariant(i: number) {
-    setVariantIdx(i);
-    setColourIdx(0);
-    setImageIdx(0);
+  function openEnquiry() {
+    setModalOpen(true);
   }
+
+  if (loading) {
+    return (
+      <div className={`${rajdhani.variable} ${montserrat.variable} bg-[#0a0a0a] text-white min-h-screen flex items-center justify-center`} style={{ fontFamily: 'var(--font-body)' }}>
+        <p className="text-white/40">Loading…</p>
+      </div>
+    );
+  }
+
+  if (!match) {
+    return (
+      <div className={`${rajdhani.variable} ${montserrat.variable} bg-[#0a0a0a] text-white min-h-screen flex items-center justify-center`} style={{ fontFamily: 'var(--font-body)' }}>
+        <div className="text-center">
+          <p className="text-white/60 mb-4">Vehicle not found.</p>
+          <a href="/" className="text-[#2a8aad] font-medium">← Back to home</a>
+        </div>
+      </div>
+    );
+  }
+
+  const allImages = images.length > 0 ? images : [];
 
   return (
     <div className={`${rajdhani.variable} ${montserrat.variable} bg-[#0a0a0a] text-white min-h-screen`} style={{ fontFamily: 'var(--font-body)' }}>
       {/* NAVBAR */}
-      <nav className="fixed top-0 w-full z-[1000] bg-black/95 backdrop-blur-xl border-b border-white/[0.08] px-4 md:px-8 h-[70px] flex items-center justify-between">
-        <Link href="/" className="font-bold text-lg" style={{ fontFamily: 'var(--font-heading)' }}>
+      <nav className="bg-black border-b border-white/[0.08] px-4 md:px-8 py-3 flex items-center gap-6">
+        <a href="/" className="font-bold text-lg shrink-0" style={{ fontFamily: 'var(--font-heading)' }}>
           <span className="text-[#e63030]">MK</span> <span className="text-[#2a8aad]">Finance</span>
-        </Link>
-        <Link href="/" className="text-white/60 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">
-          ← Back to Vehicles
-        </Link>
+        </a>
+        <div className="flex-1 max-w-md">
+          <input
+            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-md text-white text-[13px] placeholder:text-white/30 outline-none"
+            placeholder="🔍 Search cars, brands or models"
+          />
+        </div>
+        <div className="hidden md:flex items-center gap-5 text-[12.5px] text-white/60 shrink-0">
+          <span>📍 Valsad, Gujarat</span>
+          <a href="tel:+919824742356" className="text-[#2a8aad] font-medium">📞 98247 42356</a>
+        </div>
       </nav>
 
-      <div className="pt-[70px]">
-        {loading && (
-          <div className="max-w-[1200px] mx-auto px-6 md:px-8 py-24">
-            <div className="grid md:grid-cols-2 gap-10">
-              <div className="h-[380px] bg-white/[0.03] border border-white/[0.08] rounded-lg animate-pulse" />
-              <div className="space-y-4">
-                <div className="h-8 w-2/3 bg-white/[0.03] rounded animate-pulse" />
-                <div className="h-5 w-1/3 bg-white/[0.03] rounded animate-pulse" />
-                <div className="h-40 bg-white/[0.03] rounded animate-pulse" />
-              </div>
+      <div className="max-w-[1200px] mx-auto px-4 md:px-8 py-6 grid md:grid-cols-[1fr_360px] gap-8">
+        <div>
+          {/* Hero image */}
+          <div className="bg-[#141414] border border-white/[0.08] rounded-lg overflow-hidden mb-2">
+            <div className="aspect-video bg-[#1a6e8e]/[0.06] flex items-center justify-center text-8xl">
+              {allImages[activeImg] ? (
+                <img src={allImages[activeImg]} alt="" className="w-full h-full object-cover" onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} />
+              ) : '🚗'}
             </div>
           </div>
-        )}
-
-        {!loading && notFound && (
-          <div className="max-w-[600px] mx-auto px-6 py-32 text-center">
-            <div className="text-6xl mb-6">🚗</div>
-            <h1 className="text-2xl font-bold mb-3" style={{ fontFamily: 'var(--font-heading)' }}>
-              This vehicle isn't listed
-            </h1>
-            <p className="text-white/50 text-sm mb-8">
-              We couldn't find this model. It may have been renamed or removed.
-            </p>
-            <Link href="/" className="inline-block px-6 py-3 bg-[#1a6e8e] hover:bg-[#0d4d6b] text-white rounded-md text-sm font-bold">
-              Browse All Vehicles
-            </Link>
-          </div>
-        )}
-
-        {!loading && !notFound && data && variant && (
-          <>
-            {/* BREADCRUMB */}
-            <div className="max-w-[1200px] mx-auto px-6 md:px-8 pt-6 text-[13px] text-white/40 flex items-center gap-2">
-              <Link href="/" className="hover:text-[#2a8aad]">Home</Link>
-              <span>/</span>
-              <span>{data.brand.name}</span>
-              <span>/</span>
-              <span className="text-white/70">{data.model.name}</span>
+          {allImages.length > 1 && (
+            <div className="flex gap-2 mb-5">
+              {allImages.map((url, i) => (
+                <button key={i} onClick={() => setActiveImg(i)} className={`w-16 h-16 rounded-md overflow-hidden border-2 ${activeImg === i ? 'border-[#2a8aad]' : 'border-white/10'}`}>
+                  <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => ((e.target as HTMLImageElement).style.opacity = '0.2')} />
+                </button>
+              ))}
             </div>
+          )}
 
-            {/* HERO: gallery + summary */}
-            <section className="max-w-[1200px] mx-auto px-6 md:px-8 pt-6 pb-16 grid md:grid-cols-2 gap-10">
-              {/* Gallery */}
-              <div>
-                <div className="h-[280px] md:h-[380px] bg-[#1a6e8e]/[0.06] border border-white/[0.08] rounded-lg flex items-center justify-center text-8xl overflow-hidden relative">
-                  {images.length > 0 ? (
-                    <img src={images[imageIdx]} alt={`${data.brand.name} ${data.model.name}`} className="w-full h-full object-cover" />
-                  ) : (
-                    '🚗'
-                  )}
-                  <span className="absolute top-3 left-3 bg-black/70 backdrop-blur px-3 py-1 rounded-full text-[11px] font-bold tracking-wide text-white/70 border border-white/[0.08]">
-                    {data.brand.name}
-                  </span>
-                </div>
-                {images.length > 1 && (
-                  <div className="flex gap-3 mt-4 overflow-x-auto pb-1">
-                    {images.map((img, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setImageIdx(i)}
-                        className={`w-20 h-16 shrink-0 rounded-md overflow-hidden border-2 transition-colors ${
-                          i === imageIdx ? 'border-[#1a6e8e]' : 'border-white/10 opacity-60 hover:opacity-100'
-                        }`}
-                      >
-                        <img src={img} alt="" className="w-full h-full object-cover" />
-                      </button>
-                    ))}
-                  </div>
-                )}
+          {/* Tabs */}
+          <div className="flex gap-1 border-b border-white/[0.08] mb-6 overflow-x-auto">
+            {TABS.map((t) => (
+              <button
+                key={t}
+                onClick={() => setActiveTab(t)}
+                className={`px-4 py-2.5 text-[13px] font-medium whitespace-nowrap border-b-2 transition-colors ${activeTab === t ? 'border-[#2a8aad] text-[#2a8aad]' : 'border-transparent text-white/50 hover:text-white'}`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+
+          {/* Info grid */}
+          <div className="grid grid-cols-4 gap-3 mb-8">
+            {[
+              { label: 'Brand', value: match.brand.name },
+              { label: 'Model Year', value: 'New' },
+              { label: 'Fuel Type', value: fuels || '—' },
+              { label: 'Category', value: match.model.category === 'CAR' ? 'Car' : match.model.category },
+            ].map((item, i) => (
+              <div key={i} className="bg-[#141414] border border-white/[0.08] rounded-lg px-4 py-3">
+                <p className="text-[10.5px] text-white/40 mb-0.5">{item.label}</p>
+                <p className="text-[13px] font-semibold">{item.value}</p>
               </div>
+            ))}
+          </div>
 
-              {/* Summary */}
-              <div>
-                <h1 className="text-[2.2rem] md:text-[2.8rem] font-bold leading-[1.1] mb-2" style={{ fontFamily: 'var(--font-heading)' }}>
-                  {data.brand.name} <span className="text-[#e63030]">{data.model.name}</span>
-                </h1>
-                <p className="text-white/40 text-sm mb-6">{variant.fuelType} · {variant.transmission}</p>
-                <p className="text-[2rem] font-bold text-[#2a8aad] mb-1" style={{ fontFamily: 'var(--font-heading)' }}>
-                  {formatLakh(variant.exShowroomPrice)}
-                </p>
-                <p className="text-white/40 text-xs mb-8">Ex-showroom price</p>
-
-                {/* Variant tabs */}
-                {data.variants.length > 1 && (
-                  <div className="mb-8">
-                    <p className="text-[11px] uppercase tracking-[2px] text-white/40 mb-3">Choose Variant</p>
-                    <div className="flex flex-wrap gap-2">
-                      {data.variants.map((v: any, i: number) => (
-                        <button
-                          key={v.id}
-                          onClick={() => selectVariant(i)}
-                          className={`px-4 py-2.5 rounded-md text-[13px] font-semibold border transition-colors ${
-                            i === variantIdx
-                              ? 'bg-[#1a6e8e] border-[#1a6e8e] text-white'
-                              : 'border-white/10 text-white/60 hover:border-[#1a6e8e]/50 hover:text-white'
-                          }`}
-                        >
-                          {v.name} <span className="opacity-60">· {formatLakh(v.exShowroomPrice)}</span>
-                        </button>
-                      ))}
+          {activeTab === 'Price & EMI' && (
+            <div>
+              <h2 className="text-2xl font-bold mb-1" style={{ fontFamily: 'var(--font-heading)' }}>{match.brand.name} {match.model.name} Price &amp; EMI</h2>
+              <p className="text-white/45 text-sm mb-5">Estimated on-road price and EMI details.</p>
+              <div className="grid md:grid-cols-2 gap-5">
+                <div className="bg-[#141414] border border-white/[0.08] rounded-lg p-6">
+                  <h3 className="font-bold mb-4" style={{ fontFamily: 'var(--font-heading)' }}>Vehicle Price</h3>
+                  {[
+                    ['Ex-showroom Price', priceLabel],
+                    ['Fuel Type', fuels],
+                    ['Transmission', transmissions],
+                    ['Category', match.model.category === 'CAR' ? 'Car' : match.model.category],
+                  ].map(([label, val], i) => (
+                    <div key={i} className="flex justify-between py-2.5 border-b border-white/[0.05] text-sm last:border-0">
+                      <span className="text-white/50">{label}</span>
+                      <span className="font-semibold">{val}</span>
                     </div>
-                  </div>
-                )}
-
-                {/* Colours */}
-                {colours.length > 0 && (
-                  <div className="mb-8">
-                    <p className="text-[11px] uppercase tracking-[2px] text-white/40 mb-3">
-                      Colour — <span className="text-white/70">{colours[colourIdx]?.name}</span>
-                    </p>
-                    <div className="flex flex-wrap gap-3">
-                      {colours.map((c, i) => (
-                        <button
-                          key={i}
-                          onClick={() => setColourIdx(i)}
-                          title={c.name}
-                          className={`w-9 h-9 rounded-full border-2 transition-transform ${
-                            i === colourIdx ? 'border-[#2a8aad] scale-110' : 'border-white/20 hover:scale-105'
-                          }`}
-                          style={{ backgroundColor: c.hex }}
-                        />
-                      ))}
+                  ))}
+                  <p className="text-[11.5px] text-white/35 mt-4">Contact us for the exact on-road price (including RTO + Insurance) — we'll get you the best deal.</p>
+                </div>
+                <div className="bg-[#141414] border border-white/[0.08] rounded-lg p-6">
+                  <h3 className="font-bold mb-4" style={{ fontFamily: 'var(--font-heading)' }}>EMI Estimate</h3>
+                  {minPrice && [
+                    ['Starting EMI', `₹${estimateEmi(minPrice).toLocaleString('en-IN')}/mo`],
+                    ['Loan Tenure', 'Upto 84 Months'],
+                    ['Processing', '24-48 Hours'],
+                  ].map(([label, val], i) => (
+                    <div key={i} className="flex justify-between py-2.5 border-b border-white/[0.05] text-sm last:border-0">
+                      <span className="text-white/50">{label}</span>
+                      <span className="font-semibold text-[#2a8aad]">{val}</span>
                     </div>
-                  </div>
-                )}
-
-                <div className="flex gap-4 flex-wrap">
-                  <button
-                    onClick={() => setModalOpen(true)}
-                    className="bg-[#e63030] hover:bg-[#b01c1c] px-8 py-3.5 rounded font-semibold text-sm"
-                  >
-                    Get Quote
-                  </button>
-                  <a
-                    href="#specs"
-                    className="border-2 border-white/30 hover:border-[#2a8aad] hover:text-[#2a8aad] px-8 py-3.5 rounded font-semibold text-sm"
-                  >
-                    View Full Specs
-                  </a>
+                  ))}
+                  <button onClick={openEnquiry} className="w-full mt-5 py-3 bg-[#1a6e8e] hover:bg-[#0d4d6b] rounded-md font-bold text-sm">Get Personalised EMI</button>
                 </div>
               </div>
-            </section>
+            </div>
+          )}
 
-            {/* SPECS */}
-            <section id="specs" className="py-20 px-6 md:px-8 bg-[#0f0f0f]">
-              <div className="max-w-[1200px] mx-auto">
-                <div className="flex items-center gap-2 text-[11px] tracking-[3px] uppercase text-[#2a8aad] font-semibold mb-3">
-                  <span className="w-6 h-0.5 bg-[#2a8aad]" /> Specifications
+          {activeTab === 'Variants' && (
+            <div>
+              <h2 className="text-xl font-bold mb-4" style={{ fontFamily: 'var(--font-heading)' }}>Variants</h2>
+              <div className="space-y-2">
+                {sortedVariants.map((v: any) => (
+                  <div key={v.id} className="bg-[#141414] border border-white/[0.08] rounded-lg px-5 py-4 flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-[14px]">{v.name}</p>
+                      <p className="text-[12px] text-white/40">{v.fuelType} · {v.transmission}</p>
+                    </div>
+                    <p className="font-bold text-[#2a8aad]" style={{ fontFamily: 'var(--font-heading)' }}>{formatLakh(v.exShowroomPrice)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'Images' && (
+            <div>
+              <h2 className="text-xl font-bold mb-4" style={{ fontFamily: 'var(--font-heading)' }}>Images</h2>
+              {allImages.length === 0 ? (
+                <p className="text-white/40 text-sm">No images added yet.</p>
+              ) : (
+                <div className="grid grid-cols-3 gap-3">
+                  {allImages.map((url, i) => (
+                    <div key={i} className="aspect-video rounded-lg overflow-hidden bg-[#141414] border border-white/[0.08]">
+                      <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => ((e.target as HTMLImageElement).style.opacity = '0.2')} />
+                    </div>
+                  ))}
                 </div>
-                <h2 className="text-[2rem] md:text-[2.6rem] font-bold mb-10" style={{ fontFamily: 'var(--font-heading)' }}>
-                  {variant.name} <span className="text-[#e63030]">Specs</span>
-                </h2>
+              )}
+            </div>
+          )}
 
-                {specsByCategory.length === 0 ? (
-                  <p className="text-white/40 text-sm">Detailed specs for this variant haven't been added yet.</p>
-                ) : (
-                  <div className="grid md:grid-cols-2 gap-8">
-                    {specsByCategory.map((cat) => (
-                      <div key={cat.name} className="bg-[#141414] border border-white/[0.08] rounded-lg p-6">
-                        <h3 className="text-base font-bold mb-4 text-[#2a8aad]" style={{ fontFamily: 'var(--font-heading)' }}>
-                          {cat.name}
-                        </h3>
-                        <div className="space-y-3">
-                          {cat.items.map((s: any, i: number) => {
-                            const badge = APPLICABILITY_BADGE[s.applicability] || APPLICABILITY_BADGE.STANDARD;
-                            return (
-                              <div key={i} className="flex items-center justify-between gap-4 text-[13px] py-1.5 border-b border-white/[0.05] last:border-0">
-                                <span className="text-white/60">{s.fieldName}</span>
-                                <span className="flex items-center gap-2 text-right">
-                                  <span className="text-white/85 font-medium">{formatSpecValue(s)}</span>
-                                  {s.applicability !== 'STANDARD' && (
-                                    <span className={`text-[9px] px-2 py-0.5 rounded-full border uppercase tracking-wide ${badge.className}`}>
-                                      {badge.label}
-                                    </span>
-                                  )}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
+          {activeTab === 'Specs' && (
+            <div>
+              <h2 className="text-xl font-bold mb-4" style={{ fontFamily: 'var(--font-heading)' }}>Specifications</h2>
+              {Object.keys(specsByCategory).length === 0 ? (
+                <p className="text-white/40 text-sm">Specifications coming soon.</p>
+              ) : (
+                <div className="space-y-5">
+                  {Object.entries(specsByCategory).map(([catName, fields]) => (
+                    <div key={catName}>
+                      <p className="text-[11px] font-semibold text-[#2a8aad] uppercase tracking-wide mb-2">{catName}</p>
+                      <div className="grid grid-cols-2 gap-x-6">
+                        {fields.map((f, i) => (
+                          <div key={i} className="flex justify-between py-2 border-b border-white/[0.05] text-[13px]">
+                            <span className="text-white/50">{f.name}</span>
+                            <span className="font-medium">{f.value}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
-          </>
-        )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'Colours' && (
+            <div>
+              <h2 className="text-xl font-bold mb-4" style={{ fontFamily: 'var(--font-heading)' }}>Available Colours</h2>
+              {colours.length === 0 ? (
+                <p className="text-white/40 text-sm">Colour options coming soon.</p>
+              ) : (
+                <div className="flex flex-wrap gap-4">
+                  {colours.map((c, i) => (
+                    <div key={i} className="text-center">
+                      <div className="w-16 h-16 rounded-full border-2 border-white/10 mb-2" style={{ backgroundColor: c.hex }} />
+                      <p className="text-[12px] text-white/60">{c.name}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Sidebar */}
+        <div>
+          <div className="bg-[#141414] border border-white/[0.08] rounded-lg p-6 sticky top-4">
+            <p className="text-2xl font-bold mb-1" style={{ fontFamily: 'var(--font-heading)' }}>{priceLabel}<span className="text-white/30 text-base">*</span></p>
+            <p className="text-[11px] text-white/35 mb-4">*Ex-showroom price estimate — loan/EMI available through MK Finance</p>
+            <button onClick={openEnquiry} className="w-full py-3 bg-[#1a6e8e] hover:bg-[#0d4d6b] rounded-md font-bold text-sm mb-2.5">Get Finance Quote</button>
+            <a href="https://wa.me/919824742356" target="_blank" className="block text-center w-full py-3 border border-white/15 hover:border-[#25d366] rounded-md font-bold text-sm">💬 Ask on WhatsApp</a>
+
+            <div className="mt-5 bg-[#e63030]/10 border border-[#e63030]/25 rounded-lg p-4">
+              <p className="text-[#f07070] font-bold text-[13px] mb-1">Special Finance Offer</p>
+              <p className="text-[12px] text-white/50">Get a personalised EMI and loan quote from MK Finance within 24-48 hours.</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <EnquiryModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        prefillVehicle={data ? `${data.brand.name} ${data.model.name} ${variant?.name || ''}`.trim() : ''}
-      />
+      <EnquiryModal open={modalOpen} onClose={() => setModalOpen(false)} prefillVehicle={`${match.brand.name} ${match.model.name}`} />
     </div>
   );
 }

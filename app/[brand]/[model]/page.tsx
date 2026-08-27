@@ -214,6 +214,72 @@ export default function ModelDetailPage() {
     return parts.join(' ');
   }, [data, variant, specsByCategory]);
 
+  // Key Specifications — quick-glance cards pulled from real Field Builder
+  // specs (only shows a card when that spec actually exists — no invented values).
+  const KEY_SPEC_PATTERNS: { label: string; re: RegExp }[] = [
+    { label: 'Engine', re: /engine type|displacement/i },
+    { label: 'Max Power', re: /max power|power$/i },
+    { label: 'Max Torque', re: /max torque|torque$/i },
+    { label: 'Mileage', re: /mileage/i },
+    { label: 'Seating Capacity', re: /seating capacity/i },
+    { label: 'Boot Space', re: /boot space/i },
+    { label: 'Fuel Tank Capacity', re: /fuel tank/i },
+    { label: 'Ground Clearance', re: /ground clearance/i },
+  ];
+
+  const keySpecs = useMemo(() => {
+    if (!variant) return [];
+    const list: { label: string; value: string }[] = [];
+    if (variant.fuelType) list.push({ label: 'Fuel Type', value: variant.fuelType });
+    if (variant.transmission) list.push({ label: 'Transmission', value: variant.transmission });
+    for (const p of KEY_SPEC_PATTERNS) {
+      const v = findSpec(specsByCategory, p.re);
+      if (v) list.push({ label: p.label, value: v });
+    }
+    return list;
+  }, [variant, specsByCategory]);
+
+  // Key Features — real boolean/standard spec items from feature-ish
+  // categories (Comfort, Safety, Entertainment, Exterior, Interior, ADAS).
+  const keyFeatures = useMemo(() => {
+    const featureCatRe = /comfort|safety|entertainment|exterior|interior|adas/i;
+    const feats: string[] = [];
+    for (const cat of specsByCategory) {
+      if (!featureCatRe.test(cat.name)) continue;
+      for (const s of cat.items) {
+        if (s.applicability === 'NOT_AVAILABLE') continue;
+        if (s.dataType === 'BOOLEAN') {
+          if (s.valueBoolean) feats.push(s.fieldName);
+        } else if (s.valueText || s.valueNumber !== null) {
+          feats.push(s.fieldName);
+        }
+      }
+    }
+    return feats.slice(0, 12);
+  }, [specsByCategory]);
+
+  // Similar Cars — other catalogue models sharing a fuel type and roughly
+  // similar starting price band to this one (real data, not dummy).
+  const similarCars = useMemo(() => {
+    if (!data || !priceRange.min) return [];
+    const myFuels = new Set(data.variants.map((v: any) => v.fuelType).filter(Boolean));
+    const results: any[] = [];
+    for (const b of catalogueTree) {
+      for (const m of b.models || []) {
+        if (m.id === data.model.id) continue;
+        const variants = m.variants || [];
+        const fuels: string[] = variants.map((v: any) => v.fuelType).filter(Boolean);
+        if (!fuels.some((f) => myFuels.has(f))) continue;
+        const prices = variants.map((v: any) => v.exShowroomPrice).filter((p: number) => p > 0);
+        if (prices.length === 0) continue;
+        const minP = Math.min(...prices);
+        if (minP < priceRange.min * 0.5 || minP > priceRange.min * 2) continue;
+        results.push({ brandName: b.name, modelName: m.name, priceText: formatPrice(minP), fuelTypes: Array.from(new Set(fuels)).join('/') });
+      }
+    }
+    return results.slice(0, 3);
+  }, [data, catalogueTree, priceRange]);
+
   const faqs = useMemo(() => {
     if (!data || !variant) return [];
     const items: { q: string; a: string }[] = [];
@@ -460,6 +526,13 @@ export default function ModelDetailPage() {
         .vpage .picker-row-variant{display:flex;justify-content:space-between;align-items:center;gap:10px}
         .vpage .picker-row-meta{color:var(--muted);font-size:11.5px}
         .vpage .picker-row-price{color:var(--blue);font-weight:700;font-size:12.5px;white-space:nowrap}
+        .vpage .keyspecs-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+        .vpage .keyspec-item{background:#0b1b23;border:1px solid var(--line);border-radius:8px;padding:15px 12px;text-align:center}
+        .vpage .keyspec-item .val{font-size:14px;font-weight:800;color:#fff;margin-top:5px}
+        .vpage .keyspec-item .lbl{font-size:11px;color:var(--muted)}
+        .vpage .features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+        .vpage .feature-chip{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#dbe4e8;background:#0b1b23;border:1px solid var(--line);border-radius:7px;padding:11px 13px}
+        .vpage .feature-chip .tick{color:var(--green);font-weight:800}
         .vpage .variant-row:hover{background:#0d2029}
         .vpage .variant-row.active{background:#0d2029;box-shadow:inset 3px 0 0 var(--blue)}
         .vpage .variant-row:last-child{border-bottom:0}
@@ -511,7 +584,7 @@ export default function ModelDetailPage() {
         .vpage .faq-item:last-child{border-bottom:0}
         .vpage .faq-q{font-size:13px;font-weight:700;color:#fff}.vpage .faq-a{font-size:12px;color:var(--muted);margin-top:5px}
         .vpage .coming-soon{padding:32px 20px;text-align:center;color:var(--muted);font-size:13px}
-        @media(max-width:900px){.vpage .top-links{display:none}.vpage .hero-grid,.vpage .price-layout{grid-template-columns:1fr}.vpage .spec-strip{grid-template-columns:repeat(2,1fr)}.vpage .gallery{height:320px}.vpage .footer-grid{grid-template-columns:1fr 1fr}.vpage .gallery-grid{grid-template-columns:repeat(2,1fr)}.vpage .compare{grid-template-columns:1fr}}
+        @media(max-width:900px){.vpage .top-links{display:none}.vpage .hero-grid,.vpage .price-layout{grid-template-columns:1fr}.vpage .spec-strip{grid-template-columns:repeat(2,1fr)}.vpage .gallery{height:320px}.vpage .footer-grid{grid-template-columns:1fr 1fr}.vpage .gallery-grid{grid-template-columns:repeat(2,1fr)}.vpage .compare{grid-template-columns:1fr}.vpage .keyspecs-grid{grid-template-columns:repeat(2,1fr)}.vpage .features-grid{grid-template-columns:1fr 1fr}}
         @media(max-width:600px){.vpage .topbar{height:auto;padding:10px 0}.vpage .vehicle-title h1{font-size:25px}.vpage .cta{flex-direction:column;align-items:flex-start}.vpage .footer-grid{grid-template-columns:1fr}.vpage .copyright{flex-direction:column;gap:6px}.vpage .specs-tab-layout{grid-template-columns:1fr}.vpage .specs-tab-sidebar{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line)}.vpage .specs-tab-item{white-space:nowrap;border-bottom:0;border-right:1px solid var(--line)}.vpage .specs-tab-item.active{border-left:0;border-bottom:3px solid var(--blue)}}
       `}</style>
 
@@ -541,9 +614,11 @@ export default function ModelDetailPage() {
             <button onClick={() => scrollToSec('price')}>Price & EMI</button>
             <button onClick={() => scrollToSec('variants')}>Variants</button>
             {images.length > 0 && <button onClick={() => scrollToSec('images')}>Images</button>}
+            {keySpecs.length > 0 && <button onClick={() => scrollToSec('keyspecs')}>Key Specs</button>}
             <button onClick={() => scrollToSec('expert')}>Expert Opinion</button>
             <button onClick={() => scrollToSec('specs')}>Specs</button>
             {colours.length > 0 && <button onClick={() => scrollToSec('colors')}>Colours</button>}
+            {similarCars.length > 0 && <button onClick={() => scrollToSec('similar')}>Similar Cars</button>}
             {compareList.length > 0 && <button onClick={() => scrollToSec('compare')}>Compare</button>}
             <button onClick={() => scrollToSec('reviews')}>Reviews</button>
             <button onClick={() => scrollToSec('vfaq')}>FAQs</button>
@@ -699,6 +774,37 @@ export default function ModelDetailPage() {
             </section>
           )}
 
+          {keySpecs.length > 0 && (
+            <section className="section alt" id="keyspecs">
+              <div className="container">
+                <h2 className="section-title">Key Specifications of {data.brand.name} {data.model.name}</h2>
+                <p className="section-sub">A quick look at the {variant.name} variant.</p>
+                <div className="keyspecs-grid">
+                  {keySpecs.map((k, i) => (
+                    <div key={i} className="keyspec-item">
+                      <div className="lbl">{k.label}</div>
+                      <div className="val">{k.value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {keyFeatures.length > 0 && (
+            <section className="section">
+              <div className="container">
+                <h2 className="section-title">Key Features of {data.brand.name} {data.model.name}</h2>
+                <p className="section-sub">Highlights from this variant&apos;s spec sheet.</p>
+                <div className="features-grid">
+                  {keyFeatures.map((f, i) => (
+                    <div key={i} className="feature-chip"><span className="tick">✓</span> {f}</div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
           {expertOpinion && (
             <section className="section alt" id="expert">
               <div className="container">
@@ -771,8 +877,27 @@ export default function ModelDetailPage() {
             </section>
           )}
 
+          {similarCars.length > 0 && (
+            <section className="section" id="similar">
+              <div className="container">
+                <h2 className="section-title">Similar Cars to {data.brand.name} {data.model.name}</h2>
+                <p className="section-sub">Other vehicles in a similar price range and fuel type.</p>
+                <div className="compare">
+                  {similarCars.map((c, i) => (
+                    <Link key={i} href={`/${slugify(c.brandName)}/${slugify(c.modelName)}`} className="card compare-card">
+                      <div className="compare-img">🚗</div>
+                      <h3>{c.brandName} {c.modelName}</h3>
+                      <p>{c.fuelTypes || '-'}</p>
+                      <div className="compare-price">{c.priceText}</div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
           {compareList.length > 0 && (
-            <section className="section" id="compare">
+            <section className="section alt" id="compare">
               <div className="container">
                 <h2 className="section-title">Compare More Options</h2>
                 <p className="section-sub">Explore other vehicles available from MK Finance.</p>
@@ -790,7 +915,7 @@ export default function ModelDetailPage() {
             </section>
           )}
 
-          <section className="section alt" id="reviews">
+          <section className="section" id="reviews">
             <div className="container">
               <h2 className="section-title">Customer Reviews</h2>
               <p className="section-sub">Real customers na experiences.</p>
@@ -799,7 +924,7 @@ export default function ModelDetailPage() {
           </section>
 
           {faqs.length > 0 && (
-            <section className="section" id="vfaq">
+            <section className="section alt" id="vfaq">
               <div className="container">
                 <h2 className="section-title">{data.brand.name} {data.model.name} FAQs</h2>
                 <p className="section-sub">Quick answers about this vehicle.</p>

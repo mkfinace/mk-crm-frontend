@@ -642,7 +642,7 @@ export default function ModelDetailPage() {
 
       <nav className="mainnav">
         <div className="container nav">
-          <Link href="/">New Cars</Link>
+          <Link href="/cars">New Cars</Link>
           <a href="tel:9824742356">Car Loans</a>
           <a href="tel:9824742356">Insurance</a>
           <button onClick={() => scrollToSec('reviews')}>Reviews</button>

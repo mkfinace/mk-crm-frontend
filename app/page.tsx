@@ -1,8 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Rajdhani, Montserrat } from 'next/font/google';
 import { api } from '@/lib/api';
+import { slugify } from '@/lib/slugify';
 import EnquiryModal from '@/components/EnquiryModal';
 
 const rajdhani = Rajdhani({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--font-heading' });
@@ -20,16 +23,11 @@ function formatLakh(n: number) {
   return '₹' + (n / 100000).toFixed(2) + ' L';
 }
 
-function slugify(text: string) {
-  return String(text).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-}
-
-function VehicleCard({ v }: { v: any }) {
-  const href = `/${slugify(v.brand)}/${slugify(v.model)}`;
+function VehicleCard({ v, onOpenDetail, onQuickQuote }: { v: any; onOpenDetail: () => void; onQuickQuote: () => void }) {
   return (
-    <a
-      href={href}
-      className="block bg-[#141414] border border-white/[0.08] rounded-lg overflow-hidden cursor-pointer transition-all hover:border-[#1a6e8e]/40 hover:-translate-y-1 hover:shadow-2xl"
+    <div
+      onClick={onOpenDetail}
+      className="bg-[#141414] border border-white/[0.08] rounded-lg overflow-hidden cursor-pointer transition-all hover:border-[#1a6e8e]/40 hover:-translate-y-1 hover:shadow-2xl"
     >
       <div className="h-[170px] bg-[#1a6e8e]/[0.06] border-b border-white/[0.08] flex items-center justify-center text-5xl relative overflow-hidden">
         {v.icon}
@@ -44,17 +42,19 @@ function VehicleCard({ v }: { v: any }) {
         <h4 className="text-[1.05rem] font-bold mb-1" style={{ fontFamily: 'var(--font-heading)' }}>{v.model}</h4>
         <p className="text-xs text-white/40 mb-3">{v.fuelType} · {v.transmission}</p>
         <p className="text-[1.3rem] font-bold text-[#2a8aad] mb-3" style={{ fontFamily: 'var(--font-heading)' }}>{v.price}</p>
-        <span
-          className="block text-center w-full py-2.5 border border-[#e63030] text-[#e63030] hover:bg-[#e63030] hover:text-white rounded-md text-xs font-bold uppercase tracking-wide transition-colors"
+        <button
+          onClick={(e) => { e.stopPropagation(); onQuickQuote(); }}
+          className="w-full py-2.5 border border-[#e63030] text-[#e63030] hover:bg-[#e63030] hover:text-white rounded-md text-xs font-bold uppercase tracking-wide transition-colors"
         >
           View Offers →
-        </span>
+        </button>
       </div>
-    </a>
+    </div>
   );
 }
 
 export default function HomePage() {
+  const router = useRouter();
   const [catalogue, setCatalogue] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -136,6 +136,7 @@ export default function HomePage() {
           <span className="text-[#e63030]">MK</span> <span className="text-[#2a8aad]">Finance</span>
         </div>
         <ul className={`${menuOpen ? 'flex' : 'hidden'} md:flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 fixed md:static top-[70px] left-0 right-0 md:top-auto bg-black/98 md:bg-transparent p-6 md:p-0 border-b md:border-0 border-white/[0.08] list-none`}>
+          <li><Link href="/cars" className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Browse Cars</Link></li>
           <li><button onClick={() => scrollTo('vehicles')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Vehicles</button></li>
           <li><button onClick={() => scrollTo('loans')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Loans</button></li>
           <li><button onClick={() => scrollTo('insurance')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Insurance</button></li>
@@ -259,7 +260,7 @@ export default function HomePage() {
               ? <p className="text-center text-white/40 py-12">No cars listed yet — check back soon.</p>
               : (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  {cars.map((v, i) => <VehicleCard key={i} v={v} />)}
+                  {cars.map((v, i) => <VehicleCard key={i} v={v} onOpenDetail={() => router.push(`/${slugify(v.brand)}/${slugify(v.model)}`)} onQuickQuote={() => setSelectedVehicle(v)} />)}
                 </div>
               )
           )}
@@ -293,7 +294,7 @@ export default function HomePage() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 {(commercialByCategory[activeCommercialCat] || []).map((v, i) => (
-                  <VehicleCard key={i} v={v} />
+                  <VehicleCard key={i} v={v} onOpenDetail={() => router.push(`/${slugify(v.brand)}/${slugify(v.model)}`)} onQuickQuote={() => setSelectedVehicle(v)} />
                 ))}
               </div>
             </div>

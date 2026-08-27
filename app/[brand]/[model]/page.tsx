@@ -65,9 +65,18 @@ export default function ModelDetailPage() {
   const [imageIdx, setImageIdx] = useState(0);
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [compareList, setCompareList] = useState<any[]>([]);
-  const [compareVariantIds, setCompareVariantIds] = useState<string[]>([]);
+  const [catalogueTree, setCatalogueTree] = useState<any[]>([]);
+  const [compareItems, setCompareItems] = useState<any[]>([]);
   const [compareModalOpen, setCompareModalOpen] = useState(false);
+
+  // "Add Car" picker — Brand → Model → Variant wizard for adding any vehicle
+  // from the catalogue into the comparison (not just this page's variants).
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerStep, setPickerStep] = useState<'brand' | 'model' | 'variant'>('brand');
+  const [pickerBrand, setPickerBrand] = useState<any | null>(null);
+  const [pickerModel, setPickerModel] = useState<any | null>(null);
+  const [pickerSearch, setPickerSearch] = useState('');
+  const [pickerLoading, setPickerLoading] = useState(false);
 
   // Placeholder fields not yet on the CRM's Model/Vehicle schema — shown so
   // the page matches the live mkfinance-website layout. Swap for real data
@@ -89,30 +98,34 @@ export default function ModelDetailPage() {
       .finally(() => setLoading(false));
   }, [params.brand, params.model]);
 
-  // "Compare More Options" — real other models from the catalogue (not dummy)
+  // Full catalogue tree — used both for "Compare More Options" and the
+  // "+ Add Car" picker (Brand → Model → Variant), fetched once per page load.
   useEffect(() => {
     if (!data) return;
     api
       .getFullCatalogue()
-      .then((brands: any[]) => {
-        const others: any[] = [];
-        for (const b of brands) {
-          for (const m of b.models || []) {
-            if (m.id === data.model.id) continue;
-            const variants = m.variants || [];
-            const prices = variants.map((v: any) => v.exShowroomPrice).filter((p: number) => p > 0);
-            others.push({
-              brandName: b.name,
-              modelName: m.name,
-              priceText: prices.length ? formatPrice(Math.min(...prices)) : 'Price on request',
-              fuelTypes: Array.from(new Set(variants.map((v: any) => v.fuelType).filter(Boolean))).join('/'),
-            });
-          }
-        }
-        setCompareList(others.slice(0, 3));
-      })
-      .catch(() => setCompareList([]));
+      .then((brands: any[]) => setCatalogueTree(brands || []))
+      .catch(() => setCatalogueTree([]));
   }, [data]);
+
+  const compareList = useMemo(() => {
+    if (!data) return [];
+    const others: any[] = [];
+    for (const b of catalogueTree) {
+      for (const m of b.models || []) {
+        if (m.id === data.model.id) continue;
+        const variants = m.variants || [];
+        const prices = variants.map((v: any) => v.exShowroomPrice).filter((p: number) => p > 0);
+        others.push({
+          brandName: b.name,
+          modelName: m.name,
+          priceText: prices.length ? formatPrice(Math.min(...prices)) : 'Price on request',
+          fuelTypes: Array.from(new Set(variants.map((v: any) => v.fuelType).filter(Boolean))).join('/'),
+        });
+      }
+    }
+    return others.slice(0, 3);
+  }, [data, catalogueTree]);
 
   const variant = data?.variants?.[variantIdx];
   const images: string[] = variant?.vehicle?.images || [];
@@ -239,26 +252,105 @@ export default function ModelDetailPage() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   }
 
-  function toggleCompareVariant(id: string) {
-    setCompareVariantIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : prev.length >= 4 ? prev : [...prev, id]));
+  function toggleCompareVariant(v: any) {
+    setCompareItems((prev) => {
+      if (prev.some((i) => i.key === v.id)) return prev.filter((i) => i.key !== v.id);
+      if (prev.length >= 4) return prev;
+      return [
+        ...prev,
+        {
+          key: v.id,
+          brandName: data.brand.name,
+          modelName: data.model.name,
+          brandSlug: slugify(data.brand.name),
+          modelSlug: slugify(data.model.name),
+          variantName: v.name,
+          exShowroomPrice: v.exShowroomPrice,
+          fuelType: v.fuelType,
+          transmission: v.transmission,
+          specs: v.specs || [],
+        },
+      ];
+    });
   }
 
-  const compareVariants = useMemo(
-    () => (data?.variants || []).filter((v: any) => compareVariantIds.includes(v.id)),
-    [data, compareVariantIds]
+  function removeCompareItem(key: string) {
+    setCompareItems((prev) => prev.filter((i) => i.key !== key));
+  }
+
+  function openPicker() {
+    setPickerOpen(true);
+    setPickerStep('brand');
+    setPickerBrand(null);
+    setPickerModel(null);
+    setPickerSearch('');
+  }
+
+  function closePicker() {
+    setPickerOpen(false);
+  }
+
+  async function addFromPicker(brand: any, model: any, v: any) {
+    if (compareItems.some((i) => i.key === v.id) || compareItems.length >= 4) {
+      closePicker();
+      return;
+    }
+    let specs: any[] = [];
+    if (data && model.id === data.model.id) {
+      specs = data.variants.find((x: any) => x.id === v.id)?.specs || [];
+    } else {
+      setPickerLoading(true);
+      try {
+        const detail = await api.getModelDetail(slugify(brand.name), slugify(model.name));
+        specs = detail.variants.find((x: any) => x.id === v.id)?.specs || [];
+      } catch {
+        specs = [];
+      } finally {
+        setPickerLoading(false);
+      }
+    }
+    setCompareItems((prev) => [
+      ...prev,
+      {
+        key: v.id,
+        brandName: brand.name,
+        modelName: model.name,
+        brandSlug: slugify(brand.name),
+        modelSlug: slugify(model.name),
+        variantName: v.name,
+        exShowroomPrice: v.exShowroomPrice,
+        fuelType: v.fuelType,
+        transmission: v.transmission,
+        specs,
+      },
+    ]);
+    closePicker();
+  }
+
+  const pickerBrandList = useMemo(
+    () => catalogueTree.filter((b) => b.name.toLowerCase().includes(pickerSearch.toLowerCase())),
+    [catalogueTree, pickerSearch]
+  );
+  const pickerModelList = useMemo(
+    () => (pickerBrand?.models || []).filter((m: any) => m.name.toLowerCase().includes(pickerSearch.toLowerCase())),
+    [pickerBrand, pickerSearch]
+  );
+  const pickerVariantList = useMemo(
+    () => (pickerModel?.variants || []).filter((v: any) => v.name.toLowerCase().includes(pickerSearch.toLowerCase())),
+    [pickerModel, pickerSearch]
   );
 
   // Builds the side-by-side rows for the compare modal: union of every
-  // category/field across the selected variants, one column per variant.
+  // category/field across the selected items, one column per item.
   const compareTable = useMemo(() => {
     const catMap: Record<string, { order: number; fields: Record<string, { fieldName: string; order: number; values: Record<string, string> }> }> = {};
-    for (const v of compareVariants) {
-      for (const s of v.specs || []) {
+    for (const item of compareItems) {
+      for (const s of item.specs || []) {
         if (!catMap[s.categoryName]) catMap[s.categoryName] = { order: s.categoryOrder ?? 0, fields: {} };
         if (!catMap[s.categoryName].fields[s.fieldKey]) {
           catMap[s.categoryName].fields[s.fieldKey] = { fieldName: s.fieldName, order: s.displayOrder ?? 0, values: {} };
         }
-        catMap[s.categoryName].fields[s.fieldKey].values[v.id] = formatSpecValue(s);
+        catMap[s.categoryName].fields[s.fieldKey].values[item.key] = formatSpecValue(s);
       }
     }
     return Object.entries(catMap)
@@ -268,7 +360,7 @@ export default function ModelDetailPage() {
         fields: Object.values(v.fields).sort((a, b) => a.order - b.order),
       }))
       .sort((a, b) => a.order - b.order);
-  }, [compareVariants]);
+  }, [compareItems]);
 
   return (
     <div className="vpage">
@@ -353,6 +445,21 @@ export default function ModelDetailPage() {
         .vpage .compare-table td:first-child{color:var(--muted);white-space:nowrap}
         .vpage .compare-table td{color:#dbe4e8}
         .vpage .compare-cat-row td{background:#081820;color:var(--blue);font-weight:700;font-size:12px}
+        .vpage .vcb-add{display:flex;align-items:center;gap:6px;background:transparent;border:1px dashed var(--line);border-radius:8px;padding:8px 14px;font-size:12px;color:var(--blue);cursor:pointer;white-space:nowrap}
+        .vpage .vcb-add:hover{border-color:var(--blue)}
+        .vpage .picker-modal{background:#0b1b23;border:1px solid var(--line);border-radius:12px;max-width:480px;width:100%;max-height:75vh;overflow:auto;padding:22px}
+        .vpage .picker-tabs{display:flex;gap:20px;border-bottom:1px solid var(--line);margin-bottom:14px;padding-bottom:2px}
+        .vpage .picker-tabs span{font-size:13px;font-weight:700;color:var(--muted);padding-bottom:10px}
+        .vpage .picker-tabs span.active{color:var(--blue);border-bottom:2px solid var(--blue)}
+        .vpage .picker-search{width:100%;padding:11px 14px;background:#081820;border:1px solid var(--line);border-radius:8px;color:#fff;margin-bottom:12px;font-size:13px}
+        .vpage .picker-search::placeholder{color:#6d828c}
+        .vpage .picker-list{max-height:340px;overflow:auto}
+        .vpage .picker-back{font-size:12px;color:var(--blue);cursor:pointer;padding:8px 4px;font-weight:600}
+        .vpage .picker-row{padding:12px 10px;font-size:13px;color:#dbe4e8;cursor:pointer;border-radius:6px}
+        .vpage .picker-row:hover{background:#0d2029;color:#fff}
+        .vpage .picker-row-variant{display:flex;justify-content:space-between;align-items:center;gap:10px}
+        .vpage .picker-row-meta{color:var(--muted);font-size:11.5px}
+        .vpage .picker-row-price{color:var(--blue);font-weight:700;font-size:12.5px;white-space:nowrap}
         .vpage .variant-row:hover{background:#0d2029}
         .vpage .variant-row.active{background:#0d2029;box-shadow:inset 3px 0 0 var(--blue)}
         .vpage .variant-row:last-child{border-bottom:0}
@@ -564,9 +671,9 @@ export default function ModelDetailPage() {
                           <div className="vcheck">
                             <input
                               type="checkbox"
-                              checked={compareVariantIds.includes(v.id)}
+                              checked={compareItems.some((i) => i.key === v.id)}
                               onClick={(e) => e.stopPropagation()}
-                              onChange={() => toggleCompareVariant(v.id)}
+                              onChange={() => toggleCompareVariant(v)}
                             />
                           </div>
                         </div>
@@ -735,7 +842,7 @@ export default function ModelDetailPage() {
         </main>
       )}
 
-      <footer style={compareVariantIds.length > 0 ? { paddingBottom: 90 } : undefined}>
+      <footer style={compareItems.length > 0 ? { paddingBottom: 90 } : undefined}>
         <div className="container">
           <div className="footer-grid">
             <div>
@@ -761,21 +868,82 @@ export default function ModelDetailPage() {
         </div>
       </footer>
 
-      {compareVariantIds.length > 0 && (
+      {compareItems.length > 0 && (
         <div className="variant-compare-bar">
           <span className="vcb-label">My Comparison</span>
           <div className="vcb-chips">
-            {compareVariants.map((v: any) => (
-              <div key={v.id} className="vcb-chip">
-                <span className="vcb-name">{v.name}</span>
-                <span className="vcb-price">{formatPrice(v.exShowroomPrice)}</span>
-                <span className="vcb-x" onClick={() => toggleCompareVariant(v.id)}>✕</span>
+            {compareItems.map((item) => (
+              <div key={item.key} className="vcb-chip">
+                <span className="vcb-name">{item.brandName} {item.modelName} {item.variantName}</span>
+                <span className="vcb-price">{formatPrice(item.exShowroomPrice)}</span>
+                <span className="vcb-x" onClick={() => removeCompareItem(item.key)}>✕</span>
               </div>
             ))}
           </div>
+          {compareItems.length < 4 && (
+            <button className="vcb-add" onClick={openPicker}>+ Add Car</button>
+          )}
           <div className="vcb-actions">
-            <button className="btn secondary small" onClick={() => setCompareVariantIds([])}>Clear</button>
-            <button className="btn small" disabled={compareVariantIds.length < 2} onClick={() => setCompareModalOpen(true)}>Compare Now →</button>
+            <button className="btn secondary small" onClick={() => setCompareItems([])}>Clear</button>
+            <button className="btn small" disabled={compareItems.length < 2} onClick={() => setCompareModalOpen(true)}>Compare Now →</button>
+          </div>
+        </div>
+      )}
+
+      {pickerOpen && (
+        <div className="compare-modal-overlay" onClick={closePicker}>
+          <div className="picker-modal" onClick={(e) => e.stopPropagation()}>
+            <span className="compare-modal-close" onClick={closePicker}>✕</span>
+            <div className="picker-tabs">
+              <span className={pickerStep === 'brand' ? 'active' : ''}>Brand</span>
+              <span className={pickerStep === 'model' ? 'active' : ''}>Model</span>
+              <span className={pickerStep === 'variant' ? 'active' : ''}>Variant</span>
+            </div>
+            <input
+              className="picker-search"
+              placeholder={pickerStep === 'brand' ? 'Select Brand' : pickerStep === 'model' ? 'Select Model' : 'Select Variant'}
+              value={pickerSearch}
+              onChange={(e) => setPickerSearch(e.target.value)}
+              autoFocus
+            />
+            {pickerLoading && <p style={{ fontSize: 12, color: 'var(--muted)', padding: '10px 0' }}>Loading specs…</p>}
+
+            {pickerStep === 'brand' && (
+              <div className="picker-list">
+                {pickerBrandList.map((b) => (
+                  <div key={b.id} className="picker-row" onClick={() => { setPickerBrand(b); setPickerStep('model'); setPickerSearch(''); }}>
+                    {b.name}
+                  </div>
+                ))}
+                {pickerBrandList.length === 0 && <p style={{ fontSize: 12, color: 'var(--muted)', padding: '10px 0' }}>No brands found.</p>}
+              </div>
+            )}
+
+            {pickerStep === 'model' && pickerBrand && (
+              <div className="picker-list">
+                <div className="picker-back" onClick={() => { setPickerStep('brand'); setPickerSearch(''); }}>← {pickerBrand.name}</div>
+                {pickerModelList.map((m: any) => (
+                  <div key={m.id} className="picker-row" onClick={() => { setPickerModel(m); setPickerStep('variant'); setPickerSearch(''); }}>
+                    {m.name}
+                  </div>
+                ))}
+                {pickerModelList.length === 0 && <p style={{ fontSize: 12, color: 'var(--muted)', padding: '10px 0' }}>No models found.</p>}
+              </div>
+            )}
+
+            {pickerStep === 'variant' && pickerBrand && pickerModel && (
+              <div className="picker-list">
+                <div className="picker-back" onClick={() => { setPickerStep('model'); setPickerSearch(''); }}>← {pickerModel.name}</div>
+                {pickerVariantList.map((v: any) => (
+                  <div key={v.id} className="picker-row picker-row-variant" onClick={() => addFromPicker(pickerBrand, pickerModel, v)}>
+                    <span>{v.name}</span>
+                    <span className="picker-row-meta">{[v.transmission, v.fuelType].filter(Boolean).join(' • ')}</span>
+                    <span className="picker-row-price">{formatPrice(v.exShowroomPrice)}</span>
+                  </div>
+                ))}
+                {pickerVariantList.length === 0 && <p style={{ fontSize: 12, color: 'var(--muted)', padding: '10px 0' }}>No variants found.</p>}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -784,17 +952,21 @@ export default function ModelDetailPage() {
         <div className="compare-modal-overlay" onClick={() => setCompareModalOpen(false)}>
           <div className="compare-modal" onClick={(e) => e.stopPropagation()}>
             <span className="compare-modal-close" onClick={() => setCompareModalOpen(false)}>✕</span>
-            <h3 style={{ fontSize: 18, marginBottom: 4 }}>{data?.brand.name} {data?.model.name} — Variant Comparison</h3>
-            <p style={{ fontSize: 12, color: 'var(--muted)' }}>Comparing {compareVariants.length} variants</p>
+            <h3 style={{ fontSize: 18, marginBottom: 4 }}>Vehicle Comparison</h3>
+            <p style={{ fontSize: 12, color: 'var(--muted)' }}>Comparing {compareItems.length} vehicles</p>
             {compareTable.length === 0 ? (
-              <p style={{ marginTop: 16, fontSize: 13, color: 'var(--muted)' }}>No specs added for these variants yet.</p>
+              <p style={{ marginTop: 16, fontSize: 13, color: 'var(--muted)' }}>No specs added for these vehicles yet.</p>
             ) : (
               <table className="compare-table">
                 <thead>
                   <tr>
                     <th>Spec</th>
-                    {compareVariants.map((v: any) => (
-                      <th key={v.id}>{v.name}<br /><span style={{ color: 'var(--blue)', fontWeight: 400 }}>{formatPrice(v.exShowroomPrice)}</span></th>
+                    {compareItems.map((item) => (
+                      <th key={item.key}>
+                        {item.brandName} {item.modelName} {item.variantName}
+                        <br />
+                        <span style={{ color: 'var(--blue)', fontWeight: 400 }}>{formatPrice(item.exShowroomPrice)}</span>
+                      </th>
                     ))}
                   </tr>
                 </thead>
@@ -802,13 +974,13 @@ export default function ModelDetailPage() {
                   {compareTable.map((cat) => (
                     <Fragment key={cat.name}>
                       <tr className="compare-cat-row">
-                        <td colSpan={compareVariants.length + 1}>{cat.name}</td>
+                        <td colSpan={compareItems.length + 1}>{cat.name}</td>
                       </tr>
                       {cat.fields.map((f, i) => (
                         <tr key={i}>
                           <td>{f.fieldName}</td>
-                          {compareVariants.map((v: any) => (
-                            <td key={v.id}>{f.values[v.id] ?? '—'}</td>
+                          {compareItems.map((item) => (
+                            <td key={item.key}>{f.values[item.key] ?? '—'}</td>
                           ))}
                         </tr>
                       ))}

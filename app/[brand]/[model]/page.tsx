@@ -78,11 +78,15 @@ export default function ModelDetailPage() {
   const [pickerSearch, setPickerSearch] = useState('');
   const [pickerLoading, setPickerLoading] = useState(false);
 
-  // Placeholder fields not yet on the CRM's Model/Vehicle schema — shown so
-  // the page matches the live mkfinance-website layout. Swap for real data
-  // once Category/Model Year become actual fields.
-  const CATEGORY = 'Car';
+  // Model Year still has no real field on the schema — kept as a display
+  // placeholder. Category IS now real (see data.model.category below).
   const MODEL_YEAR = 'New';
+
+  const CATEGORY_LABEL: Record<string, string> = {
+    CAR: 'Car', TRUCK: 'Truck', TEMPO: 'Tempo / Mini Truck', PICKUP: 'Pickup',
+    TRACTOR: 'Tractor', BUS: 'Bus', CONSTRUCTION: 'Construction Equipment',
+  };
+  const CATEGORY = data?.model?.category ? (CATEGORY_LABEL[data.model.category] || data.model.category) : 'Car';
 
   useEffect(() => {
     setLoading(true);

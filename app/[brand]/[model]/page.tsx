@@ -714,8 +714,10 @@ export default function ModelDetailPage() {
                     <span className="tag-chip">Brand New</span>
                     <span className="tag-chip">{variant.fuelType}</span>
                   </div>
-                  <div className="price">{priceRange.text}*</div>
-                  <div className="price-note">*Ex-showroom price estimate — loan/EMI available through MK Finance</div>
+                  <div className="price">{formatPrice(variant.exShowroomPrice)}*</div>
+                  <div className="price-note">
+                    *Ex-showroom price for {variant.name}{data.variants.length > 1 ? ` — full range ${priceRange.text}` : ''} — loan/EMI available through MK Finance
+                  </div>
                   <div className="btn-row">
                     <button className="btn" onClick={() => setModalOpen(true)}>Get Finance Quote</button>
                     <a href="https://wa.me/919824742356" target="_blank" className="btn outline">💬 Ask on WhatsApp</a>
@@ -738,8 +740,11 @@ export default function ModelDetailPage() {
               <p className="section-sub">Estimated on-road price ane EMI details.</p>
               <div className="price-layout">
                 <div className="card side-card">
-                  <h3>Vehicle Price</h3>
-                  <div className="emi-row"><span>Ex-showroom Price</span><strong>{priceRange.text}</strong></div>
+                  <h3>Vehicle Price — {variant.name}</h3>
+                  <div className="emi-row"><span>Ex-showroom Price</span><strong>{formatPrice(variant.exShowroomPrice)}</strong></div>
+                  {data.variants.length > 1 && (
+                    <div className="emi-row"><span>Price Range (All Variants)</span><strong>{priceRange.text}</strong></div>
+                  )}
                   <div className="emi-row"><span>Fuel Type</span><strong>{variant.fuelType || '-'}</strong></div>
                   <div className="emi-row"><span>Model Year</span><strong>{MODEL_YEAR}</strong></div>
                   <div className="emi-row"><span>Category</span><strong>{CATEGORY}</strong></div>
@@ -818,7 +823,7 @@ export default function ModelDetailPage() {
                         <div
                           key={v.id}
                           className={`variant-row ${globalIdx === variantIdx ? 'active' : ''}`}
-                          onClick={() => { setVariantIdx(globalIdx); setImageIdx(0); }}
+                          onClick={() => { setVariantIdx(globalIdx); setImageIdx(0); scrollToSec('overview'); }}
                         >
                           <div className="vname">{v.name}</div>
                           <div className="vtrans">{[v.transmission, v.fuelType].filter(Boolean).join(' • ') || '-'}</div>

@@ -136,7 +136,7 @@ export default function HomePage() {
           <span className="text-[#e63030]">MK</span> <span className="text-[#2a8aad]">Finance</span>
         </div>
         <ul className={`${menuOpen ? 'flex' : 'hidden'} md:flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 fixed md:static top-[70px] left-0 right-0 md:top-auto bg-black/98 md:bg-transparent p-6 md:p-0 border-b md:border-0 border-white/[0.08] list-none`}>
-          <li><Link href="/cars" className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Browse Cars</Link></li>
+          <li><Link href="/cars" className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Browse Vehicles</Link></li>
           <li><button onClick={() => scrollTo('vehicles')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Vehicles</button></li>
           <li><button onClick={() => scrollTo('loans')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Loans</button></li>
           <li><button onClick={() => scrollTo('insurance')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Insurance</button></li>

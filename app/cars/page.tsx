@@ -10,11 +10,17 @@ function formatPrice(n: number | null | undefined) {
   return '₹' + (n / 100000).toFixed(2) + ' L';
 }
 
+const CATEGORY_LABEL: Record<string, string> = {
+  CAR: 'Car', TRUCK: 'Truck', TEMPO: 'Tempo / Mini Truck', PICKUP: 'Pickup',
+  TRACTOR: 'Tractor', BUS: 'Bus', CONSTRUCTION: 'Construction Equipment',
+};
+
 type Row = {
   brandName: string;
   modelName: string;
   brandSlug: string;
   modelSlug: string;
+  category: string;
   minPrice: number;
   maxPrice: number;
   fuelTypes: string[];
@@ -28,6 +34,7 @@ export default function CarsListingPage() {
   const [rows, setRows] = useState<Row[]>([]);
 
   const [search, setSearch] = useState('');
+  const [selCategories, setSelCategories] = useState<string[]>([]);
   const [selBrands, setSelBrands] = useState<string[]>([]);
   const [selFuels, setSelFuels] = useState<string[]>([]);
   const [selTrans, setSelTrans] = useState<string[]>([]);
@@ -59,6 +66,7 @@ export default function CarsListingPage() {
               modelName: m.name,
               brandSlug: slugify(b.name),
               modelSlug: slugify(m.name),
+              category: m.category || 'CAR',
               minPrice: prices.length ? Math.min(...prices) : 0,
               maxPrice: prices.length ? Math.max(...prices) : 0,
               fuelTypes: Array.from(new Set(variants.map((v: any) => v.fuelType).filter(Boolean))) as string[],
@@ -74,6 +82,7 @@ export default function CarsListingPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const allCategories = useMemo(() => Array.from(new Set(rows.map((r) => r.category))).sort(), [rows]);
   const allBrands = useMemo(() => Array.from(new Set(rows.map((r) => r.brandName))).sort(), [rows]);
   const allFuels = useMemo(() => Array.from(new Set(rows.flatMap((r) => r.fuelTypes))).sort(), [rows]);
   const allTrans = useMemo(() => Array.from(new Set(rows.flatMap((r) => r.transmissions))).sort(), [rows]);
@@ -86,6 +95,7 @@ export default function CarsListingPage() {
   const filtered = useMemo(() => {
     let list = rows.filter((r) => {
       if (search && !`${r.brandName} ${r.modelName}`.toLowerCase().includes(search.toLowerCase())) return false;
+      if (selCategories.length && !selCategories.includes(r.category)) return false;
       if (selBrands.length && !selBrands.includes(r.brandName)) return false;
       if (selFuels.length && !r.fuelTypes.some((f) => selFuels.includes(f))) return false;
       if (selTrans.length && !r.transmissions.some((t) => selTrans.includes(t))) return false;
@@ -96,9 +106,10 @@ export default function CarsListingPage() {
     else if (sort === 'price-desc') list = [...list].sort((a, b) => (b.minPrice || 0) - (a.minPrice || 0));
     else list = [...list].sort((a, b) => `${a.brandName}${a.modelName}`.localeCompare(`${b.brandName}${b.modelName}`));
     return list;
-  }, [rows, search, selBrands, selFuels, selTrans, priceMax, sort]);
+  }, [rows, search, selCategories, selBrands, selFuels, selTrans, priceMax, sort]);
 
   function clearFilters() {
+    setSelCategories([]);
     setSelBrands([]);
     setSelFuels([]);
     setSelTrans([]);
@@ -106,7 +117,7 @@ export default function CarsListingPage() {
     setSearch('');
   }
 
-  const activeFilterCount = selBrands.length + selFuels.length + selTrans.length + (priceMax > 0 ? 1 : 0);
+  const activeFilterCount = selCategories.length + selBrands.length + selFuels.length + selTrans.length + (priceMax > 0 ? 1 : 0);
 
   return (
     <div className="lpage">
@@ -188,7 +199,7 @@ export default function CarsListingPage() {
 
       <div className="container page-head">
         <h1>Browse All Vehicles</h1>
-        <p>Search and filter cars available through MK Finance.</p>
+        <p>Search and filter vehicles available through MK Finance.</p>
         <div className="search-row">
           <input className="search-input" placeholder="Search brand or model…" value={search} onChange={(e) => setSearch(e.target.value)} />
           <select className="search-input" style={{ maxWidth: 200 }} value={sort} onChange={(e) => setSort(e.target.value as any)}>
@@ -209,6 +220,17 @@ export default function CarsListingPage() {
             <h3>Filters</h3>
             {activeFilterCount > 0 && <span className="clear-link" onClick={clearFilters}>Clear all</span>}
           </div>
+
+          {allCategories.length > 1 && (
+            <div className="filter-group">
+              <h4>Vehicle Type</h4>
+              {allCategories.map((c) => (
+                <label key={c} className="filter-opt">
+                  <input type="checkbox" checked={selCategories.includes(c)} onChange={() => toggle(selCategories, setSelCategories, c)} /> {CATEGORY_LABEL[c] || c}
+                </label>
+              ))}
+            </div>
+          )}
 
           {allBrands.length > 0 && (
             <div className="filter-group">
@@ -272,6 +294,7 @@ export default function CarsListingPage() {
 
               {activeFilterCount > 0 && (
                 <div className="active-chips">
+                  {selCategories.map((c) => <span key={c} className="chip">{CATEGORY_LABEL[c] || c} <span className="x" onClick={() => toggle(selCategories, setSelCategories, c)}>✕</span></span>)}
                   {selBrands.map((b) => <span key={b} className="chip">{b} <span className="x" onClick={() => toggle(selBrands, setSelBrands, b)}>✕</span></span>)}
                   {selFuels.map((f) => <span key={f} className="chip">{f} <span className="x" onClick={() => toggle(selFuels, setSelFuels, f)}>✕</span></span>)}
                   {selTrans.map((t) => <span key={t} className="chip">{t} <span className="x" onClick={() => toggle(selTrans, setSelTrans, t)}>✕</span></span>)}
@@ -290,8 +313,9 @@ export default function CarsListingPage() {
                   {filtered.map((r) => (
                     <Link key={`${r.brandSlug}-${r.modelSlug}`} href={`/${r.brandSlug}/${r.modelSlug}`} className="card">
                       <div className="card-img">
-                        {r.image ? <img src={r.image} alt={`${r.brandName} ${r.modelName}`} /> : '🚗'}
+                        {r.image ? <img src={r.image} alt={`${r.brandName} ${r.modelName}`} /> : (r.category === 'CAR' ? '🚗' : '🚛')}
                         <span className="card-badge">{r.brandName}</span>
+                        {r.category !== 'CAR' && <span className="card-badge" style={{ left: 'auto', right: 10 }}>{CATEGORY_LABEL[r.category] || r.category}</span>}
                       </div>
                       <div className="card-body">
                         <h3>{r.modelName}</h3>

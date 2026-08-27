@@ -69,7 +69,7 @@ export default function ModelDetailPage() {
   const [compareItems, setCompareItems] = useState<any[]>([]);
   const [compareModalOpen, setCompareModalOpen] = useState(false);
 
-  // "Add Car" picker — Brand → Model → Variant wizard for adding any vehicle
+  // "Add Vehicle" picker — Brand → Model → Variant wizard for adding any vehicle
   // from the catalogue into the comparison (not just this page's variants).
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerStep, setPickerStep] = useState<'brand' | 'model' | 'variant'>('brand');
@@ -103,7 +103,7 @@ export default function ModelDetailPage() {
   }, [params.brand, params.model]);
 
   // Full catalogue tree — used both for "Compare More Options" and the
-  // "+ Add Car" picker (Brand → Model → Variant), fetched once per page load.
+  // "+ Add Vehicle" picker (Brand → Model → Variant), fetched once per page load.
   useEffect(() => {
     if (!data) return;
     api
@@ -112,23 +112,29 @@ export default function ModelDetailPage() {
       .catch(() => setCatalogueTree([]));
   }, [data]);
 
+  // "Compare More Options" — prefer same category (Car stays with Cars,
+  // Pickup stays with commercial vehicles); fall back to any model only if
+  // the catalogue has nothing else in that category yet.
   const compareList = useMemo(() => {
     if (!data) return [];
-    const others: any[] = [];
+    const sameCategory: any[] = [];
+    const anyCategory: any[] = [];
     for (const b of catalogueTree) {
       for (const m of b.models || []) {
         if (m.id === data.model.id) continue;
         const variants = m.variants || [];
         const prices = variants.map((v: any) => v.exShowroomPrice).filter((p: number) => p > 0);
-        others.push({
+        const row = {
           brandName: b.name,
           modelName: m.name,
           priceText: prices.length ? formatPrice(Math.min(...prices)) : 'Price on request',
           fuelTypes: Array.from(new Set(variants.map((v: any) => v.fuelType).filter(Boolean))).join('/'),
-        });
+        };
+        anyCategory.push(row);
+        if ((m.category || 'CAR') === (data.model.category || 'CAR')) sameCategory.push(row);
       }
     }
-    return others.slice(0, 3);
+    return (sameCategory.length > 0 ? sameCategory : anyCategory).slice(0, 3);
   }, [data, catalogueTree]);
 
   const variant = data?.variants?.[variantIdx];
@@ -265,15 +271,17 @@ export default function ModelDetailPage() {
     return feats.slice(0, 12);
   }, [specsByCategory]);
 
-  // Similar Cars — other catalogue models sharing a fuel type and roughly
-  // similar starting price band to this one (real data, not dummy).
+  // "Similar Vehicles" — strictly same category (a Pickup only shows other
+  // Pickups/commercial vehicles, never passenger cars, and vice versa).
   const similarCars = useMemo(() => {
     if (!data) return [];
+    const myCategory = data.model.category || 'CAR';
     const myFuels = new Set(data.variants.map((v: any) => v.fuelType).filter(Boolean));
     const others: { brandName: string; modelName: string; priceText: string; fuelTypes: string; minP: number; sharesFuel: boolean }[] = [];
     for (const b of catalogueTree) {
       for (const m of b.models || []) {
         if (m.id === data.model.id) continue;
+        if ((m.category || 'CAR') !== myCategory) continue;
         const variants = m.variants || [];
         const fuels: string[] = variants.map((v: any) => v.fuelType).filter(Boolean);
         const prices = variants.map((v: any) => v.exShowroomPrice).filter((p: number) => p > 0);
@@ -289,9 +297,9 @@ export default function ModelDetailPage() {
         });
       }
     }
-    // Prefer same fuel type + similar price band; if that's too sparse
-    // (small catalogue), fall back to nearest-priced models of any fuel type
-    // so the section reliably has something to show.
+    // Within the same category, prefer same fuel type + similar price band;
+    // if that's too sparse (small catalogue), fall back to nearest-priced
+    // models in the same category so the section reliably has something to show.
     const strict = priceRange.min
       ? others.filter((o) => o.sharesFuel && o.minP >= priceRange.min * 0.5 && o.minP <= priceRange.min * 2)
       : [];
@@ -649,8 +657,8 @@ export default function ModelDetailPage() {
 
       <nav className="mainnav">
         <div className="container nav">
-          <Link href="/cars">New Cars</Link>
-          <a href="tel:9824742356">Car Loans</a>
+          <Link href="/cars">New Vehicles</Link>
+          <a href="tel:9824742356">Vehicle Loans</a>
           <a href="tel:9824742356">Insurance</a>
           <button onClick={() => scrollToSec('reviews')}>Reviews</button>
         </div>
@@ -667,7 +675,7 @@ export default function ModelDetailPage() {
             <button onClick={() => scrollToSec('expert')}>Expert Opinion</button>
             <button onClick={() => scrollToSec('specs')}>Specs</button>
             {colours.length > 0 && <button onClick={() => scrollToSec('colors')}>Colours</button>}
-            {similarCars.length > 0 && <button onClick={() => scrollToSec('similar')}>Similar Cars</button>}
+            {similarCars.length > 0 && <button onClick={() => scrollToSec('similar')}>Similar Vehicles</button>}
             {compareList.length > 0 && <button onClick={() => scrollToSec('compare')}>Compare</button>}
             <button onClick={() => scrollToSec('reviews')}>Reviews</button>
             <button onClick={() => scrollToSec('vfaq')}>FAQs</button>
@@ -937,7 +945,7 @@ export default function ModelDetailPage() {
           {similarCars.length > 0 && (
             <section className="section" id="similar">
               <div className="container">
-                <h2 className="section-title">Similar Cars to {data.brand.name} {data.model.name}</h2>
+                <h2 className="section-title">Similar Vehicles to {data.brand.name} {data.model.name}</h2>
                 <p className="section-sub">Other vehicles in a similar price range and fuel type.</p>
                 <div className="compare">
                   {similarCars.map((c, i) => (
@@ -1063,7 +1071,7 @@ export default function ModelDetailPage() {
             ))}
           </div>
           {compareItems.length < 4 && (
-            <button className="vcb-add" onClick={openPicker}>+ Add Car</button>
+            <button className="vcb-add" onClick={openPicker}>+ Add Vehicle</button>
           )}
           <div className="vcb-actions">
             <button className="btn secondary small" onClick={() => setCompareItems([])}>Clear</button>

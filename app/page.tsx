@@ -69,8 +69,26 @@ export default function HomePage() {
   const [rate, setRate] = useState(8.5);
   const [tenure, setTenure] = useState(48);
 
+  // Admin-editable via Site Settings — these defaults match what's always
+  // shown until an admin edits them, so the page never looks empty.
+  const DEFAULT_LOAN_PRODUCTS = [
+    { icon: '🚗', name: 'New Car Loan', desc: 'Up to 90% financing on brand new vehicles.', rate: '7.5%' },
+    { icon: '🚛', name: 'Commercial Vehicle Loan', desc: 'Business loans on trucks, tempos, and tractors.', rate: '8.5%' },
+    { icon: '🔄', name: 'Refinance Loan', desc: 'Switch to a better rate and close your old loan.', rate: '9%' },
+    { icon: '📈', name: 'Top-Up Loan', desc: 'Additional loan on your existing vehicle loan.', rate: '10%' },
+  ];
+  const [loanProducts, setLoanProducts] = useState(DEFAULT_LOAN_PRODUCTS);
+
   useEffect(() => {
     api.getFullCatalogue().then(setCatalogue).catch(() => {}).finally(() => setLoading(false));
+    api
+      .getSiteSettings()
+      .then((s: Record<string, any>) => {
+        const order = ['loan_new_car', 'loan_commercial', 'loan_refinance', 'loan_topup'];
+        const fromApi = order.map((k, i) => s[k] || DEFAULT_LOAN_PRODUCTS[i]);
+        if (fromApi.every(Boolean)) setLoanProducts(fromApi);
+      })
+      .catch(() => {});
   }, []);
 
   const allVehicles = useMemo(() => {
@@ -389,12 +407,7 @@ export default function HomePage() {
           </div>
 
           <div className="space-y-4">
-            {[
-              { icon: '🚗', name: 'New Car Loan', desc: 'Up to 90% financing on brand new vehicles.', rate: '7.5%' },
-              { icon: '🚛', name: 'Commercial Vehicle Loan', desc: 'Business loans on trucks, tempos, and tractors.', rate: '8.5%' },
-              { icon: '🔄', name: 'Refinance Loan', desc: 'Switch to a better rate and close your old loan.', rate: '9%' },
-              { icon: '📈', name: 'Top-Up Loan', desc: 'Additional loan on your existing vehicle loan.', rate: '10%' },
-            ].map((l, i) => (
+            {loanProducts.map((l, i) => (
               <div key={i} onClick={() => scrollTo('contact')} className="bg-[#141414] border border-white/[0.08] rounded-lg px-7 py-6 flex gap-4 items-start cursor-pointer hover:bg-[#1a6e8e]/[0.06] hover:border-[#1a6e8e]/30 transition-all">
                 <div className="w-11 h-11 shrink-0 bg-[#1a6e8e]/10 rounded-md flex items-center justify-center text-xl">{l.icon}</div>
                 <div className="flex-1">

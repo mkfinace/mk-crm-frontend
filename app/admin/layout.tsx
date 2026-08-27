@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Manrope } from 'next/font/google';
 import { getStaffUser, clearStaffUser, StaffUser } from '@/lib/auth';
 import {
-  IconGrid, IconUsers, IconCar, IconBuilding, IconBank, IconUser, IconBell, IconLogout, IconLayers,
+  IconGrid, IconUsers, IconCar, IconBuilding, IconBank, IconUser, IconBell, IconLogout, IconLayers, IconEdit,
 } from '@/components/AdminIcons';
 
 const manrope = Manrope({ subsets: ['latin'], weight: ['500', '600', '700', '800'], variable: '--font-display' });
@@ -52,6 +52,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/catalogue', label: 'Catalogue', icon: IconCar },
     { href: '/admin/car-data', label: 'Car Data', icon: IconCar },
     { href: '/admin/field-builder', label: 'Field Builder', icon: IconLayers },
+    { href: '/admin/site-content', label: 'Site Content', icon: IconEdit },
     { href: '/admin/dealers', label: 'Dealers', icon: IconBuilding },
     { href: '/admin/banks', label: 'Banks', icon: IconBank },
     { href: '/admin/users', label: 'Users', icon: IconUser },

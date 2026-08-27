@@ -126,4 +126,10 @@ export const api = {
   // Vehicles (colours + images per variant)
   getVehicleByVariant: (variantId: string) => apiFetch(`/vehicles/${variantId}`),
   upsertVehicle: (variantId: string, data: any) => apiFetch(`/vehicles/${variantId}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  // Site Settings (admin-editable site-wide content — rates, text, labels)
+  getSiteSettings: () => apiFetch('/site-settings'),
+  getSiteSettingsRaw: () => apiFetch('/site-settings/admin/list'),
+  updateSiteSetting: (key: string, data: { label: string; group: string; value: any }) =>
+    apiFetch(`/site-settings/${key}`, { method: 'PUT', body: JSON.stringify(data) }),
 };

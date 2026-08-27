@@ -134,6 +134,15 @@ export function IconPlus({ className = 'w-4 h-4' }: { className?: string }) {
   );
 }
 
+export function IconEdit({ className = 'w-[18px] h-[18px]' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
+      <path d="M14 6.5 17.5 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function IconChevronDown({ className = 'w-4 h-4' }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>

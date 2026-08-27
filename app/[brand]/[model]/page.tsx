@@ -2,324 +2,433 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Rajdhani, Montserrat } from 'next/font/google';
+import Link from 'next/link';
 import { api } from '@/lib/api';
 import EnquiryModal from '@/components/EnquiryModal';
 
-const rajdhani = Rajdhani({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--font-heading' });
-const montserrat = Montserrat({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700', '800'], variable: '--font-body' });
-
-function slugify(text: string) {
-  return String(text).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-}
-function formatLakh(n: number) {
+function formatPrice(n: number | null | undefined) {
+  if (!n) return 'Price on request';
   return '₹' + (n / 100000).toFixed(2) + ' L';
 }
-function estimateEmi(price: number) {
-  const loan = price * 0.8; // rough 80% financed estimate
-  const r = 8.5 / 12 / 100;
-  const months = 84;
-  const emi = (loan * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
-  return Math.round(emi);
+
+function formatSpecValue(spec: any): string {
+  if (spec.applicability === 'NOT_AVAILABLE') return '—';
+  if (spec.dataType === 'BOOLEAN') return spec.valueBoolean ? '✓ Yes' : '✗ No';
+  if (spec.valueNumber !== null && spec.valueNumber !== undefined) {
+    return `${spec.valueNumber}${spec.unit ? ' ' + spec.unit : ''}`;
+  }
+  return spec.valueText || '—';
 }
 
-const TABS = ['Price & EMI', 'Variants', 'Images', 'Specs', 'Colours'];
-
-export default function VehicleDetailPage() {
-  const params = useParams();
-  const brandSlug = params.brand as string;
-  const modelSlug = params.model as string;
-
-  const [catalogue, setCatalogue] = useState<any[]>([]);
-  const [fieldCategories, setFieldCategories] = useState<any[]>([]);
-  const [specValues, setSpecValues] = useState<any[]>([]);
-  const [colours, setColours] = useState<{ name: string; hex: string }[]>([]);
-  const [images, setImages] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState('Price & EMI');
-  const [activeImg, setActiveImg] = useState(0);
+export default function ModelDetailPage() {
+  const params = useParams<{ brand: string; model: string }>();
+  const [data, setData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+
+  const [variantIdx, setVariantIdx] = useState(0);
+  const [transFilter, setTransFilter] = useState<'All' | 'Automatic' | 'Manual'>('All');
+  const [imageIdx, setImageIdx] = useState(0);
+  const [activeCat, setActiveCat] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
-    api.getFullCatalogue().then(setCatalogue).catch(() => {}).finally(() => setLoading(false));
-    api.listFieldCategories().then(setFieldCategories).catch(() => {});
-  }, []);
-
-  const match = useMemo(() => {
-    for (const brand of catalogue) {
-      if (slugify(brand.name) !== brandSlug) continue;
-      for (const model of brand.models || []) {
-        if (slugify(model.name) === modelSlug) return { brand, model };
-      }
-    }
-    return null;
-  }, [catalogue, brandSlug, modelSlug]);
-
-  const variants = match?.model.variants || [];
-  const sortedVariants = [...variants].sort((a: any, b: any) => a.exShowroomPrice - b.exShowroomPrice);
-  const topVariant = sortedVariants[sortedVariants.length - 1];
-  const minPrice = sortedVariants[0]?.exShowroomPrice;
-  const maxPrice = sortedVariants[sortedVariants.length - 1]?.exShowroomPrice;
-  const priceLabel = minPrice ? (minPrice === maxPrice ? formatLakh(minPrice) : `${formatLakh(minPrice)} - ${formatLakh(maxPrice)}`) : '';
-  const fuels = [...new Set(sortedVariants.map((v: any) => v.fuelType))].join('/');
-  const transmissions = [...new Set(sortedVariants.map((v: any) => v.transmission))].join('/');
-
-  useEffect(() => {
-    if (!topVariant) return;
-    Promise.all([api.listFieldValuesForVariant(topVariant.id), api.getVehicleByVariant(topVariant.id)])
-      .then(([values, vehicle]) => {
-        setSpecValues(values);
-        setColours(vehicle.colours || []);
-        setImages(vehicle.images || []);
+    setLoading(true);
+    setNotFound(false);
+    api
+      .getModelDetail(params.brand as string, params.model as string)
+      .then((res) => {
+        setData(res);
+        setVariantIdx(0);
+        setImageIdx(0);
       })
-      .catch(() => {});
-  }, [topVariant?.id]);
+      .catch(() => setNotFound(true))
+      .finally(() => setLoading(false));
+  }, [params.brand, params.model]);
+
+  const variant = data?.variants?.[variantIdx];
+  const images: string[] = variant?.vehicle?.images || [];
+  const colours: { name: string; hex: string }[] = variant?.vehicle?.colours || [];
 
   const specsByCategory = useMemo(() => {
-    const fieldMeta: Record<string, any> = {};
-    for (const cat of fieldCategories) {
-      for (const f of cat.fields || []) fieldMeta[f.id] = { ...f, categoryName: cat.name };
+    if (!variant?.specs) return [];
+    const map: Record<string, { order: number; items: any[] }> = {};
+    for (const s of variant.specs) {
+      if (!map[s.categoryName]) map[s.categoryName] = { order: s.categoryOrder ?? 0, items: [] };
+      map[s.categoryName].items.push(s);
     }
-    const grouped: Record<string, { name: string; value: string }[]> = {};
-    for (const v of specValues) {
-      const meta = fieldMeta[v.fieldId];
-      if (!meta) continue;
-      let display = '';
-      if (v.valueBoolean !== null && v.valueBoolean !== undefined) display = v.valueBoolean ? 'Yes' : 'No';
-      else if (v.valueNumber !== null && v.valueNumber !== undefined) display = `${v.valueNumber}${meta.unit ? ' ' + meta.unit : ''}`;
-      else if (v.valueText) display = v.valueText;
-      if (!display) continue;
-      if (!grouped[meta.categoryName]) grouped[meta.categoryName] = [];
-      grouped[meta.categoryName].push({ name: meta.name, value: display });
-    }
-    return grouped;
-  }, [specValues, fieldCategories]);
+    return Object.entries(map)
+      .map(([name, v]) => ({ name, order: v.order, items: v.items.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)) }))
+      .sort((a, b) => a.order - b.order);
+  }, [variant]);
 
-  function openEnquiry() {
-    setModalOpen(true);
+  useEffect(() => {
+    setActiveCat(specsByCategory[0]?.name || null);
+  }, [specsByCategory]);
+
+  const hasTransData = (data?.variants || []).some((v: any) => v.transmission);
+  const filteredVariants = (data?.variants || []).filter((v: any) => transFilter === 'All' || v.transmission === transFilter);
+
+  function scrollToSec(id: string) {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   }
-
-  if (loading) {
-    return (
-      <div className={`${rajdhani.variable} ${montserrat.variable} bg-[#0a0a0a] text-white min-h-screen flex items-center justify-center`} style={{ fontFamily: 'var(--font-body)' }}>
-        <p className="text-white/40">Loading…</p>
-      </div>
-    );
-  }
-
-  if (!match) {
-    return (
-      <div className={`${rajdhani.variable} ${montserrat.variable} bg-[#0a0a0a] text-white min-h-screen flex items-center justify-center`} style={{ fontFamily: 'var(--font-body)' }}>
-        <div className="text-center">
-          <p className="text-white/60 mb-4">Vehicle not found.</p>
-          <a href="/" className="text-[#2a8aad] font-medium">← Back to home</a>
-        </div>
-      </div>
-    );
-  }
-
-  const allImages = images.length > 0 ? images : [];
 
   return (
-    <div className={`${rajdhani.variable} ${montserrat.variable} bg-[#0a0a0a] text-white min-h-screen`} style={{ fontFamily: 'var(--font-body)' }}>
-      {/* NAVBAR */}
-      <nav className="bg-black border-b border-white/[0.08] px-4 md:px-8 py-3 flex items-center gap-6">
-        <a href="/" className="font-bold text-lg shrink-0" style={{ fontFamily: 'var(--font-heading)' }}>
-          <span className="text-[#e63030]">MK</span> <span className="text-[#2a8aad]">Finance</span>
-        </a>
-        <div className="flex-1 max-w-md">
-          <input
-            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-md text-white text-[13px] placeholder:text-white/30 outline-none"
-            placeholder="🔍 Search cars, brands or models"
-          />
+    <div className="vpage">
+      <style>{`
+        .vpage{--blue:#159ac4;--blue-dark:#1f56c5;--red:#ef3030;--text:#fff;--muted:#8fa3ad;--line:rgba(42,138,173,.20);--green:#159447;--shadow:0 18px 45px rgba(0,0,0,.28);
+          font-family:Inter,Roboto,Arial,sans-serif;background:#06131a;color:var(--text);line-height:1.5;min-height:100vh;}
+        .vpage *{box-sizing:border-box}
+        .vpage a{text-decoration:none;color:inherit}
+        .vpage button{font:inherit;cursor:pointer}
+        .vpage .container{max-width:1200px;margin:auto;padding:0 18px}
+        .vpage .topbar{height:68px;border-bottom:1px solid var(--line);background:#07151c;display:flex;align-items:center;position:sticky;top:0;z-index:1000}
+        .vpage .topbar-inner{display:flex;align-items:center;gap:22px;width:100%}
+        .vpage .logo{font-size:24px;font-weight:800;letter-spacing:-1px;white-space:nowrap}
+        .vpage .logo span:first-child{color:var(--red)} .vpage .logo span:last-child{color:var(--blue)}
+        .vpage .top-links{margin-left:auto;display:flex;gap:20px;font-size:13px;color:#a8b7be;align-items:center}
+        .vpage .city{font-weight:600;color:#fff}
+        .vpage .top-links a.call{font-weight:700;color:var(--blue)}
+        .vpage .subnav{background:#07151c;border-bottom:1px solid var(--line);position:sticky;top:68px;z-index:900}
+        .vpage section[id]{scroll-margin-top:130px}
+        .vpage .subnav .nav{height:50px;display:flex;align-items:center;gap:25px;overflow:auto;white-space:nowrap}
+        .vpage .subnav button{background:none;border:0;font-size:13px;font-weight:600;color:#aebbc1;padding:16px 0;cursor:pointer}
+        .vpage .subnav button:hover{color:var(--blue)}
+        .vpage .hero{padding:22px 0 26px;background:linear-gradient(135deg,#06131a 0%,#081b24 45%,#061117 100%);position:relative;overflow:hidden}
+        .vpage .hero-grid{display:grid;grid-template-columns:56% 44%;gap:26px;align-items:center}
+        .vpage .gallery{height:390px;border:1px solid rgba(42,138,173,.25);border-radius:10px;background:rgba(21,154,196,.045);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+        .vpage .gallery img{width:100%;height:100%;object-fit:cover}
+        .vpage .gallery-fallback{font-size:110px;filter:drop-shadow(0 12px 15px rgba(0,0,0,.45))}
+        .vpage .photo-count{position:absolute;bottom:14px;left:14px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 12px;font-size:12px;font-weight:700;color:#0b1b23}
+        .vpage .thumb-row{display:flex;gap:8px;margin-top:10px;overflow-x:auto}
+        .vpage .thumb{flex:0 0 72px;height:54px;border-radius:6px;overflow:hidden;cursor:pointer;border:2px solid transparent;background:rgba(21,154,196,.08)}
+        .vpage .thumb.active{border-color:var(--blue)}
+        .vpage .thumb img{width:100%;height:100%;object-fit:cover}
+        .vpage .vehicle-title h1{font-size:31px;line-height:1.15;margin-bottom:8px;color:#fff}
+        .vpage .rating-row{display:flex;align-items:center;gap:9px;font-size:13px;margin-bottom:14px;color:#a8b7be}
+        .vpage .tag-chip{font-size:10px;background:rgba(21,154,196,.15);color:var(--blue);padding:4px 9px;border-radius:20px;font-weight:700;border:1px solid rgba(21,154,196,.3)}
+        .vpage .price{font-size:26px;font-weight:800;color:#fff;margin-bottom:3px}
+        .vpage .price-note{font-size:11px;color:#879da7;margin-bottom:17px}
+        .vpage .btn-row{display:flex;gap:10px;flex-wrap:wrap}
+        .vpage .btn{border:1px solid var(--blue);background:var(--blue);color:#fff;border-radius:6px;padding:11px 18px;font-size:13px;font-weight:700}
+        .vpage .btn:hover{background:var(--blue-dark)}
+        .vpage .btn.outline{background:transparent;color:var(--blue)}
+        .vpage .btn.small{padding:8px 14px;font-size:12px}
+        .vpage .offer{margin-top:18px;background:rgba(239,48,48,.055);border:1px solid rgba(239,48,48,.28);border-radius:8px;padding:13px}
+        .vpage .offer b{color:#ff5a5a;font-size:13px}.vpage .offer p{font-size:12px;color:#9aabb2;margin-top:3px}
+        .vpage .spec-strip{border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow);display:grid;grid-template-columns:repeat(4,1fr);overflow:hidden;margin-top:18px}
+        .vpage .spec{padding:15px 12px;border-right:1px solid var(--line);background:#0a1a22}
+        .vpage .spec:last-child{border-right:0}.vpage .spec-label{font-size:11px;color:#8299a3;margin-bottom:3px}.vpage .spec-value{font-size:13px;font-weight:700;color:#fff}
+        .vpage .section{padding:28px 0;background:#06131a}.vpage .section.alt{background:#0a1a22;border-top:1px solid rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.04)}
+        .vpage .section-title{font-size:23px;color:#fff;margin-bottom:5px}.vpage .section-sub{font-size:13px;color:var(--muted);margin-bottom:18px}
+        .vpage .card{background:#0b1b23;border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow)}
+        .vpage .price-layout{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+        .vpage .side-card{padding:18px}.vpage .side-card h3{font-size:16px;margin-bottom:12px;color:#fff}.vpage .side-card p{font-size:12px;color:var(--muted);margin-bottom:14px}
+        .vpage .emi-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:12px}
+        .vpage .emi-row strong{color:#fff}.vpage .full{width:100%;margin-top:14px}
+        .vpage .variant-filter-bar{display:flex;align-items:center;gap:18px;padding:14px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+        .vpage .vfilter-opt{display:flex;align-items:center;gap:6px;font-size:13px;color:#c3d0d5;cursor:pointer}
+        .vpage .vfilter-opt input{accent-color:var(--blue)}
+        .vpage .variant-table-head{display:grid;grid-template-columns:2fr 1fr 1fr;padding:10px 18px;background:#0d2029;font-size:11px;text-transform:uppercase;color:#8299a3;letter-spacing:.4px}
+        .vpage .variant-row{display:grid;grid-template-columns:2fr 1fr 1fr;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .15s}
+        .vpage .variant-row:hover{background:#0d2029}
+        .vpage .variant-row.active{background:#0d2029;box-shadow:inset 3px 0 0 var(--blue)}
+        .vpage .variant-row:last-child{border-bottom:0}
+        .vpage .variant-row .vname{font-size:14px;font-weight:700;color:#fff}
+        .vpage .variant-row .vprice{font-size:14px;font-weight:800;color:#fff}
+        .vpage .variant-row .vtrans{font-size:12px;color:#c3d0d5}
+        .vpage .specs-tab-layout{display:grid;grid-template-columns:250px 1fr}
+        .vpage .specs-tab-sidebar{border-right:1px solid var(--line);background:#081820}
+        .vpage .specs-tab-item{padding:14px 18px;font-size:13px;color:#c3d0d5;cursor:pointer;border-bottom:1px solid var(--line);border-left:3px solid transparent;background:none;width:100%;text-align:left;display:block}
+        .vpage .specs-tab-item:hover{color:#fff}
+        .vpage .specs-tab-item.active{background:#0d2029;color:var(--blue);font-weight:700;border-left:3px solid var(--blue)}
+        .vpage .specs-tab-content{padding:20px 24px}
+        .vpage .specs-tab-content h3{font-size:16px;color:#fff;margin-bottom:14px}
+        .vpage .specs-tab-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);font-size:13px}
+        .vpage .specs-tab-row:last-child{border-bottom:0}
+        .vpage .specs-tab-row span:first-child{color:var(--muted)}
+        .vpage .specs-tab-row span:last-child{color:#fff;font-weight:600;text-align:right}
+        .vpage .gallery-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+        .vpage .gallery-tile{height:160px;background:#0b1b23;border:1px solid var(--line);border-radius:8px;overflow:hidden;position:relative}
+        .vpage .gallery-tile img{width:100%;height:100%;object-fit:cover}
+        .vpage .colors{display:flex;gap:16px;flex-wrap:wrap;padding:18px}
+        .vpage .color-item{width:130px;text-align:center}
+        .vpage .color-dot{height:80px;border-radius:8px;border:1px solid rgba(255,255,255,.18);box-shadow:var(--shadow)}
+        .vpage .color-item p{font-size:12px;font-weight:600;margin-top:8px;color:#dbe4e8}
+        .vpage .cta{background:linear-gradient(135deg,rgba(21,154,196,.13),rgba(239,48,48,.055));border:1px solid rgba(42,138,173,.25);border-radius:10px;padding:22px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+        .vpage .cta h2{font-size:21px;color:#fff}.vpage .cta p{font-size:12px;color:var(--muted);margin-top:3px}
+        .vpage footer{background:#07131a;color:#d1d5db;padding:38px 0 20px;margin-top:10px;border-top:1px solid var(--line)}
+        .vpage .footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:28px}
+        .vpage .footer-logo{font-size:24px;font-weight:800;color:#fff}.vpage .footer-logo span{color:var(--blue)}
+        .vpage .footer-grid h4{font-size:12px;color:#fff;margin-bottom:12px}
+        .vpage .footer-grid a{display:block;font-size:12px;color:#9ca3af;margin:7px 0;cursor:pointer}
+        .vpage .footer-desc{font-size:12px;color:#9ca3af;max-width:300px;margin-top:8px}
+        .vpage .copyright{border-top:1px solid #374151;margin-top:28px;padding-top:17px;font-size:11px;color:#9ca3af;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+        .vpage .loading-state,.vpage .notfound-state{text-align:center;padding:100px 20px;color:var(--muted)}
+        @media(max-width:900px){.vpage .top-links{display:none}.vpage .hero-grid,.vpage .price-layout{grid-template-columns:1fr}.vpage .spec-strip{grid-template-columns:repeat(2,1fr)}.vpage .gallery{height:320px}.vpage .footer-grid{grid-template-columns:1fr 1fr}.vpage .gallery-grid{grid-template-columns:repeat(2,1fr)}}
+        @media(max-width:600px){.vpage .topbar{height:auto;padding:10px 0}.vpage .vehicle-title h1{font-size:25px}.vpage .cta{flex-direction:column;align-items:flex-start}.vpage .footer-grid{grid-template-columns:1fr}.vpage .copyright{flex-direction:column;gap:6px}.vpage .specs-tab-layout{grid-template-columns:1fr}.vpage .specs-tab-sidebar{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line)}.vpage .specs-tab-item{white-space:nowrap;border-bottom:0;border-right:1px solid var(--line)}.vpage .specs-tab-item.active{border-left:0;border-bottom:3px solid var(--blue)}}
+      `}</style>
+
+      <header className="topbar">
+        <div className="container topbar-inner">
+          <Link className="logo" href="/"><span>MK</span> <span>Finance</span></Link>
+          <div className="top-links">
+            <span className="city">📍 Valsad, Gujarat</span>
+            <a className="call" href="tel:9824742356">📞 98247 42356</a>
+          </div>
         </div>
-        <div className="hidden md:flex items-center gap-5 text-[12.5px] text-white/60 shrink-0">
-          <span>📍 Valsad, Gujarat</span>
-          <a href="tel:+919824742356" className="text-[#2a8aad] font-medium">📞 98247 42356</a>
+      </header>
+
+      {!loading && !notFound && data && variant && (
+        <nav className="subnav">
+          <div className="container nav">
+            <button onClick={() => scrollToSec('overview')}>{data.brand.name} {data.model.name}</button>
+            <button onClick={() => scrollToSec('price')}>Price & EMI</button>
+            <button onClick={() => scrollToSec('variants')}>Variants</button>
+            {images.length > 0 && <button onClick={() => scrollToSec('images')}>Images</button>}
+            <button onClick={() => scrollToSec('specs')}>Specs</button>
+            {colours.length > 0 && <button onClick={() => scrollToSec('colors')}>Colours</button>}
+          </div>
+        </nav>
+      )}
+
+      {loading && <div className="container loading-state">Loading vehicle details...</div>}
+
+      {!loading && notFound && (
+        <div className="container notfound-state">
+          <h2>Vehicle Not Found</h2>
+          <p style={{ marginTop: 8 }}>This vehicle is no longer available.</p>
+          <Link href="/" className="btn" style={{ display: 'inline-block', marginTop: 20 }}>Home par pacha javo</Link>
         </div>
-      </nav>
+      )}
 
-      <div className="max-w-[1200px] mx-auto px-4 md:px-8 py-6 grid md:grid-cols-[1fr_360px] gap-8">
-        <div>
-          {/* Hero image */}
-          <div className="bg-[#141414] border border-white/[0.08] rounded-lg overflow-hidden mb-2">
-            <div className="aspect-video bg-[#1a6e8e]/[0.06] flex items-center justify-center text-8xl">
-              {allImages[activeImg] ? (
-                <img src={allImages[activeImg]} alt="" className="w-full h-full object-cover" onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} />
-              ) : '🚗'}
-            </div>
-          </div>
-          {allImages.length > 1 && (
-            <div className="flex gap-2 mb-5">
-              {allImages.map((url, i) => (
-                <button key={i} onClick={() => setActiveImg(i)} className={`w-16 h-16 rounded-md overflow-hidden border-2 ${activeImg === i ? 'border-[#2a8aad]' : 'border-white/10'}`}>
-                  <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => ((e.target as HTMLImageElement).style.opacity = '0.2')} />
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Tabs */}
-          <div className="flex gap-1 border-b border-white/[0.08] mb-6 overflow-x-auto">
-            {TABS.map((t) => (
-              <button
-                key={t}
-                onClick={() => setActiveTab(t)}
-                className={`px-4 py-2.5 text-[13px] font-medium whitespace-nowrap border-b-2 transition-colors ${activeTab === t ? 'border-[#2a8aad] text-[#2a8aad]' : 'border-transparent text-white/50 hover:text-white'}`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-
-          {/* Info grid */}
-          <div className="grid grid-cols-4 gap-3 mb-8">
-            {[
-              { label: 'Brand', value: match.brand.name },
-              { label: 'Model Year', value: 'New' },
-              { label: 'Fuel Type', value: fuels || '—' },
-              { label: 'Category', value: match.model.category === 'CAR' ? 'Car' : match.model.category },
-            ].map((item, i) => (
-              <div key={i} className="bg-[#141414] border border-white/[0.08] rounded-lg px-4 py-3">
-                <p className="text-[10.5px] text-white/40 mb-0.5">{item.label}</p>
-                <p className="text-[13px] font-semibold">{item.value}</p>
-              </div>
-            ))}
-          </div>
-
-          {activeTab === 'Price & EMI' && (
-            <div>
-              <h2 className="text-2xl font-bold mb-1" style={{ fontFamily: 'var(--font-heading)' }}>{match.brand.name} {match.model.name} Price &amp; EMI</h2>
-              <p className="text-white/45 text-sm mb-5">Estimated on-road price and EMI details.</p>
-              <div className="grid md:grid-cols-2 gap-5">
-                <div className="bg-[#141414] border border-white/[0.08] rounded-lg p-6">
-                  <h3 className="font-bold mb-4" style={{ fontFamily: 'var(--font-heading)' }}>Vehicle Price</h3>
-                  {[
-                    ['Ex-showroom Price', priceLabel],
-                    ['Fuel Type', fuels],
-                    ['Transmission', transmissions],
-                    ['Category', match.model.category === 'CAR' ? 'Car' : match.model.category],
-                  ].map(([label, val], i) => (
-                    <div key={i} className="flex justify-between py-2.5 border-b border-white/[0.05] text-sm last:border-0">
-                      <span className="text-white/50">{label}</span>
-                      <span className="font-semibold">{val}</span>
-                    </div>
-                  ))}
-                  <p className="text-[11.5px] text-white/35 mt-4">Contact us for the exact on-road price (including RTO + Insurance) — we'll get you the best deal.</p>
-                </div>
-                <div className="bg-[#141414] border border-white/[0.08] rounded-lg p-6">
-                  <h3 className="font-bold mb-4" style={{ fontFamily: 'var(--font-heading)' }}>EMI Estimate</h3>
-                  {minPrice && [
-                    ['Starting EMI', `₹${estimateEmi(minPrice).toLocaleString('en-IN')}/mo`],
-                    ['Loan Tenure', 'Upto 84 Months'],
-                    ['Processing', '24-48 Hours'],
-                  ].map(([label, val], i) => (
-                    <div key={i} className="flex justify-between py-2.5 border-b border-white/[0.05] text-sm last:border-0">
-                      <span className="text-white/50">{label}</span>
-                      <span className="font-semibold text-[#2a8aad]">{val}</span>
-                    </div>
-                  ))}
-                  <button onClick={openEnquiry} className="w-full mt-5 py-3 bg-[#1a6e8e] hover:bg-[#0d4d6b] rounded-md font-bold text-sm">Get Personalised EMI</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'Variants' && (
-            <div>
-              <h2 className="text-xl font-bold mb-4" style={{ fontFamily: 'var(--font-heading)' }}>Variants</h2>
-              <div className="space-y-2">
-                {sortedVariants.map((v: any) => (
-                  <div key={v.id} className="bg-[#141414] border border-white/[0.08] rounded-lg px-5 py-4 flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-[14px]">{v.name}</p>
-                      <p className="text-[12px] text-white/40">{v.fuelType} · {v.transmission}</p>
-                    </div>
-                    <p className="font-bold text-[#2a8aad]" style={{ fontFamily: 'var(--font-heading)' }}>{formatLakh(v.exShowroomPrice)}</p>
+      {!loading && !notFound && data && variant && (
+        <main>
+          <section className="hero" id="overview">
+            <div className="container">
+              <div className="hero-grid">
+                <div>
+                  <div className="gallery">
+                    {images.length > 0 ? (
+                      <>
+                        <img src={images[imageIdx]} alt={`${data.brand.name} ${data.model.name}`} />
+                        <div className="photo-count">📷 {images.length} Photo{images.length > 1 ? 's' : ''}</div>
+                      </>
+                    ) : (
+                      <div className="gallery-fallback">🚗</div>
+                    )}
                   </div>
-                ))}
+                  {images.length > 1 && (
+                    <div className="thumb-row">
+                      {images.map((url, i) => (
+                        <div key={i} className={`thumb ${i === imageIdx ? 'active' : ''}`} onClick={() => setImageIdx(i)}>
+                          <img src={url} alt="" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="vehicle-title">
+                  <h1>{data.brand.name} {data.model.name}</h1>
+                  <div className="rating-row">
+                    <span className="tag-chip">Brand New</span>
+                    <span className="tag-chip">{variant.fuelType}</span>
+                  </div>
+                  <div className="price">{formatPrice(variant.exShowroomPrice)}*</div>
+                  <div className="price-note">*Ex-showroom price estimate — loan/EMI available through MK Finance</div>
+                  <div className="btn-row">
+                    <button className="btn" onClick={() => setModalOpen(true)}>Get Finance Quote</button>
+                    <a href="https://wa.me/919824742356" target="_blank" className="btn outline">💬 Ask on WhatsApp</a>
+                  </div>
+                  <div className="offer"><b>Special Finance Offer</b><p>Get a personalised EMI and loan quote from MK Finance within 24-48 hours.</p></div>
+                </div>
+              </div>
+              <div className="spec-strip">
+                <div className="spec"><div className="spec-label">Brand</div><div className="spec-value">{data.brand.name}</div></div>
+                <div className="spec"><div className="spec-label">Fuel Type</div><div className="spec-value">{variant.fuelType || '-'}</div></div>
+                <div className="spec"><div className="spec-label">Transmission</div><div className="spec-value">{variant.transmission || '-'}</div></div>
+                <div className="spec"><div className="spec-label">Variants</div><div className="spec-value">{data.variants.length} Available</div></div>
               </div>
             </div>
+          </section>
+
+          <section className="section" id="price">
+            <div className="container">
+              <h2 className="section-title">{data.brand.name} {data.model.name} Price & EMI</h2>
+              <p className="section-sub">Estimated on-road price ane EMI details.</p>
+              <div className="price-layout">
+                <div className="card side-card">
+                  <h3>Vehicle Price — {variant.name}</h3>
+                  <div className="emi-row"><span>Ex-showroom Price</span><strong>{formatPrice(variant.exShowroomPrice)}</strong></div>
+                  <div className="emi-row"><span>Fuel Type</span><strong>{variant.fuelType || '-'}</strong></div>
+                  <div className="emi-row"><span>Transmission</span><strong>{variant.transmission || '-'}</strong></div>
+                  <p style={{ marginTop: 14 }}>Contact us for the exact on-road price (including RTO + Insurance) — we&apos;ll get you the best deal.</p>
+                </div>
+                <div className="card side-card">
+                  <h3>EMI Estimate</h3>
+                  <p>Get a personalised monthly payment plan based on your profile.</p>
+                  <div className="emi-row"><span>Loan Tenure</span><strong>Upto 84 Months</strong></div>
+                  <div className="emi-row"><span>Processing</span><strong>24-48 Hours</strong></div>
+                  <button className="btn full" onClick={() => setModalOpen(true)}>Get Personalised EMI</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="section alt" id="variants">
+            <div className="container">
+              <h2 className="section-title">{data.brand.name} {data.model.name} Variants</h2>
+              <p className="section-sub">Variants available for this vehicle.</p>
+              <div className="card" style={{ overflow: 'hidden' }}>
+                {hasTransData && (
+                  <div className="variant-filter-bar">
+                    {(['All', 'Automatic', 'Manual'] as const).map((t) => (
+                      <label key={t} className="vfilter-opt">
+                        <input type="radio" name="vtrans" checked={transFilter === t} onChange={() => setTransFilter(t)} /> {t}
+                      </label>
+                    ))}
+                  </div>
+                )}
+                {hasTransData && (
+                  <div className="variant-table-head"><span>Variant</span><span>Transmission / Fuel</span><span>Ex-Showroom Price</span></div>
+                )}
+                <div>
+                  {filteredVariants.length === 0 ? (
+                    <p style={{ color: 'var(--muted)', fontSize: 13, padding: 18 }}>No {transFilter.toLowerCase()} variants listed.</p>
+                  ) : (
+                    filteredVariants.map((v: any) => {
+                      const globalIdx = data.variants.findIndex((x: any) => x.id === v.id);
+                      return (
+                        <div
+                          key={v.id}
+                          className={`variant-row ${globalIdx === variantIdx ? 'active' : ''}`}
+                          onClick={() => { setVariantIdx(globalIdx); setImageIdx(0); }}
+                        >
+                          <div className="vname">{v.name}</div>
+                          <div className="vtrans">{[v.transmission, v.fuelType].filter(Boolean).join(' • ') || '-'}</div>
+                          <div className="vprice">{formatPrice(v.exShowroomPrice)}</div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {images.length > 0 && (
+            <section className="section" id="images">
+              <div className="container">
+                <h2 className="section-title">{data.brand.name} {data.model.name} Images</h2>
+                <p className="section-sub">All photos of this vehicle.</p>
+                <div className="gallery-grid">
+                  {images.map((url, i) => (
+                    <div key={i} className="gallery-tile"><img src={url} alt="" /></div>
+                  ))}
+                </div>
+              </div>
+            </section>
           )}
 
-          {activeTab === 'Images' && (
-            <div>
-              <h2 className="text-xl font-bold mb-4" style={{ fontFamily: 'var(--font-heading)' }}>Images</h2>
-              {allImages.length === 0 ? (
-                <p className="text-white/40 text-sm">No images added yet.</p>
+          <section className="section alt" id="specs">
+            <div className="container">
+              <h2 className="section-title">{data.brand.name} {data.model.name} Specifications</h2>
+              <p className="section-sub">All the vehicle&apos;s details in one place.</p>
+
+              {specsByCategory.length === 0 ? (
+                <div className="card" style={{ padding: 18, color: 'var(--muted)', fontSize: 13 }}>
+                  Detailed specs for this variant haven&apos;t been added yet.
+                </div>
               ) : (
-                <div className="grid grid-cols-3 gap-3">
-                  {allImages.map((url, i) => (
-                    <div key={i} className="aspect-video rounded-lg overflow-hidden bg-[#141414] border border-white/[0.08]">
-                      <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => ((e.target as HTMLImageElement).style.opacity = '0.2')} />
+                <div className="card" style={{ overflow: 'hidden' }}>
+                  <div className="specs-tab-layout">
+                    <div className="specs-tab-sidebar">
+                      {specsByCategory.map((cat) => (
+                        <button
+                          key={cat.name}
+                          className={`specs-tab-item ${activeCat === cat.name ? 'active' : ''}`}
+                          onClick={() => setActiveCat(cat.name)}
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
                     </div>
-                  ))}
+                    <div className="specs-tab-content">
+                      <h3>{activeCat}</h3>
+                      {specsByCategory.find((c) => c.name === activeCat)?.items.map((s: any, i: number) => (
+                        <div key={i} className="specs-tab-row">
+                          <span>{s.fieldName}</span>
+                          <span>{formatSpecValue(s)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
-          )}
+          </section>
 
-          {activeTab === 'Specs' && (
-            <div>
-              <h2 className="text-xl font-bold mb-4" style={{ fontFamily: 'var(--font-heading)' }}>Specifications</h2>
-              {Object.keys(specsByCategory).length === 0 ? (
-                <p className="text-white/40 text-sm">Specifications coming soon.</p>
-              ) : (
-                <div className="space-y-5">
-                  {Object.entries(specsByCategory).map(([catName, fields]) => (
-                    <div key={catName}>
-                      <p className="text-[11px] font-semibold text-[#2a8aad] uppercase tracking-wide mb-2">{catName}</p>
-                      <div className="grid grid-cols-2 gap-x-6">
-                        {fields.map((f, i) => (
-                          <div key={i} className="flex justify-between py-2 border-b border-white/[0.05] text-[13px]">
-                            <span className="text-white/50">{f.name}</span>
-                            <span className="font-medium">{f.value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'Colours' && (
-            <div>
-              <h2 className="text-xl font-bold mb-4" style={{ fontFamily: 'var(--font-heading)' }}>Available Colours</h2>
-              {colours.length === 0 ? (
-                <p className="text-white/40 text-sm">Colour options coming soon.</p>
-              ) : (
-                <div className="flex flex-wrap gap-4">
+          {colours.length > 0 && (
+            <section className="section" id="colors">
+              <div className="container">
+                <h2 className="section-title">{data.brand.name} {data.model.name} Colours</h2>
+                <p className="section-sub">Colours available for this vehicle.</p>
+                <div className="card colors">
                   {colours.map((c, i) => (
-                    <div key={i} className="text-center">
-                      <div className="w-16 h-16 rounded-full border-2 border-white/10 mb-2" style={{ backgroundColor: c.hex }} />
-                      <p className="text-[12px] text-white/60">{c.name}</p>
+                    <div key={i} className="color-item">
+                      <div className="color-dot" style={{ background: c.hex }} />
+                      <p>{c.name}</p>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+            </section>
           )}
-        </div>
 
-        {/* Sidebar */}
-        <div>
-          <div className="bg-[#141414] border border-white/[0.08] rounded-lg p-6 sticky top-4">
-            <p className="text-2xl font-bold mb-1" style={{ fontFamily: 'var(--font-heading)' }}>{priceLabel}<span className="text-white/30 text-base">*</span></p>
-            <p className="text-[11px] text-white/35 mb-4">*Ex-showroom price estimate — loan/EMI available through MK Finance</p>
-            <button onClick={openEnquiry} className="w-full py-3 bg-[#1a6e8e] hover:bg-[#0d4d6b] rounded-md font-bold text-sm mb-2.5">Get Finance Quote</button>
-            <a href="https://wa.me/919824742356" target="_blank" className="block text-center w-full py-3 border border-white/15 hover:border-[#25d366] rounded-md font-bold text-sm">💬 Ask on WhatsApp</a>
+          <section className="section alt">
+            <div className="container">
+              <div className="cta">
+                <div>
+                  <h2>Need the best loan for {data.brand.name} {data.model.name}?</h2>
+                  <p>Get vehicle finance, insurance and on-road assistance from MK Finance.</p>
+                </div>
+                <button className="btn" onClick={() => setModalOpen(true)}>Get Finance Quote</button>
+              </div>
+            </div>
+          </section>
+        </main>
+      )}
 
-            <div className="mt-5 bg-[#e63030]/10 border border-[#e63030]/25 rounded-lg p-4">
-              <p className="text-[#f07070] font-bold text-[13px] mb-1">Special Finance Offer</p>
-              <p className="text-[12px] text-white/50">Get a personalised EMI and loan quote from MK Finance within 24-48 hours.</p>
+      <footer>
+        <div className="container">
+          <div className="footer-grid">
+            <div>
+              <div className="footer-logo"><span>MK</span> Finance</div>
+              <p className="footer-desc">Your financial partner — for vehicle loans, commercial vehicle finance and vehicle insurance.</p>
+            </div>
+            <div>
+              <h4>Finance</h4>
+              <a href="tel:9824742356">Car Loan</a>
+              <a href="tel:9824742356">Commercial Vehicle Loan</a>
+              <a href="tel:9824742356">Insurance</a>
+            </div>
+            <div>
+              <h4>Quick Links</h4>
+              <a onClick={() => scrollToSec('price')}>Price</a>
+              <a onClick={() => scrollToSec('variants')}>Variants</a>
+              <a onClick={() => scrollToSec('specs')}>Specs</a>
+              <Link href="/">Home</Link>
             </div>
           </div>
+          <div className="copyright"><span>© 2026 MK Finance. All Rights Reserved.</span><span>Call: 9824742356</span></div>
         </div>
-      </div>
+      </footer>
 
-      <EnquiryModal open={modalOpen} onClose={() => setModalOpen(false)} prefillVehicle={`${match.brand.name} ${match.model.name}`} />
+      <EnquiryModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        prefillVehicle={data ? `${data.brand.name} ${data.model.name} ${variant?.name || ''}`.trim() : ''}
+      />
     </div>
   );
 }

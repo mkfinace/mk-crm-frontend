@@ -25,6 +25,7 @@ export const api = {
   updateModel: (id: string, data: any) => apiFetch(`/catalogue/models/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteModel: (id: string) => apiFetch(`/catalogue/models/${id}`, { method: 'DELETE' }),
   getVariants: (modelId?: string) => apiFetch(`/catalogue/variants${modelId ? `?modelId=${modelId}` : ''}`),
+  getModelDetail: (brandSlug: string, modelSlug: string) => apiFetch(`/catalogue/model/${brandSlug}/${modelSlug}`),
   createVariant: (data: any) => apiFetch('/catalogue/variants', { method: 'POST', body: JSON.stringify(data) }),
   updateVariant: (id: string, data: any) => apiFetch(`/catalogue/variants/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteVariant: (id: string) => apiFetch(`/catalogue/variants/${id}`, { method: 'DELETE' }),

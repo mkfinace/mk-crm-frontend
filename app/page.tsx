@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Rajdhani, Montserrat } from 'next/font/google';
 import { api } from '@/lib/api';
+import { slugify } from '@/lib/slugify';
 import EnquiryModal from '@/components/EnquiryModal';
 
 const rajdhani = Rajdhani({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--font-heading' });
@@ -20,10 +22,10 @@ function formatLakh(n: number) {
   return '₹' + (n / 100000).toFixed(2) + ' L';
 }
 
-function VehicleCard({ v, onOpen }: { v: any; onOpen: () => void }) {
+function VehicleCard({ v, onOpenDetail, onQuickQuote }: { v: any; onOpenDetail: () => void; onQuickQuote: () => void }) {
   return (
     <div
-      onClick={onOpen}
+      onClick={onOpenDetail}
       className="bg-[#141414] border border-white/[0.08] rounded-lg overflow-hidden cursor-pointer transition-all hover:border-[#1a6e8e]/40 hover:-translate-y-1 hover:shadow-2xl"
     >
       <div className="h-[170px] bg-[#1a6e8e]/[0.06] border-b border-white/[0.08] flex items-center justify-center text-5xl relative overflow-hidden">
@@ -40,7 +42,7 @@ function VehicleCard({ v, onOpen }: { v: any; onOpen: () => void }) {
         <p className="text-xs text-white/40 mb-3">{v.fuelType} · {v.transmission}</p>
         <p className="text-[1.3rem] font-bold text-[#2a8aad] mb-3" style={{ fontFamily: 'var(--font-heading)' }}>{v.price}</p>
         <button
-          onClick={(e) => { e.stopPropagation(); onOpen(); }}
+          onClick={(e) => { e.stopPropagation(); onQuickQuote(); }}
           className="w-full py-2.5 border border-[#e63030] text-[#e63030] hover:bg-[#e63030] hover:text-white rounded-md text-xs font-bold uppercase tracking-wide transition-colors"
         >
           View Offers →
@@ -51,6 +53,7 @@ function VehicleCard({ v, onOpen }: { v: any; onOpen: () => void }) {
 }
 
 export default function HomePage() {
+  const router = useRouter();
   const [catalogue, setCatalogue] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -255,7 +258,7 @@ export default function HomePage() {
               ? <p className="text-center text-white/40 py-12">No cars listed yet — check back soon.</p>
               : (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  {cars.map((v, i) => <VehicleCard key={i} v={v} onOpen={() => setSelectedVehicle(v)} />)}
+                  {cars.map((v, i) => <VehicleCard key={i} v={v} onOpenDetail={() => router.push(`/${slugify(v.brand)}/${slugify(v.model)}`)} onQuickQuote={() => setSelectedVehicle(v)} />)}
                 </div>
               )
           )}
@@ -289,7 +292,7 @@ export default function HomePage() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 {(commercialByCategory[activeCommercialCat] || []).map((v, i) => (
-                  <VehicleCard key={i} v={v} onOpen={() => setSelectedVehicle(v)} />
+                  <VehicleCard key={i} v={v} onOpenDetail={() => router.push(`/${slugify(v.brand)}/${slugify(v.model)}`)} onQuickQuote={() => setSelectedVehicle(v)} />
                 ))}
               </div>
             </div>

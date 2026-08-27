@@ -115,26 +115,28 @@ export default function ModelDetailPage() {
   // "Compare More Options" — prefer same category (Car stays with Cars,
   // Pickup stays with commercial vehicles); fall back to any model only if
   // the catalogue has nothing else in that category yet.
+  // "Compare More Options" — strictly same category, same as "Similar
+  // Vehicles". No cross-category fallback: a commercial Pickup must never
+  // show passenger cars here (and vice versa) — better to hide the section
+  // than show an irrelevant vehicle.
   const compareList = useMemo(() => {
     if (!data) return [];
     const sameCategory: any[] = [];
-    const anyCategory: any[] = [];
     for (const b of catalogueTree) {
       for (const m of b.models || []) {
         if (m.id === data.model.id) continue;
+        if ((m.category || 'CAR') !== (data.model.category || 'CAR')) continue;
         const variants = m.variants || [];
         const prices = variants.map((v: any) => v.exShowroomPrice).filter((p: number) => p > 0);
-        const row = {
+        sameCategory.push({
           brandName: b.name,
           modelName: m.name,
           priceText: prices.length ? formatPrice(Math.min(...prices)) : 'Price on request',
           fuelTypes: Array.from(new Set(variants.map((v: any) => v.fuelType).filter(Boolean))).join('/'),
-        };
-        anyCategory.push(row);
-        if ((m.category || 'CAR') === (data.model.category || 'CAR')) sameCategory.push(row);
+        });
       }
     }
-    return (sameCategory.length > 0 ? sameCategory : anyCategory).slice(0, 3);
+    return sameCategory.slice(0, 3);
   }, [data, catalogueTree]);
 
   const variant = data?.variants?.[variantIdx];
@@ -672,7 +674,7 @@ export default function ModelDetailPage() {
             {keySpecs.length > 0 && <button onClick={() => scrollToSec('keyspecs')}>Key Specs</button>}
             <button onClick={() => scrollToSec('variants')}>Variants</button>
             {images.length > 0 && <button onClick={() => scrollToSec('images')}>Images</button>}
-            <button onClick={() => scrollToSec('expert')}>Expert Opinion</button>
+            {expertOpinion && <button onClick={() => scrollToSec('expert')}>Expert Opinion</button>}
             <button onClick={() => scrollToSec('specs')}>Specs</button>
             {colours.length > 0 && <button onClick={() => scrollToSec('colors')}>Colours</button>}
             {similarCars.length > 0 && <button onClick={() => scrollToSec('similar')}>Similar Vehicles</button>}

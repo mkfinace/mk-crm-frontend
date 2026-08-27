@@ -261,23 +261,35 @@ export default function ModelDetailPage() {
   // Similar Cars — other catalogue models sharing a fuel type and roughly
   // similar starting price band to this one (real data, not dummy).
   const similarCars = useMemo(() => {
-    if (!data || !priceRange.min) return [];
+    if (!data) return [];
     const myFuels = new Set(data.variants.map((v: any) => v.fuelType).filter(Boolean));
-    const results: any[] = [];
+    const others: { brandName: string; modelName: string; priceText: string; fuelTypes: string; minP: number; sharesFuel: boolean }[] = [];
     for (const b of catalogueTree) {
       for (const m of b.models || []) {
         if (m.id === data.model.id) continue;
         const variants = m.variants || [];
         const fuels: string[] = variants.map((v: any) => v.fuelType).filter(Boolean);
-        if (!fuels.some((f) => myFuels.has(f))) continue;
         const prices = variants.map((v: any) => v.exShowroomPrice).filter((p: number) => p > 0);
         if (prices.length === 0) continue;
         const minP = Math.min(...prices);
-        if (minP < priceRange.min * 0.5 || minP > priceRange.min * 2) continue;
-        results.push({ brandName: b.name, modelName: m.name, priceText: formatPrice(minP), fuelTypes: Array.from(new Set(fuels)).join('/') });
+        others.push({
+          brandName: b.name,
+          modelName: m.name,
+          priceText: formatPrice(minP),
+          fuelTypes: Array.from(new Set(fuels)).join('/'),
+          minP,
+          sharesFuel: fuels.some((f) => myFuels.has(f)),
+        });
       }
     }
-    return results.slice(0, 3);
+    // Prefer same fuel type + similar price band; if that's too sparse
+    // (small catalogue), fall back to nearest-priced models of any fuel type
+    // so the section reliably has something to show.
+    const strict = priceRange.min
+      ? others.filter((o) => o.sharesFuel && o.minP >= priceRange.min * 0.5 && o.minP <= priceRange.min * 2)
+      : [];
+    const pool = strict.length >= 3 ? strict : others.sort((a, b) => Math.abs(a.minP - (priceRange.min || a.minP)) - Math.abs(b.minP - (priceRange.min || b.minP)));
+    return pool.slice(0, 3);
   }, [data, catalogueTree, priceRange]);
 
   const faqs = useMemo(() => {
@@ -445,11 +457,13 @@ export default function ModelDetailPage() {
         .vpage .city{font-weight:600;color:#fff}
         .vpage .top-links a.call{font-weight:700;color:var(--blue)}
         .vpage .mainnav{border-bottom:1px solid var(--line);background:#081820;position:sticky;top:68px;z-index:950}
-        .vpage .mainnav .nav{height:46px;display:flex;align-items:center;gap:26px;overflow:auto;white-space:nowrap}
+        .vpage .mainnav .nav{height:46px;display:flex;align-items:center;gap:26px;overflow-x:auto;overflow-y:hidden;white-space:nowrap;scrollbar-width:none}
+        .vpage .mainnav .nav::-webkit-scrollbar{display:none}
         .vpage .mainnav button{background:none;border:0;font-size:13px;color:#b5c2c8;cursor:pointer}.vpage .mainnav button:hover{color:var(--blue)}
         .vpage .subnav{background:#07151c;border-bottom:1px solid var(--line);position:sticky;top:114px;z-index:900}
         .vpage section[id]{scroll-margin-top:130px}
-        .vpage .subnav .nav{height:50px;display:flex;align-items:center;gap:25px;overflow:auto;white-space:nowrap}
+        .vpage .subnav .nav{height:50px;display:flex;align-items:center;gap:25px;overflow-x:auto;overflow-y:hidden;white-space:nowrap;scrollbar-width:none}
+        .vpage .subnav .nav::-webkit-scrollbar{display:none}
         .vpage .subnav button{background:none;border:0;font-size:13px;font-weight:600;color:#aebbc1;padding:16px 0;cursor:pointer}
         .vpage .subnav button:hover{color:var(--blue)}
         .vpage .hero{padding:22px 0 26px;background:linear-gradient(135deg,#06131a 0%,#081b24 45%,#061117 100%);position:relative;overflow:hidden}
@@ -468,7 +482,9 @@ export default function ModelDetailPage() {
         .vpage .price{font-size:26px;font-weight:800;color:#fff;margin-bottom:3px}
         .vpage .price-note{font-size:11px;color:#879da7;margin-bottom:17px}
         .vpage .btn-row{display:flex;gap:10px;flex-wrap:wrap}
-        .vpage .btn{border:1px solid var(--blue);background:var(--blue);color:#fff;border-radius:6px;padding:11px 18px;font-size:13px;font-weight:700}
+        .vpage .btn{border:1px solid var(--blue);background:var(--blue);color:#fff;border-radius:6px;padding:11px 18px;font-size:13px;font-weight:700;transition:background .15s,transform .1s,opacity .15s}
+        .vpage .btn:active{transform:scale(.97)}
+        .vpage .btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
         .vpage .btn:hover{background:var(--blue-dark)}
         .vpage .btn.outline{background:transparent;color:var(--blue)}
         .vpage .btn.small{padding:8px 14px;font-size:12px}
@@ -503,9 +519,13 @@ export default function ModelDetailPage() {
         .vpage .vcb-actions{display:flex;gap:8px;margin-left:auto}
         .vpage .btn.secondary{background:transparent;border:1px solid var(--line);color:#c3d0d5}
         .vpage .compare-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;display:flex;align-items:flex-start;justify-content:center;padding:50px 20px;overflow:auto}
-        .vpage .compare-modal{background:#0b1b23;border:1px solid var(--line);border-radius:12px;max-width:960px;width:100%;padding:22px;max-height:85vh;overflow:auto}
+        .vpage .compare-modal{background:#0b1b23;border:1px solid var(--line);border-radius:12px;max-width:960px;width:100%;padding:22px;max-height:85vh;overflow:auto;box-shadow:0 25px 60px rgba(0,0,0,.5)}
+        .vpage .compare-modal::-webkit-scrollbar,.vpage .picker-modal::-webkit-scrollbar,.vpage .picker-list::-webkit-scrollbar{width:7px}
+        .vpage .compare-modal::-webkit-scrollbar-thumb,.vpage .picker-modal::-webkit-scrollbar-thumb,.vpage .picker-list::-webkit-scrollbar-thumb{background:rgba(21,154,196,.35);border-radius:4px}
+        .vpage .compare-modal,.vpage .picker-modal,.vpage .picker-list{scrollbar-width:thin;scrollbar-color:rgba(21,154,196,.35) transparent}
+        .vpage .compare-table-wrap{overflow-x:auto}
         .vpage .compare-modal-close{float:right;cursor:pointer;color:var(--muted);font-size:20px}
-        .vpage .compare-table{width:100%;border-collapse:collapse;margin-top:14px;font-size:12.5px}
+        .vpage .compare-table{width:100%;min-width:560px;border-collapse:collapse;margin-top:14px;font-size:12.5px}
         .vpage .compare-table th,.vpage .compare-table td{border:1px solid var(--line);padding:10px 12px;text-align:left}
         .vpage .compare-table th{background:#0d2029;color:#fff;font-size:12px}
         .vpage .compare-table td:first-child{color:var(--muted);white-space:nowrap}
@@ -513,7 +533,7 @@ export default function ModelDetailPage() {
         .vpage .compare-cat-row td{background:#081820;color:var(--blue);font-weight:700;font-size:12px}
         .vpage .vcb-add{display:flex;align-items:center;gap:6px;background:transparent;border:1px dashed var(--line);border-radius:8px;padding:8px 14px;font-size:12px;color:var(--blue);cursor:pointer;white-space:nowrap}
         .vpage .vcb-add:hover{border-color:var(--blue)}
-        .vpage .picker-modal{background:#0b1b23;border:1px solid var(--line);border-radius:12px;max-width:480px;width:100%;max-height:75vh;overflow:auto;padding:22px}
+        .vpage .picker-modal{background:#0b1b23;border:1px solid var(--line);border-radius:12px;max-width:480px;width:100%;max-height:75vh;overflow:auto;padding:22px;box-shadow:0 25px 60px rgba(0,0,0,.5)}
         .vpage .picker-tabs{display:flex;gap:20px;border-bottom:1px solid var(--line);margin-bottom:14px;padding-bottom:2px}
         .vpage .picker-tabs span{font-size:13px;font-weight:700;color:var(--muted);padding-bottom:10px}
         .vpage .picker-tabs span.active{color:var(--blue);border-bottom:2px solid var(--blue)}
@@ -521,7 +541,7 @@ export default function ModelDetailPage() {
         .vpage .picker-search::placeholder{color:#6d828c}
         .vpage .picker-list{max-height:340px;overflow:auto}
         .vpage .picker-back{font-size:12px;color:var(--blue);cursor:pointer;padding:8px 4px;font-weight:600}
-        .vpage .picker-row{padding:12px 10px;font-size:13px;color:#dbe4e8;cursor:pointer;border-radius:6px}
+        .vpage .picker-row{padding:12px 10px;font-size:13px;color:#dbe4e8;cursor:pointer;border-radius:6px;transition:background .12s,color .12s}
         .vpage .picker-row:hover{background:#0d2029;color:#fff}
         .vpage .picker-row-variant{display:flex;justify-content:space-between;align-items:center;gap:10px}
         .vpage .picker-row-meta{color:var(--muted);font-size:11.5px}
@@ -531,10 +551,11 @@ export default function ModelDetailPage() {
         .vpage .keyspec-item .val{font-size:14px;font-weight:800;color:#fff;margin-top:5px}
         .vpage .keyspec-item .lbl{font-size:11px;color:var(--muted)}
         .vpage .keyspec-list{display:grid;grid-template-columns:1fr 1fr;column-gap:40px}
-        .vpage .keyspec-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--line);font-size:13px}
+        .vpage .keyspec-row{display:flex;justify-content:space-between;align-items:center;padding:14px 4px;border-bottom:1px solid var(--line);font-size:13px;border-radius:6px;transition:background .15s}
+        .vpage .keyspec-row:hover{background:rgba(21,154,196,.05)}
         .vpage .keyspec-row .lbl{color:var(--muted)}
         .vpage .keyspec-row .val{color:#fff;font-weight:700}
-        .vpage .keyspec-row .tick{color:var(--green);font-weight:800}
+        .vpage .keyspec-row .tick{color:var(--green);font-weight:800;font-size:15px}
         .vpage .features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
         .vpage .feature-chip{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#dbe4e8;background:#0b1b23;border:1px solid var(--line);border-radius:7px;padding:11px 13px}
         .vpage .feature-chip .tick{color:var(--green);font-weight:800}
@@ -581,8 +602,10 @@ export default function ModelDetailPage() {
         .vpage .expert-badge{background:var(--green);color:#fff;padding:5px 10px;border-radius:5px;font-weight:800;font-size:12px}
         .vpage .expert-card p{font-size:13px;color:#c3d0d5;line-height:1.8}
         .vpage .compare{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-        .vpage .compare-card{padding:15px;cursor:pointer}
-        .vpage .compare-img{height:70px;border-radius:7px;background:#081820;display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:10px}
+        .vpage .compare-card{padding:16px;cursor:pointer;transition:transform .18s,box-shadow .18s,border-color .18s;display:block}
+        .vpage .compare-card:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(0,0,0,.4);border-color:rgba(21,154,196,.45)}
+        .vpage .compare-img{height:76px;border-radius:7px;background:#081820;display:flex;align-items:center;justify-content:center;font-size:38px;margin-bottom:11px;transition:background .18s}
+        .vpage .compare-card:hover .compare-img{background:rgba(21,154,196,.12)}
         .vpage .compare-card h3{font-size:14px;color:#fff}.vpage .compare-card p{font-size:12px;color:var(--muted);margin:4px 0 10px}
         .vpage .compare-price{font-weight:800;font-size:13px;color:var(--blue)}
         .vpage .faq-item{padding:15px 0;border-bottom:1px solid var(--line)}
@@ -590,7 +613,21 @@ export default function ModelDetailPage() {
         .vpage .faq-q{font-size:13px;font-weight:700;color:#fff}.vpage .faq-a{font-size:12px;color:var(--muted);margin-top:5px}
         .vpage .coming-soon{padding:32px 20px;text-align:center;color:var(--muted);font-size:13px}
         @media(max-width:900px){.vpage .top-links{display:none}.vpage .hero-grid,.vpage .price-layout{grid-template-columns:1fr}.vpage .spec-strip{grid-template-columns:repeat(2,1fr)}.vpage .gallery{height:320px}.vpage .footer-grid{grid-template-columns:1fr 1fr}.vpage .gallery-grid{grid-template-columns:repeat(2,1fr)}.vpage .compare{grid-template-columns:1fr}.vpage .keyspecs-grid{grid-template-columns:repeat(2,1fr)}.vpage .features-grid{grid-template-columns:1fr 1fr}}
-        @media(max-width:600px){.vpage .keyspec-list{grid-template-columns:1fr}.vpage .topbar{height:auto;padding:10px 0}.vpage .vehicle-title h1{font-size:25px}.vpage .cta{flex-direction:column;align-items:flex-start}.vpage .footer-grid{grid-template-columns:1fr}.vpage .copyright{flex-direction:column;gap:6px}.vpage .specs-tab-layout{grid-template-columns:1fr}.vpage .specs-tab-sidebar{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line)}.vpage .specs-tab-item{white-space:nowrap;border-bottom:0;border-right:1px solid var(--line)}.vpage .specs-tab-item.active{border-left:0;border-bottom:3px solid var(--blue)}}
+        @media(max-width:600px){.vpage .keyspec-list{grid-template-columns:1fr}.vpage .topbar{height:auto;padding:10px 0}.vpage .vehicle-title h1{font-size:25px}.vpage .cta{flex-direction:column;align-items:flex-start}.vpage .footer-grid{grid-template-columns:1fr}.vpage .copyright{flex-direction:column;gap:6px}.vpage .specs-tab-layout{grid-template-columns:1fr}.vpage .specs-tab-sidebar{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line)}.vpage .specs-tab-item{white-space:nowrap;border-bottom:0;border-right:1px solid var(--line)}.vpage .specs-tab-item.active{border-left:0;border-bottom:3px solid var(--blue)}
+          .vpage .variant-table-head{display:none}
+          .vpage .variant-row{grid-template-columns:1fr auto;grid-template-areas:"name check" "meta meta" "price price";row-gap:4px;padding:14px}
+          .vpage .variant-row .vname{grid-area:name}
+          .vpage .variant-row .vcheck{grid-area:check;justify-content:flex-end}
+          .vpage .variant-row .vtrans{grid-area:meta}
+          .vpage .variant-row .vprice{grid-area:price;font-size:15px}
+          .vpage .variant-filter-bar{padding:12px 14px}
+          .vpage .picker-modal{max-width:100%;max-height:85vh}
+          .vpage .picker-row-variant{flex-wrap:wrap;row-gap:4px}
+          .vpage .vcb-chips{width:100%}
+          .vpage .vcb-actions{width:100%}.vpage .vcb-actions .btn{flex:1}
+          .vpage .variant-compare-bar{flex-direction:column;align-items:stretch}
+          .vpage .compare-modal{padding:16px}
+        }
       `}</style>
 
       <header className="topbar">
@@ -1025,7 +1062,7 @@ export default function ModelDetailPage() {
 
       {pickerOpen && (
         <div className="compare-modal-overlay" onClick={closePicker}>
-          <div className="picker-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="picker-modal" style={pickerLoading ? { opacity: 0.6, pointerEvents: 'none' } : undefined} onClick={(e) => e.stopPropagation()}>
             <span className="compare-modal-close" onClick={closePicker}>✕</span>
             <div className="picker-tabs">
               <span className={pickerStep === 'brand' ? 'active' : ''}>Brand</span>
@@ -1090,6 +1127,7 @@ export default function ModelDetailPage() {
             {compareTable.length === 0 ? (
               <p style={{ marginTop: 16, fontSize: 13, color: 'var(--muted)' }}>No specs added for these vehicles yet.</p>
             ) : (
+              <div className="compare-table-wrap">
               <table className="compare-table">
                 <thead>
                   <tr>
@@ -1121,6 +1159,7 @@ export default function ModelDetailPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </div>

@@ -7,10 +7,10 @@ import { IconEdit } from '@/components/AdminIcons';
 
 type LoanItem = { icon: string; name: string; desc: string; rate: string };
 type ServiceItem = { icon: string; title: string; desc: string };
-type HeroMedia = { type: 'icon' | 'image' | 'video'; url: string; animation: 'fade' | 'slide' | 'zoom' | 'none'; showText?: boolean };
+type HeroMedia = { type: 'icon' | 'image' | 'video'; url: string; animation: 'fade' | 'slide' | 'zoom' | 'none'; showText?: boolean; fit?: 'cover' | 'contain' };
 type SettingRow = { key: string; label: string; group: string; value: any };
 
-const DEFAULT_HERO_MEDIA: HeroMedia = { type: 'icon', url: '', animation: 'fade', showText: true };
+const DEFAULT_HERO_MEDIA: HeroMedia = { type: 'icon', url: '', animation: 'fade', showText: true, fit: 'cover' };
 const DEFAULT_HERO_SLIDES: HeroMedia[] = [DEFAULT_HERO_MEDIA];
 
 // Trims fully-transparent padding around the visible content of an image —
@@ -194,7 +194,7 @@ export default function SiteContentAdminPage() {
   }
 
   function addSlide() {
-    setHeroSlides((prev) => [...prev, { type: 'icon', url: '', animation: 'fade', showText: true }]);
+    setHeroSlides((prev) => [...prev, { type: 'icon', url: '', animation: 'fade', showText: true, fit: 'cover' }]);
   }
 
   function removeSlide(index: number) {
@@ -422,6 +422,19 @@ export default function SiteContentAdminPage() {
                         </select>
                       </div>
                     </div>
+                    {slide.type !== 'icon' && (
+                      <div className="mb-3">
+                        <label className="text-[11px] text-slate-500 block mb-1">Fit Mode</label>
+                        <select
+                          className={`${inputCls} w-full`}
+                          value={slide.fit || 'cover'}
+                          onChange={(e) => updateSlide(index, { fit: e.target.value as HeroMedia['fit'] })}
+                        >
+                          <option value="cover">Fill & Crop (may zoom in / crop edges)</option>
+                          <option value="contain">Show Full Image (no cropping, may letterbox)</option>
+                        </select>
+                      </div>
+                    )}
                     {slide.type !== 'icon' && (
                       <label className="flex items-center gap-2 mb-3 text-[12px] text-slate-600">
                         <input

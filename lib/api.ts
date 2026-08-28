@@ -62,6 +62,9 @@ export const api = {
 
   // Staff login (admin / dealer / finance)
   staffLogin: (mobile: string, password: string) => apiFetch('/users/login', { method: 'POST', body: JSON.stringify({ mobile, password }) }),
+  requestPasswordReset: (mobile: string) => apiFetch('/users/forgot-password/request', { method: 'POST', body: JSON.stringify({ mobile }) }),
+  resetPasswordWithOtp: (mobile: string, code: string, newPassword: string) =>
+    apiFetch('/users/forgot-password/reset', { method: 'POST', body: JSON.stringify({ mobile, code, newPassword }) }),
   listUsers: (role?: string) => apiFetch(`/users${role ? `?role=${role}` : ''}`),
   createUser: (data: any) => apiFetch('/users', { method: 'POST', body: JSON.stringify(data) }),
   updateUser: (id: string, data: any) => apiFetch(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),

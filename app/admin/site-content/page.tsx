@@ -7,10 +7,10 @@ import { IconEdit } from '@/components/AdminIcons';
 
 type LoanItem = { icon: string; name: string; desc: string; rate: string };
 type ServiceItem = { icon: string; title: string; desc: string };
-type HeroMedia = { type: 'icon' | 'image' | 'video'; url: string; animation: 'fade' | 'slide' | 'zoom' | 'none' };
+type HeroMedia = { type: 'icon' | 'image' | 'video'; url: string; animation: 'fade' | 'slide' | 'zoom' | 'none'; showText?: boolean };
 type SettingRow = { key: string; label: string; group: string; value: any };
 
-const DEFAULT_HERO_MEDIA: HeroMedia = { type: 'icon', url: '', animation: 'fade' };
+const DEFAULT_HERO_MEDIA: HeroMedia = { type: 'icon', url: '', animation: 'fade', showText: true };
 const DEFAULT_HERO_SLIDES: HeroMedia[] = [DEFAULT_HERO_MEDIA];
 
 // Trims fully-transparent padding around the visible content of an image —
@@ -194,7 +194,7 @@ export default function SiteContentAdminPage() {
   }
 
   function addSlide() {
-    setHeroSlides((prev) => [...prev, { type: 'icon', url: '', animation: 'fade' }]);
+    setHeroSlides((prev) => [...prev, { type: 'icon', url: '', animation: 'fade', showText: true }]);
   }
 
   function removeSlide(index: number) {
@@ -422,6 +422,16 @@ export default function SiteContentAdminPage() {
                         </select>
                       </div>
                     </div>
+                    {slide.type !== 'icon' && (
+                      <label className="flex items-center gap-2 mb-3 text-[12px] text-slate-600">
+                        <input
+                          type="checkbox"
+                          checked={slide.showText !== false}
+                          onChange={(e) => updateSlide(index, { showText: e.target.checked })}
+                        />
+                        Show text overlay (heading, buttons, stats) on top of this slide — turn off to display the image/video full and clean
+                      </label>
+                    )}
                     {slide.type !== 'icon' && (
                       <div>
                         <label className="text-[11px] text-slate-500 block mb-1">Upload from your computer</label>

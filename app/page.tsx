@@ -163,7 +163,7 @@ export default function HomePage() {
     contact_city: 'Valsad, Gujarat',
     contact_service_area: 'Based in Dharampur, Valsad — serving South Gujarat including Vapi, Surat, Navsari, Bharuch and Silvassa.',
     footer_tagline: 'Your trusted financial partner for all vehicle needs — buying, financing, and insuring, all under one roof.',
-    hero_slides: [{ type: 'icon', url: '', animation: 'fade' }] as { type: 'icon' | 'image' | 'video'; url: string; animation: 'fade' | 'slide' | 'zoom' | 'none' }[],
+    hero_slides: [{ type: 'icon', url: '', animation: 'fade', showText: true }] as { type: 'icon' | 'image' | 'video'; url: string; animation: 'fade' | 'slide' | 'zoom' | 'none'; showText?: boolean }[],
   });
   const phoneDigits = content.contact_phone.replace(/\s/g, '');
 
@@ -288,6 +288,7 @@ export default function HomePage() {
       {(() => {
         const activeSlideData = content.hero_slides[activeSlide] || content.hero_slides[0];
         const isBanner = activeSlideData.type !== 'icon' && !!activeSlideData.url && !heroMediaError;
+        const showText = isBanner ? activeSlideData.showText !== false : true;
 
         return (
           <section className="min-h-screen flex items-center pt-[70px] relative overflow-hidden bg-gradient-to-br from-[#050e14] via-[#0a1a24] to-[#0d1010]">
@@ -313,8 +314,13 @@ export default function HomePage() {
                     className={`absolute inset-0 w-full h-full object-cover ${heroAnimClass(activeSlideData.animation)}`}
                   />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-r from-[#050e14] via-[#050e14]/85 to-[#050e14]/40" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#050e14] via-transparent to-transparent" />
+                {showText && (
+                  <>
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#050e14] via-[#050e14]/85 to-[#050e14]/40" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#050e14] via-transparent to-transparent" />
+                  </>
+                )}
+                {!showText && <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />}
               </>
             ) : (
               <>
@@ -325,6 +331,7 @@ export default function HomePage() {
             )}
 
             <div className={`max-w-[1200px] mx-auto px-6 md:px-8 py-16 ${isBanner ? '' : 'grid md:grid-cols-2 gap-12 items-center'} relative z-10 w-full`}>
+              {showText && (
               <div className={isBanner ? 'max-w-[600px]' : ''}>
                 <h1 className="text-[2.8rem] md:text-[4.5rem] font-bold leading-[1.05]" style={{ fontFamily: 'var(--font-heading)' }}>
                   <span className="text-[#e63030]">MK</span> <span ref={financeHeroRef} className="text-[#2a8aad]">Finance</span>
@@ -360,6 +367,7 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
+              )}
 
               {!isBanner && (
                 <div className="hidden md:flex items-center justify-center relative">
@@ -382,7 +390,7 @@ export default function HomePage() {
               )}
             </div>
 
-            {isBanner && (
+            {isBanner && showText && (
               <>
                 <div className="hidden md:block absolute bottom-8 right-8 bg-black/80 border border-[#1a6e8e]/30 rounded-lg px-4 py-3 text-xs shadow-lg backdrop-blur z-10">
                   <div className="text-white/40 mb-0.5">Today's Best Rate</div>

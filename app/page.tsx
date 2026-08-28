@@ -234,15 +234,14 @@ export default function HomePage() {
   };
 
   const financeHeroRef = useRef<HTMLSpanElement>(null);
-  const financeFooterRef = useRef<HTMLSpanElement>(null);
 
   return (
     <div className={`${rajdhani.variable} ${montserrat.variable} bg-[#0a0a0a] text-white min-h-screen`} style={{ fontFamily: 'var(--font-body)' }}>
       {/* NAVBAR */}
       <nav className="fixed top-0 w-full z-[1000] bg-black/95 backdrop-blur-xl border-b border-white/[0.08] px-4 md:px-8 h-[70px] flex items-center justify-between">
-        <div className="font-bold text-lg" style={{ fontFamily: 'var(--font-heading)' }}>
-          <span className="text-[#e63030]">MK</span> <span className="text-[#2a8aad]">Finance</span>
-        </div>
+        <Link href="/" className="flex items-center">
+          <img src="/logo.png" alt="MK Finance" className="h-11 w-auto" />
+        </Link>
         <ul className={`${menuOpen ? 'flex' : 'hidden'} md:flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 fixed md:static top-[70px] left-0 right-0 md:top-auto bg-black/98 md:bg-transparent p-6 md:p-0 border-b md:border-0 border-white/[0.08] list-none`}>
           <li><Link href="/cars" className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Browse Vehicles</Link></li>
           <li><button onClick={() => scrollTo('vehicles')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Vehicles</button></li>
@@ -656,12 +655,7 @@ export default function HomePage() {
       <footer className="bg-[#141414] border-t border-white/[0.08] px-6 md:px-8 pt-16 pb-8">
         <div className="max-w-[1200px] mx-auto grid md:grid-cols-3 gap-10 mb-10">
           <div>
-            <div className="font-bold text-lg" style={{ fontFamily: 'var(--font-heading)' }}>
-              <span className="text-[#e63030]">MK</span> <span ref={financeFooterRef} className="text-[#2a8aad]">Finance</span>
-            </div>
-            <div className="mb-3">
-              <StretchedTagline text={content.hero_tagline} matchRef={financeFooterRef} className="text-[#2a8aad] text-[10px] font-semibold" mode="center-nowrap" />
-            </div>
+            <img src="/logo.png" alt="MK Finance" className="h-20 w-auto mb-3" />
             <p className="text-[13px] text-white/40 leading-[1.7] max-w-[280px] mb-4">
               {content.footer_tagline}
             </p>

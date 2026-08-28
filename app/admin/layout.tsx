@@ -71,13 +71,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <aside className="w-64 shrink-0 bg-[#0B1220] flex flex-col">
         <div className="px-5 pt-6 pb-5">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#D8B155] to-[#B4872E] flex items-center justify-center shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
-              <span className="text-[#0B1220] font-bold text-sm" style={{ fontFamily: 'var(--font-display)' }}>M</span>
-            </div>
             <div>
-              <p className="text-white text-[15px] leading-tight font-semibold tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
-                MK Finance
-              </p>
+              <img src="/logo.png" alt="MK Finance" className="h-8 w-auto mb-1" />
               <p className="text-[11px] text-slate-500 leading-tight tracking-wide uppercase">Car CRM</p>
             </div>
           </div>

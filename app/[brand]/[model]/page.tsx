@@ -484,7 +484,7 @@ export default function ModelDetailPage() {
         .vpage .container{max-width:1200px;margin:auto;padding:0 18px}
         .vpage .topbar{height:68px;border-bottom:1px solid var(--line);background:#07151c;display:flex;align-items:center;position:sticky;top:0;z-index:1000}
         .vpage .topbar-inner{display:flex;align-items:center;gap:22px;width:100%}
-        .vpage .logo{font-size:24px;font-weight:800;letter-spacing:-1px;white-space:nowrap}
+        .vpage .logo{display:flex;align-items:center;letter-spacing:-1px;white-space:nowrap}
         .vpage .logo span:first-child{color:var(--red)} .vpage .logo span:last-child{color:var(--blue)}
         .vpage .top-links{margin-left:auto;display:flex;gap:20px;font-size:13px;color:#a8b7be;align-items:center}
         .vpage .city{font-weight:600;color:#fff}
@@ -665,7 +665,7 @@ export default function ModelDetailPage() {
 
       <header className="topbar">
         <div className="container topbar-inner">
-          <Link className="logo" href="/"><span>MK</span> <span>Finance</span></Link>
+          <Link className="logo" href="/"><img src="/logo.png" alt="MK Finance" style={{ height: 44, width: 'auto' }} /></Link>
           <div className="top-links">
             <span className="city">📍 {contactInfo.contact_city}</span>
             <a className="call" href={`tel:${contactPhoneDigits}`}>📞 {contactInfo.contact_phone}</a>
@@ -1054,7 +1054,7 @@ export default function ModelDetailPage() {
         <div className="container">
           <div className="footer-grid">
             <div>
-              <div className="footer-logo"><span>MK</span> Finance</div>
+              <img src="/logo.png" alt="MK Finance" style={{ height: 72, width: 'auto', marginBottom: 8 }} />
               <p className="footer-desc">Your financial partner — for vehicle loans, commercial vehicle finance and vehicle insurance.</p>
             </div>
             <div>

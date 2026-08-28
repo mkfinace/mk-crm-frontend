@@ -47,13 +47,8 @@ export default function StaffLoginPage() {
 
       <form onSubmit={handleLogin} className="relative bg-[#101A2E] border border-white/[0.06] rounded-2xl shadow-2xl p-8 max-w-sm w-full">
         <div className="flex items-center gap-2.5 mb-8">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#D8B155] to-[#B4872E] flex items-center justify-center">
-            <span className="text-[#0B1220] font-bold text-base" style={{ fontFamily: 'var(--font-display)' }}>M</span>
-          </div>
           <div>
-            <p className="text-white text-[15px] font-semibold leading-tight" style={{ fontFamily: 'var(--font-display)' }}>
-              MK Finance
-            </p>
+            <img src="/logo.png" alt="MK Finance" className="h-9 w-auto mb-1" />
             <p className="text-[11px] text-slate-500 uppercase tracking-wide leading-tight">Car CRM</p>
           </div>
         </div>

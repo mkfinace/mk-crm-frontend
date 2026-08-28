@@ -129,7 +129,7 @@ export default function CarsListingPage() {
         .lpage button{font:inherit;cursor:pointer}
         .lpage .container{max-width:1200px;margin:auto;padding:0 18px}
         .lpage .topbar{height:68px;border-bottom:1px solid var(--line);background:#07151c;display:flex;align-items:center;position:sticky;top:0;z-index:1000}
-        .lpage .logo{font-size:24px;font-weight:800;letter-spacing:-1px}
+        .lpage .logo{display:flex;align-items:center;letter-spacing:-1px}
         .lpage .logo span:first-child{color:var(--red)}.lpage .logo span:last-child{color:var(--blue)}
         .lpage .top-links{margin-left:auto;display:flex;gap:20px;font-size:13px;color:#a8b7be;align-items:center}
         .lpage .top-links a.call{font-weight:700;color:var(--blue)}
@@ -189,7 +189,7 @@ export default function CarsListingPage() {
 
       <header className="topbar">
         <div className="container" style={{ display: 'flex', alignItems: 'center', gap: 22, width: '100%' }}>
-          <Link className="logo" href="/"><span>MK</span> <span>Finance</span></Link>
+          <Link className="logo" href="/"><img src="/logo.png" alt="MK Finance" style={{ height: 44, width: 'auto' }} /></Link>
           <div className="top-links">
             <span style={{ fontWeight: 600, color: '#fff' }}>📍 Valsad, Gujarat</span>
             <a className="call" href="tel:9824742356">📞 98247 42356</a>

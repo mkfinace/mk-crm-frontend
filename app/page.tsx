@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Rajdhani, Montserrat } from 'next/font/google';
@@ -21,6 +21,37 @@ const CATEGORY_ICON: Record<string, string> = {
 
 function formatLakh(n: number) {
   return '₹' + (n / 100000).toFixed(2) + ' L';
+}
+
+// Stretches text so its start/end line up exactly with another element's
+// rendered width (e.g. the tagline spanning the same width as "Finance"
+// above it) — measures live, so it adapts to text edits and screen size.
+function StretchedTagline({ text, matchRef, className }: { text: string; matchRef: React.RefObject<HTMLElement | null>; className?: string }) {
+  const [rect, setRect] = useState<{ left: number; width: number } | null>(null);
+
+  useEffect(() => {
+    function measure() {
+      if (matchRef.current) setRect({ left: matchRef.current.offsetLeft, width: matchRef.current.offsetWidth });
+    }
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [matchRef, text]);
+
+  return (
+    <span
+      className={className}
+      style={{
+        display: 'inline-block',
+        marginLeft: rect ? `${rect.left}px` : 0,
+        width: rect ? `${rect.width}px` : 'auto',
+        textAlign: 'justify',
+        textAlignLast: 'justify',
+      }}
+    >
+      {text}
+    </span>
+  );
 }
 
 function VehicleCard({ v, onOpenDetail, onQuickQuote }: { v: any; onOpenDetail: () => void; onQuickQuote: () => void }) {
@@ -195,6 +226,9 @@ export default function HomePage() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const financeHeroRef = useRef<HTMLSpanElement>(null);
+  const financeFooterRef = useRef<HTMLSpanElement>(null);
+
   return (
     <div className={`${rajdhani.variable} ${montserrat.variable} bg-[#0a0a0a] text-white min-h-screen`} style={{ fontFamily: 'var(--font-body)' }}>
       {/* NAVBAR */}
@@ -224,9 +258,11 @@ export default function HomePage() {
         <div className="max-w-[1200px] mx-auto px-6 md:px-8 py-16 grid md:grid-cols-2 gap-12 items-center relative z-10">
           <div>
             <h1 className="text-[2.8rem] md:text-[4.5rem] font-bold leading-[1.05]" style={{ fontFamily: 'var(--font-heading)' }}>
-              <span className="text-[#e63030]">MK</span> <span className="text-[#2a8aad]">Finance</span>
+              <span className="text-[#e63030]">MK</span> <span ref={financeHeroRef} className="text-[#2a8aad]">Finance</span>
             </h1>
-            <p className="text-[#2a8aad] text-[14px] font-semibold tracking-wide mb-5 pl-1 md:pl-[7.5rem] -mt-2 md:-mt-3">{content.hero_tagline}</p>
+            <div className="mb-5 -mt-2 md:-mt-3">
+              <StretchedTagline text={content.hero_tagline} matchRef={financeHeroRef} className="text-[#2a8aad] text-[14px] font-semibold" />
+            </div>
             <p className="text-white/85 text-[1.35rem] font-bold mb-6" style={{ fontFamily: 'var(--font-heading)' }}>{content.hero_subheading}</p>
             <p className="text-white/60 leading-[1.8] mb-8 max-w-[440px] text-[15px]">
               {content.hero_description}
@@ -613,8 +649,11 @@ export default function HomePage() {
       <footer className="bg-[#141414] border-t border-white/[0.08] px-6 md:px-8 pt-16 pb-8">
         <div className="max-w-[1200px] mx-auto grid md:grid-cols-3 gap-10 mb-10">
           <div>
-            <div className="font-bold text-lg mb-3" style={{ fontFamily: 'var(--font-heading)' }}>
-              <span className="text-[#e63030]">MK</span> <span className="text-[#2a8aad]">Finance</span>
+            <div className="font-bold text-lg" style={{ fontFamily: 'var(--font-heading)' }}>
+              <span className="text-[#e63030]">MK</span> <span ref={financeFooterRef} className="text-[#2a8aad]">Finance</span>
+            </div>
+            <div className="mb-3">
+              <StretchedTagline text={content.hero_tagline} matchRef={financeFooterRef} className="text-[#2a8aad] text-[10px] font-semibold" />
             </div>
             <p className="text-[13px] text-white/40 leading-[1.7] max-w-[280px] mb-4">
               {content.footer_tagline}

@@ -289,10 +289,10 @@ export default function HomePage() {
         const activeSlideData = content.hero_slides[activeSlide] || content.hero_slides[0];
         const isBanner = activeSlideData.type !== 'icon' && !!activeSlideData.url && !heroMediaError;
         const showText = isBanner ? activeSlideData.showText !== false : true;
-        const fitClass = activeSlideData.fit === 'contain' ? 'object-contain' : 'object-cover';
+        const fitClass = activeSlideData.fit === 'cover' ? 'object-cover' : 'object-contain';
 
         return (
-          <section className="min-h-screen flex items-center pt-[70px] relative overflow-hidden bg-gradient-to-br from-[#050e14] via-[#0a1a24] to-[#0d1010]">
+          <section className={`flex items-center pt-[70px] relative overflow-hidden bg-gradient-to-br from-[#050e14] via-[#0a1a24] to-[#0d1010] ${isBanner ? 'min-h-[520px] h-[75vh] max-h-[760px]' : 'min-h-screen'}`}>
             {isBanner ? (
               <>
                 {activeSlideData.type === 'image' ? (

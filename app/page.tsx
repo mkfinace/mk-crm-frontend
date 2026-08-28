@@ -42,11 +42,10 @@ function StretchedTagline({ text, matchRef, className }: { text: string; matchRe
     <span
       className={className}
       style={{
-        display: 'inline-block',
+        display: 'block',
         marginLeft: rect ? `${rect.left}px` : 0,
         width: rect ? `${rect.width}px` : 'auto',
-        textAlign: 'justify',
-        textAlignLast: 'justify',
+        textAlign: 'center',
       }}
     >
       {text}

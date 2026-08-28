@@ -315,13 +315,16 @@ export default function ModelDetailPage() {
         });
       }
     }
-    // Within the same category, prefer same fuel type + similar price band;
-    // if that's too sparse (small catalogue), fall back to nearest-priced
-    // models in the same category so the section reliably has something to show.
-    const strict = priceRange.min
-      ? others.filter((o) => o.sharesFuel && o.minP >= priceRange.min * 0.5 && o.minP <= priceRange.min * 2)
+    // Strict match — same category, same fuel type, and price within ₹1-3
+    // lakh of this model's starting price. No loose fallback: if nothing
+    // genuinely qualifies, the section stays empty rather than showing a
+    // mismatched vehicle.
+    const MAX_PRICE_DIFF = 300000; // ₹3 lakh
+    const pool = priceRange.min
+      ? others
+          .filter((o) => o.sharesFuel && Math.abs(o.minP - priceRange.min) <= MAX_PRICE_DIFF)
+          .sort((a, b) => Math.abs(a.minP - priceRange.min) - Math.abs(b.minP - priceRange.min))
       : [];
-    const pool = strict.length >= 3 ? strict : others.sort((a, b) => Math.abs(a.minP - (priceRange.min || a.minP)) - Math.abs(b.minP - (priceRange.min || b.minP)));
     return pool.slice(0, 3);
   }, [data, catalogueTree, priceRange]);
 

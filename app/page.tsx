@@ -53,7 +53,7 @@ function StretchedTagline({
         const selfWidth = selfRef.current?.offsetWidth || 0;
         setStyle({ display: 'block', whiteSpace: 'nowrap', marginLeft: `${left + width / 2 - selfWidth / 2}px` });
       } else {
-        setStyle({ display: 'block', marginLeft: `${left}px`, width: `${width}px`, textAlign: 'center' });
+        setStyle({ display: 'block', marginLeft: `${left}px`, width: `${width}px`, textAlign: 'center', whiteSpace: 'nowrap' });
       }
     }
     measure();
@@ -352,7 +352,7 @@ export default function HomePage() {
                   <span className="text-[#e63030]">MK</span> <span ref={financeHeroRef} className="text-[#2a8aad]">Finance</span>
                 </h1>
                 <div className="mb-5 -mt-2 md:-mt-3">
-                  <StretchedTagline text={content.hero_tagline} matchRef={financeHeroRef} className="text-[#2a8aad] text-[14px] font-semibold" />
+                  <StretchedTagline text={content.hero_tagline} matchRef={financeHeroRef} className="text-[#2a8aad] text-[10px] md:text-[14px] font-semibold" />
                 </div>
                 <p className="text-white/85 text-[1.35rem] font-bold mb-6" style={{ fontFamily: 'var(--font-heading)' }}>{content.hero_subheading}</p>
                 <p className="text-white/60 leading-[1.8] mb-8 max-w-[440px] text-[15px]">

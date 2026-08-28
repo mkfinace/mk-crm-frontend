@@ -11,6 +11,56 @@ type HeroMedia = { type: 'icon' | 'image' | 'video'; url: string; animation: 'fa
 type SettingRow = { key: string; label: string; group: string; value: any };
 
 const DEFAULT_HERO_MEDIA: HeroMedia = { type: 'icon', url: '', animation: 'fade' };
+const DEFAULT_HERO_SLIDES: HeroMedia[] = [DEFAULT_HERO_MEDIA];
+
+// Trims fully-transparent padding around the visible content of an image —
+// fixes uploads (like logos exported on a huge canvas) that show a small
+// mark surrounded by empty space when placed in the hero box.
+function autoCropTransparentPadding(dataUrl: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return resolve(dataUrl);
+      ctx.drawImage(img, 0, 0);
+      let data: Uint8ClampedArray;
+      try {
+        data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      } catch {
+        return resolve(dataUrl); // e.g. tainted canvas from a cross-origin URL
+      }
+      let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0, found = false;
+      for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+          if (data[(y * canvas.width + x) * 4 + 3] > 10) {
+            found = true;
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      if (!found || (minX === 0 && minY === 0 && maxX === canvas.width - 1 && maxY === canvas.height - 1)) {
+        return resolve(dataUrl); // opaque image or already tight — nothing to trim
+      }
+      const w = maxX - minX + 1;
+      const h = maxY - minY + 1;
+      const cropCanvas = document.createElement('canvas');
+      cropCanvas.width = w;
+      cropCanvas.height = h;
+      const cropCtx = cropCanvas.getContext('2d');
+      if (!cropCtx) return resolve(dataUrl);
+      cropCtx.drawImage(canvas, minX, minY, w, h, 0, 0, w, h);
+      resolve(cropCanvas.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
 
 const DEFAULT_LOANS: Record<string, LoanItem> = {
   loan_new_car: { icon: '🚗', name: 'New Car Loan', desc: 'Up to 90% financing on brand new vehicles.', rate: '7.5%' },
@@ -67,7 +117,7 @@ export default function SiteContentAdminPage() {
 
   const [loans, setLoans] = useState<Record<string, LoanItem>>(DEFAULT_LOANS);
   const [services, setServices] = useState<Record<string, ServiceItem>>(DEFAULT_SERVICES);
-  const [heroMedia, setHeroMedia] = useState<HeroMedia>(DEFAULT_HERO_MEDIA);
+  const [heroSlides, setHeroSlides] = useState<HeroMedia[]>(DEFAULT_HERO_SLIDES);
   const [simple, setSimple] = useState<Record<string, string>>(
     Object.fromEntries(Object.entries(FIELD_META).map(([k, m]) => [k, m.default]))
   );
@@ -85,16 +135,16 @@ export default function SiteContentAdminPage() {
       const nextLoans = { ...DEFAULT_LOANS };
       const nextServices = { ...DEFAULT_SERVICES };
       const nextSimple = { ...simple };
-      let nextHeroMedia = DEFAULT_HERO_MEDIA;
+      let nextHeroSlides = DEFAULT_HERO_SLIDES;
       for (const r of raw) {
         if (LOAN_KEYS.includes(r.key)) nextLoans[r.key] = r.value;
         else if (SERVICE_KEYS.includes(r.key)) nextServices[r.key] = r.value;
-        else if (r.key === 'hero_media') nextHeroMedia = r.value;
+        else if (r.key === 'hero_slides' && Array.isArray(r.value) && r.value.length > 0) nextHeroSlides = r.value;
         else if (r.key in FIELD_META) nextSimple[r.key] = r.value;
       }
       setLoans(nextLoans);
       setServices(nextServices);
-      setHeroMedia(nextHeroMedia);
+      setHeroSlides(nextHeroSlides);
       setSimple(nextSimple);
     } catch (e: any) {
       setError(e.message);
@@ -137,9 +187,21 @@ export default function SiteContentAdminPage() {
   }
 
   const [uploadError, setUploadError] = useState('');
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading] = useState<number | null>(null);
 
-  function handleFileSelect(file: File | undefined) {
+  function updateSlide(index: number, patch: Partial<HeroMedia>) {
+    setHeroSlides((prev) => prev.map((s, i) => (i === index ? { ...s, ...patch } : s)));
+  }
+
+  function addSlide() {
+    setHeroSlides((prev) => [...prev, { type: 'icon', url: '', animation: 'fade' }]);
+  }
+
+  function removeSlide(index: number) {
+    setHeroSlides((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function handleFileSelect(index: number, file: File | undefined) {
     if (!file) return;
     setUploadError('');
     const isVideo = file.type.startsWith('video/');
@@ -148,25 +210,33 @@ export default function SiteContentAdminPage() {
       setUploadError(`File too large — max ${isVideo ? '12MB for video' : '4MB for images'}. Try a smaller/compressed file.`);
       return;
     }
-    setUploading(true);
+    setUploading(index);
     const reader = new FileReader();
-    reader.onload = () => {
-      setHeroMedia((p) => ({ ...p, type: isVideo ? 'video' : 'image', url: reader.result as string }));
-      setUploading(false);
+    reader.onload = async () => {
+      let dataUrl = reader.result as string;
+      if (!isVideo) {
+        try {
+          dataUrl = await autoCropTransparentPadding(dataUrl);
+        } catch {
+          // fall back to the uncropped image if trimming fails for any reason
+        }
+      }
+      updateSlide(index, { type: isVideo ? 'video' : 'image', url: dataUrl });
+      setUploading(null);
     };
     reader.onerror = () => {
       setUploadError('Could not read that file — try again.');
-      setUploading(false);
+      setUploading(null);
     };
     reader.readAsDataURL(file);
   }
 
-  async function saveHeroMedia() {
-    setSavingKey('hero_media');
+  async function saveHeroSlides() {
+    setSavingKey('hero_slides');
     setError('');
     try {
-      await api.updateSiteSetting('hero_media', { label: 'Hero — Image / Video', group: 'hero', value: heroMedia });
-      setSavedKey('hero_media');
+      await api.updateSiteSetting('hero_slides', { label: 'Hero — Slides', group: 'hero', value: heroSlides });
+      setSavedKey('hero_slides');
       setTimeout(() => setSavedKey(null), 1800);
     } catch (e: any) {
       setError(e.message);
@@ -299,77 +369,101 @@ export default function SiteContentAdminPage() {
           )}
 
           {activeGroup === 'hero' && (
-            <div className={`${cardCls} p-5 mb-4`}>
-              <h3 className="text-[13px] font-semibold text-slate-700 mb-1">Hero Image / Video</h3>
-              <p className="text-[12px] text-slate-500 mb-4">
-                Replace the animated car icon with your own image or video — upload a file from your computer, or paste a hosted link instead.
-              </p>
-              <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-3">
                 <div>
-                  <label className="text-[11px] text-slate-500 block mb-1">Media Type</label>
-                  <select
-                    className={`${inputCls} w-full`}
-                    value={heroMedia.type}
-                    onChange={(e) => setHeroMedia((p) => ({ ...p, type: e.target.value as HeroMedia['type'] }))}
-                  >
-                    <option value="icon">Car Icon (default)</option>
-                    <option value="image">Image</option>
-                    <option value="video">Video</option>
-                  </select>
+                  <h3 className="text-[13px] font-semibold text-slate-700">Hero Slides</h3>
+                  <p className="text-[12px] text-slate-500 mt-0.5">
+                    One or more slides shown in the hero box, cycling automatically every 5 seconds when there's more than one.
+                  </p>
                 </div>
-                <div>
-                  <label className="text-[11px] text-slate-500 block mb-1">Entrance Animation</label>
-                  <select
-                    className={`${inputCls} w-full`}
-                    value={heroMedia.animation}
-                    onChange={(e) => setHeroMedia((p) => ({ ...p, animation: e.target.value as HeroMedia['animation'] }))}
-                  >
-                    <option value="fade">Fade In</option>
-                    <option value="slide">Slide Up</option>
-                    <option value="zoom">Zoom In</option>
-                    <option value="none">None</option>
-                  </select>
-                </div>
-              </div>
-              {heroMedia.type !== 'icon' && (
-                <div className="mb-4">
-                  <label className="text-[11px] text-slate-500 block mb-1">Upload from your computer</label>
-                  <input
-                    type="file"
-                    accept="image/*,video/*"
-                    className={`${inputCls} w-full`}
-                    onChange={(e) => handleFileSelect(e.target.files?.[0])}
-                  />
-                  <p className="text-[11px] text-slate-400 mt-1">Max 4MB for images, 12MB for video.</p>
-                  {uploading && <p className="text-[12px] text-slate-500 mt-2">Reading file…</p>}
-                  {uploadError && <p className="text-[12px] text-red-600 mt-2">{uploadError}</p>}
-
-                  <div className="flex items-center gap-3 my-3">
-                    <div className="h-px bg-slate-200 flex-1" />
-                    <span className="text-[11px] text-slate-400">OR paste a link</span>
-                    <div className="h-px bg-slate-200 flex-1" />
-                  </div>
-                  <input
-                    className={`${inputCls} w-full`}
-                    placeholder="https://…"
-                    value={heroMedia.url.startsWith('data:') ? '' : heroMedia.url}
-                    onChange={(e) => setHeroMedia((p) => ({ ...p, url: e.target.value }))}
-                  />
-
-                  {heroMedia.url && heroMedia.type === 'image' && (
-                    <img src={heroMedia.url} alt="Preview" className="mt-3 h-28 w-auto rounded-lg border border-slate-200 object-cover" />
-                  )}
-                  {heroMedia.url && heroMedia.type === 'video' && (
-                    <video src={heroMedia.url} className="mt-3 h-28 w-auto rounded-lg border border-slate-200" muted autoPlay loop playsInline />
-                  )}
-                </div>
-              )}
-              <div className="flex items-center gap-3">
-                <button className={primaryBtnCls} disabled={savingKey === 'hero_media' || uploading} onClick={saveHeroMedia}>
-                  {savingKey === 'hero_media' ? 'Saving…' : 'Save'}
+                <button className={primaryBtnCls} disabled={savingKey === 'hero_slides' || uploading !== null} onClick={saveHeroSlides}>
+                  {savingKey === 'hero_slides' ? 'Saving…' : 'Save All Slides'}
                 </button>
-                {savedKey === 'hero_media' && <span className="text-[12.5px] text-emerald-600 font-medium">✓ Saved — live on the website now</span>}
               </div>
+              {savedKey === 'hero_slides' && <p className="text-[12.5px] text-emerald-600 font-medium mb-3">✓ Saved — live on the website now</p>}
+              {uploadError && <p className="text-[12px] text-red-600 mb-3">{uploadError}</p>}
+
+              <div className="space-y-4">
+                {heroSlides.map((slide, index) => (
+                  <div key={index} className={`${cardCls} p-5`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[12px] font-semibold text-slate-600">Slide {index + 1}</span>
+                      {heroSlides.length > 1 && (
+                        <button className="text-[12px] text-red-600 hover:text-red-700 font-medium" onClick={() => removeSlide(index)}>
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="text-[11px] text-slate-500 block mb-1">Media Type</label>
+                        <select
+                          className={`${inputCls} w-full`}
+                          value={slide.type}
+                          onChange={(e) => updateSlide(index, { type: e.target.value as HeroMedia['type'] })}
+                        >
+                          <option value="icon">Car Icon (default)</option>
+                          <option value="image">Image</option>
+                          <option value="video">Video</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-slate-500 block mb-1">Entrance Animation</label>
+                        <select
+                          className={`${inputCls} w-full`}
+                          value={slide.animation}
+                          onChange={(e) => updateSlide(index, { animation: e.target.value as HeroMedia['animation'] })}
+                        >
+                          <option value="fade">Fade In</option>
+                          <option value="slide">Slide Up</option>
+                          <option value="zoom">Zoom In</option>
+                          <option value="none">None</option>
+                        </select>
+                      </div>
+                    </div>
+                    {slide.type !== 'icon' && (
+                      <div>
+                        <label className="text-[11px] text-slate-500 block mb-1">Upload from your computer</label>
+                        <input
+                          type="file"
+                          accept="image/*,video/*"
+                          className={`${inputCls} w-full`}
+                          onChange={(e) => handleFileSelect(index, e.target.files?.[0])}
+                        />
+                        <p className="text-[11px] text-slate-400 mt-1">Max 4MB for images, 12MB for video. Images auto-trim empty transparent padding.</p>
+                        {uploading === index && <p className="text-[12px] text-slate-500 mt-2">Processing file…</p>}
+
+                        <div className="flex items-center gap-3 my-3">
+                          <div className="h-px bg-slate-200 flex-1" />
+                          <span className="text-[11px] text-slate-400">OR paste a link</span>
+                          <div className="h-px bg-slate-200 flex-1" />
+                        </div>
+                        <input
+                          className={`${inputCls} w-full`}
+                          placeholder="https://…"
+                          value={slide.url.startsWith('data:') ? '' : slide.url}
+                          onChange={(e) => updateSlide(index, { url: e.target.value })}
+                        />
+
+                        {slide.url && slide.type === 'image' && (
+                          <img src={slide.url} alt="Preview" className="mt-3 h-28 w-auto rounded-lg border border-slate-200 object-contain bg-slate-50" />
+                        )}
+                        {slide.url && slide.type === 'video' && (
+                          <video src={slide.url} className="mt-3 h-28 w-auto rounded-lg border border-slate-200" muted autoPlay loop playsInline />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <button
+                className="mt-4 w-full py-2.5 border border-dashed border-slate-300 rounded-lg text-[13px] text-slate-500 hover:border-[#D8B155] hover:text-[#96701F] transition-colors"
+                onClick={addSlide}
+              >
+                + Add Another Slide
+              </button>
             </div>
           )}
 

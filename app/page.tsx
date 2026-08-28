@@ -135,6 +135,7 @@ export default function HomePage() {
     { icon: '📈', name: 'Top-Up Loan', desc: 'Additional loan on your existing vehicle loan.', rate: '10%' },
   ];
   const [loanProducts, setLoanProducts] = useState(DEFAULT_LOAN_PRODUCTS);
+  const [heroMediaError, setHeroMediaError] = useState(false);
 
   const DEFAULT_SERVICES = [
     { icon: '🚗', title: 'New Car Sales', desc: 'Maruti, Hyundai, Tata, Mahindra and more — best price guarantee.' },
@@ -162,9 +163,28 @@ export default function HomePage() {
     contact_city: 'Valsad, Gujarat',
     contact_service_area: 'Based in Dharampur, Valsad — serving South Gujarat including Vapi, Surat, Navsari, Bharuch and Silvassa.',
     footer_tagline: 'Your trusted financial partner for all vehicle needs — buying, financing, and insuring, all under one roof.',
-    hero_media: { type: 'icon', url: '', animation: 'fade' } as { type: 'icon' | 'image' | 'video'; url: string; animation: 'fade' | 'slide' | 'zoom' | 'none' },
+    hero_slides: [{ type: 'icon', url: '', animation: 'fade' }] as { type: 'icon' | 'image' | 'video'; url: string; animation: 'fade' | 'slide' | 'zoom' | 'none' }[],
   });
   const phoneDigits = content.contact_phone.replace(/\s/g, '');
+
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  useEffect(() => {
+    setHeroMediaError(false);
+  }, [activeSlide, content.hero_slides]);
+
+  // Auto-advance the hero carousel when there's more than one slide.
+  useEffect(() => {
+    if (content.hero_slides.length <= 1) return;
+    const id = setInterval(() => {
+      setActiveSlide((i) => (i + 1) % content.hero_slides.length);
+    }, 5000);
+    return () => clearInterval(id);
+  }, [content.hero_slides.length]);
+
+  useEffect(() => {
+    if (activeSlide >= content.hero_slides.length) setActiveSlide(0);
+  }, [content.hero_slides.length, activeSlide]);
 
   useEffect(() => {
     api.getFullCatalogue().then(setCatalogue).catch(() => {}).finally(() => setLoading(false));
@@ -309,26 +329,49 @@ export default function HomePage() {
             <div className="w-[400px] h-[300px] bg-gradient-to-br from-[#0d1f28] to-[#0a151c] border border-[#1a6e8e]/25 rounded-2xl flex items-center justify-center relative overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.45)]">
               <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'radial-gradient(circle, rgba(42,138,173,0.25) 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
               <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#e63030]/10 rounded-full blur-3xl" />
-              {content.hero_media.type === 'image' && content.hero_media.url ? (
-                <img
-                  key={content.hero_media.url}
-                  src={content.hero_media.url}
-                  alt="MK Finance"
-                  className={`relative w-full h-full object-cover ${heroAnimClass(content.hero_media.animation)}`}
-                />
-              ) : content.hero_media.type === 'video' && content.hero_media.url ? (
-                <video
-                  key={content.hero_media.url}
-                  src={content.hero_media.url}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  className={`relative w-full h-full object-cover ${heroAnimClass(content.hero_media.animation)}`}
-                />
-              ) : (
-                <div className={`relative w-44 h-44 rounded-full bg-[#1a6e8e]/10 border border-[#1a6e8e]/20 flex items-center justify-center ${heroAnimClass(content.hero_media.animation)}`}>
-                  <span className="text-8xl drop-shadow-[0_12px_20px_rgba(0,0,0,0.5)]">🚗</span>
+              {(() => {
+                const slide = content.hero_slides[activeSlide] || content.hero_slides[0];
+                if (slide.type === 'image' && slide.url && !heroMediaError) {
+                  return (
+                    <img
+                      key={`${activeSlide}-${slide.url}`}
+                      src={slide.url}
+                      alt="MK Finance"
+                      onError={() => setHeroMediaError(true)}
+                      className={`relative w-full h-full object-contain p-6 ${heroAnimClass(slide.animation)}`}
+                    />
+                  );
+                }
+                if (slide.type === 'video' && slide.url && !heroMediaError) {
+                  return (
+                    <video
+                      key={`${activeSlide}-${slide.url}`}
+                      src={slide.url}
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      onError={() => setHeroMediaError(true)}
+                      className={`relative w-full h-full object-cover ${heroAnimClass(slide.animation)}`}
+                    />
+                  );
+                }
+                return (
+                  <div className={`relative w-44 h-44 rounded-full bg-[#1a6e8e]/10 border border-[#1a6e8e]/20 flex items-center justify-center ${heroAnimClass(slide.animation)}`}>
+                    <span className="text-8xl drop-shadow-[0_12px_20px_rgba(0,0,0,0.5)]">🚗</span>
+                  </div>
+                );
+              })()}
+              {content.hero_slides.length > 1 && (
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                  {content.hero_slides.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setActiveSlide(i)}
+                      className={`h-1.5 rounded-full transition-all ${i === activeSlide ? 'w-6 bg-[#2a8aad]' : 'w-1.5 bg-white/30 hover:bg-white/50'}`}
+                      aria-label={`Slide ${i + 1}`}
+                    />
+                  ))}
                 </div>
               )}
             </div>

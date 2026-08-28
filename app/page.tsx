@@ -26,28 +26,36 @@ function formatLakh(n: number) {
 // Stretches text so its start/end line up exactly with another element's
 // rendered width (e.g. the tagline spanning the same width as "Finance"
 // above it) — measures live, so it adapts to text edits and screen size.
-function StretchedTagline({ text, matchRef, className }: { text: string; matchRef: React.RefObject<HTMLElement | null>; className?: string }) {
-  const [rect, setRect] = useState<{ left: number; width: number } | null>(null);
+function StretchedTagline({
+  text, matchRef, className, mode = 'fit',
+}: {
+  text: string;
+  matchRef: React.RefObject<HTMLElement | null>;
+  className?: string;
+  mode?: 'fit' | 'center-nowrap';
+}) {
+  const selfRef = useRef<HTMLSpanElement>(null);
+  const [style, setStyle] = useState<React.CSSProperties>({ display: 'block' });
 
   useEffect(() => {
     function measure() {
-      if (matchRef.current) setRect({ left: matchRef.current.offsetLeft, width: matchRef.current.offsetWidth });
+      if (!matchRef.current) return;
+      const left = matchRef.current.offsetLeft;
+      const width = matchRef.current.offsetWidth;
+      if (mode === 'center-nowrap') {
+        const selfWidth = selfRef.current?.offsetWidth || 0;
+        setStyle({ display: 'block', whiteSpace: 'nowrap', marginLeft: `${left + width / 2 - selfWidth / 2}px` });
+      } else {
+        setStyle({ display: 'block', marginLeft: `${left}px`, width: `${width}px`, textAlign: 'center' });
+      }
     }
     measure();
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
-  }, [matchRef, text]);
+  }, [matchRef, text, mode]);
 
   return (
-    <span
-      className={className}
-      style={{
-        display: 'block',
-        marginLeft: rect ? `${rect.left}px` : 0,
-        width: rect ? `${rect.width}px` : 'auto',
-        textAlign: 'center',
-      }}
-    >
+    <span ref={selfRef} className={className} style={style}>
       {text}
     </span>
   );
@@ -652,7 +660,7 @@ export default function HomePage() {
               <span className="text-[#e63030]">MK</span> <span ref={financeFooterRef} className="text-[#2a8aad]">Finance</span>
             </div>
             <div className="mb-3">
-              <StretchedTagline text={content.hero_tagline} matchRef={financeFooterRef} className="text-[#2a8aad] text-[10px] font-semibold" />
+              <StretchedTagline text={content.hero_tagline} matchRef={financeFooterRef} className="text-[#2a8aad] text-[10px] font-semibold" mode="center-nowrap" />
             </div>
             <p className="text-[13px] text-white/40 leading-[1.7] max-w-[280px] mb-4">
               {content.footer_tagline}

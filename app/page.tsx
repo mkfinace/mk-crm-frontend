@@ -285,107 +285,131 @@ export default function HomePage() {
       </nav>
 
       {/* HERO */}
-      <section className="min-h-screen flex items-center pt-[70px] relative overflow-hidden bg-gradient-to-br from-[#050e14] via-[#0a1a24] to-[#0d1010]">
-        <div className="absolute inset-0 opacity-[0.35]" style={{ backgroundImage: 'radial-gradient(circle, rgba(42,138,173,0.35) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
-        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-[#1a6e8e]/[0.12] rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-15%] left-[-10%] w-[400px] h-[400px] bg-[#e63030]/[0.08] rounded-full blur-[120px]" />
-        <div className="max-w-[1200px] mx-auto px-6 md:px-8 py-16 grid md:grid-cols-2 gap-12 items-center relative z-10">
-          <div>
-            <h1 className="text-[2.8rem] md:text-[4.5rem] font-bold leading-[1.05]" style={{ fontFamily: 'var(--font-heading)' }}>
-              <span className="text-[#e63030]">MK</span> <span ref={financeHeroRef} className="text-[#2a8aad]">Finance</span>
-            </h1>
-            <div className="mb-5 -mt-2 md:-mt-3">
-              <StretchedTagline text={content.hero_tagline} matchRef={financeHeroRef} className="text-[#2a8aad] text-[14px] font-semibold" />
-            </div>
-            <p className="text-white/85 text-[1.35rem] font-bold mb-6" style={{ fontFamily: 'var(--font-heading)' }}>{content.hero_subheading}</p>
-            <p className="text-white/60 leading-[1.8] mb-8 max-w-[440px] text-[15px]">
-              {content.hero_description}
-            </p>
-            <div className="flex gap-4 flex-wrap mb-6">
-              <Link href="/cars" className="bg-[#e63030] hover:bg-[#b01c1c] px-8 py-3.5 rounded font-semibold text-sm transition-colors">Browse Vehicles</Link>
-              <button onClick={() => scrollTo('loans')} className="border-2 border-white/30 hover:border-[#2a8aad] hover:text-[#2a8aad] px-8 py-3.5 rounded font-semibold text-sm transition-colors">Calculate EMI</button>
-            </div>
-            <div className="flex flex-wrap gap-x-5 gap-y-2 mb-6 text-[12px] text-white/50">
-              <span className="flex items-center gap-1.5"><span className="text-[#4ecb70]">✓</span> {content.hero_trust_1}</span>
-              <span className="flex items-center gap-1.5"><span className="text-[#4ecb70]">✓</span> {content.hero_trust_2}</span>
-              <span className="flex items-center gap-1.5"><span className="text-[#4ecb70]">✓</span> {content.hero_trust_3}</span>
-            </div>
-            <div className="flex gap-8 pt-6 border-t border-white/[0.08] mt-6">
-              <div>
-                <div className="text-[2rem] font-bold text-[#2a8aad]" style={{ fontFamily: 'var(--font-heading)' }}>{allVehicles.length}<span className="text-[#e63030]">+</span></div>
-                <div className="text-[11px] text-white/50 tracking-wide">Vehicles Listed</div>
-              </div>
-              <div>
-                <div className="text-[2rem] font-bold text-[#2a8aad]" style={{ fontFamily: 'var(--font-heading)' }}>{content.stat_approval_rate}</div>
-                <div className="text-[11px] text-white/50 tracking-wide">Loan Approval Rate</div>
-              </div>
-              <div>
-                <div className="text-[2rem] font-bold text-[#2a8aad]" style={{ fontFamily: 'var(--font-heading)' }}>{content.stat_approval_time}</div>
-                <div className="text-[11px] text-white/50 tracking-wide">Approval Time</div>
-              </div>
-            </div>
-          </div>
-          <div className="hidden md:flex items-center justify-center relative">
-            <div className="w-[400px] h-[300px] bg-gradient-to-br from-[#0d1f28] to-[#0a151c] border border-[#1a6e8e]/25 rounded-2xl flex items-center justify-center relative overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.45)]">
-              <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'radial-gradient(circle, rgba(42,138,173,0.25) 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
-              <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#e63030]/10 rounded-full blur-3xl" />
-              {(() => {
-                const slide = content.hero_slides[activeSlide] || content.hero_slides[0];
-                if (slide.type === 'image' && slide.url && !heroMediaError) {
-                  return (
-                    <img
-                      key={`${activeSlide}-${slide.url}`}
-                      src={slide.url}
-                      alt="MK Finance"
-                      onError={() => setHeroMediaError(true)}
-                      className={`relative w-full h-full object-contain p-6 ${heroAnimClass(slide.animation)}`}
-                    />
-                  );
-                }
-                if (slide.type === 'video' && slide.url && !heroMediaError) {
-                  return (
-                    <video
-                      key={`${activeSlide}-${slide.url}`}
-                      src={slide.url}
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      onError={() => setHeroMediaError(true)}
-                      className={`relative w-full h-full object-cover ${heroAnimClass(slide.animation)}`}
-                    />
-                  );
-                }
-                return (
-                  <div className={`relative w-44 h-44 rounded-full bg-[#1a6e8e]/10 border border-[#1a6e8e]/20 flex items-center justify-center ${heroAnimClass(slide.animation)}`}>
-                    <span className="text-8xl drop-shadow-[0_12px_20px_rgba(0,0,0,0.5)]">🚗</span>
+      {(() => {
+        const activeSlideData = content.hero_slides[activeSlide] || content.hero_slides[0];
+        const isBanner = activeSlideData.type !== 'icon' && !!activeSlideData.url && !heroMediaError;
+
+        return (
+          <section className="min-h-screen flex items-center pt-[70px] relative overflow-hidden bg-gradient-to-br from-[#050e14] via-[#0a1a24] to-[#0d1010]">
+            {isBanner ? (
+              <>
+                {activeSlideData.type === 'image' ? (
+                  <img
+                    key={`banner-${activeSlide}-${activeSlideData.url}`}
+                    src={activeSlideData.url}
+                    alt="MK Finance"
+                    onError={() => setHeroMediaError(true)}
+                    className={`absolute inset-0 w-full h-full object-cover ${heroAnimClass(activeSlideData.animation)}`}
+                  />
+                ) : (
+                  <video
+                    key={`banner-${activeSlide}-${activeSlideData.url}`}
+                    src={activeSlideData.url}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    onError={() => setHeroMediaError(true)}
+                    className={`absolute inset-0 w-full h-full object-cover ${heroAnimClass(activeSlideData.animation)}`}
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-r from-[#050e14] via-[#050e14]/85 to-[#050e14]/40" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#050e14] via-transparent to-transparent" />
+              </>
+            ) : (
+              <>
+                <div className="absolute inset-0 opacity-[0.35]" style={{ backgroundImage: 'radial-gradient(circle, rgba(42,138,173,0.35) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
+                <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-[#1a6e8e]/[0.12] rounded-full blur-[120px]" />
+                <div className="absolute bottom-[-15%] left-[-10%] w-[400px] h-[400px] bg-[#e63030]/[0.08] rounded-full blur-[120px]" />
+              </>
+            )}
+
+            <div className={`max-w-[1200px] mx-auto px-6 md:px-8 py-16 ${isBanner ? '' : 'grid md:grid-cols-2 gap-12 items-center'} relative z-10 w-full`}>
+              <div className={isBanner ? 'max-w-[600px]' : ''}>
+                <h1 className="text-[2.8rem] md:text-[4.5rem] font-bold leading-[1.05]" style={{ fontFamily: 'var(--font-heading)' }}>
+                  <span className="text-[#e63030]">MK</span> <span ref={financeHeroRef} className="text-[#2a8aad]">Finance</span>
+                </h1>
+                <div className="mb-5 -mt-2 md:-mt-3">
+                  <StretchedTagline text={content.hero_tagline} matchRef={financeHeroRef} className="text-[#2a8aad] text-[14px] font-semibold" />
+                </div>
+                <p className="text-white/85 text-[1.35rem] font-bold mb-6" style={{ fontFamily: 'var(--font-heading)' }}>{content.hero_subheading}</p>
+                <p className="text-white/60 leading-[1.8] mb-8 max-w-[440px] text-[15px]">
+                  {content.hero_description}
+                </p>
+                <div className="flex gap-4 flex-wrap mb-6">
+                  <Link href="/cars" className="bg-[#e63030] hover:bg-[#b01c1c] px-8 py-3.5 rounded font-semibold text-sm transition-colors">Browse Vehicles</Link>
+                  <button onClick={() => scrollTo('loans')} className="border-2 border-white/30 hover:border-[#2a8aad] hover:text-[#2a8aad] px-8 py-3.5 rounded font-semibold text-sm transition-colors">Calculate EMI</button>
+                </div>
+                <div className="flex flex-wrap gap-x-5 gap-y-2 mb-6 text-[12px] text-white/50">
+                  <span className="flex items-center gap-1.5"><span className="text-[#4ecb70]">✓</span> {content.hero_trust_1}</span>
+                  <span className="flex items-center gap-1.5"><span className="text-[#4ecb70]">✓</span> {content.hero_trust_2}</span>
+                  <span className="flex items-center gap-1.5"><span className="text-[#4ecb70]">✓</span> {content.hero_trust_3}</span>
+                </div>
+                <div className="flex gap-8 pt-6 border-t border-white/[0.08] mt-6">
+                  <div>
+                    <div className="text-[2rem] font-bold text-[#2a8aad]" style={{ fontFamily: 'var(--font-heading)' }}>{allVehicles.length}<span className="text-[#e63030]">+</span></div>
+                    <div className="text-[11px] text-white/50 tracking-wide">Vehicles Listed</div>
                   </div>
-                );
-              })()}
-              {content.hero_slides.length > 1 && (
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-                  {content.hero_slides.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setActiveSlide(i)}
-                      className={`h-1.5 rounded-full transition-all ${i === activeSlide ? 'w-6 bg-[#2a8aad]' : 'w-1.5 bg-white/30 hover:bg-white/50'}`}
-                      aria-label={`Slide ${i + 1}`}
-                    />
-                  ))}
+                  <div>
+                    <div className="text-[2rem] font-bold text-[#2a8aad]" style={{ fontFamily: 'var(--font-heading)' }}>{content.stat_approval_rate}</div>
+                    <div className="text-[11px] text-white/50 tracking-wide">Loan Approval Rate</div>
+                  </div>
+                  <div>
+                    <div className="text-[2rem] font-bold text-[#2a8aad]" style={{ fontFamily: 'var(--font-heading)' }}>{content.stat_approval_time}</div>
+                    <div className="text-[11px] text-white/50 tracking-wide">Approval Time</div>
+                  </div>
+                </div>
+              </div>
+
+              {!isBanner && (
+                <div className="hidden md:flex items-center justify-center relative">
+                  <div className="w-[400px] h-[300px] bg-gradient-to-br from-[#0d1f28] to-[#0a151c] border border-[#1a6e8e]/25 rounded-2xl flex items-center justify-center relative overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.45)]">
+                    <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'radial-gradient(circle, rgba(42,138,173,0.25) 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
+                    <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#e63030]/10 rounded-full blur-3xl" />
+                    <div className={`relative w-44 h-44 rounded-full bg-[#1a6e8e]/10 border border-[#1a6e8e]/20 flex items-center justify-center ${heroAnimClass(activeSlideData.animation)}`}>
+                      <span className="text-8xl drop-shadow-[0_12px_20px_rgba(0,0,0,0.5)]">🚗</span>
+                    </div>
+                  </div>
+                  <div className="absolute bottom-5 -left-6 bg-black/95 border border-[#1a6e8e]/30 rounded-lg px-4 py-3 text-xs shadow-lg backdrop-blur">
+                    <div className="text-white/40 mb-0.5">Today's Best Rate</div>
+                    <div className="font-bold text-[#2a8aad] text-base">{content.hero_rate_badge}</div>
+                  </div>
+                  <div className="absolute top-6 -right-4 bg-black/95 border border-[#e63030]/30 rounded-lg px-4 py-3 text-xs shadow-lg backdrop-blur">
+                    <div className="text-white/40 mb-0.5">Customer Rating</div>
+                    <div className="font-bold text-white text-base">⭐ {content.hero_rating_badge}</div>
+                  </div>
                 </div>
               )}
             </div>
-            <div className="absolute bottom-5 -left-6 bg-black/95 border border-[#1a6e8e]/30 rounded-lg px-4 py-3 text-xs shadow-lg backdrop-blur">
-              <div className="text-white/40 mb-0.5">Today's Best Rate</div>
-              <div className="font-bold text-[#2a8aad] text-base">{content.hero_rate_badge}</div>
-            </div>
-            <div className="absolute top-6 -right-4 bg-black/95 border border-[#e63030]/30 rounded-lg px-4 py-3 text-xs shadow-lg backdrop-blur">
-              <div className="text-white/40 mb-0.5">Customer Rating</div>
-              <div className="font-bold text-white text-base">⭐ {content.hero_rating_badge}</div>
-            </div>
-          </div>
-        </div>
-      </section>
+
+            {isBanner && (
+              <>
+                <div className="hidden md:block absolute bottom-8 right-8 bg-black/80 border border-[#1a6e8e]/30 rounded-lg px-4 py-3 text-xs shadow-lg backdrop-blur z-10">
+                  <div className="text-white/40 mb-0.5">Today's Best Rate</div>
+                  <div className="font-bold text-[#2a8aad] text-base">{content.hero_rate_badge}</div>
+                </div>
+                <div className="hidden md:block absolute top-24 right-8 bg-black/80 border border-[#e63030]/30 rounded-lg px-4 py-3 text-xs shadow-lg backdrop-blur z-10">
+                  <div className="text-white/40 mb-0.5">Customer Rating</div>
+                  <div className="font-bold text-white text-base">⭐ {content.hero_rating_badge}</div>
+                </div>
+              </>
+            )}
+
+            {content.hero_slides.length > 1 && (
+              <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+                {content.hero_slides.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveSlide(i)}
+                    className={`h-1.5 rounded-full transition-all ${i === activeSlide ? 'w-8 bg-[#2a8aad]' : 'w-1.5 bg-white/30 hover:bg-white/50'}`}
+                    aria-label={`Slide ${i + 1}`}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        );
+      })()}
 
       {/* SERVICES */}
       <section className="py-24 px-6 md:px-8 bg-[#0f0f0f]">

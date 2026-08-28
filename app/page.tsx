@@ -223,14 +223,11 @@ export default function HomePage() {
         <div className="absolute bottom-[-15%] left-[-10%] w-[400px] h-[400px] bg-[#e63030]/[0.08] rounded-full blur-[120px]" />
         <div className="max-w-[1200px] mx-auto px-6 md:px-8 py-16 grid md:grid-cols-2 gap-12 items-center relative z-10">
           <div>
-            <div className="flex items-center gap-2 text-[11px] tracking-[3px] uppercase text-[#2a8aad] font-semibold mb-6">
-              <span className="w-8 h-0.5 bg-[#2a8aad]" /> {content.hero_tagline}
-            </div>
-            <h1 className="text-[2.8rem] md:text-[4.5rem] font-bold leading-[1.05] mb-6" style={{ fontFamily: 'var(--font-heading)' }}>
+            <h1 className="text-[2.8rem] md:text-[4.5rem] font-bold leading-[1.05] mb-3" style={{ fontFamily: 'var(--font-heading)' }}>
               <span className="text-[#e63030]">MK</span> <span className="text-[#2a8aad]">Finance</span>
-              <br />
-              <span className="text-[0.5em] text-white/85">{content.hero_subheading}</span>
             </h1>
+            <p className="text-[#2a8aad] text-[15px] font-semibold tracking-wide mb-1.5">{content.hero_tagline}</p>
+            <p className="text-white/85 text-[1.35rem] font-bold mb-6" style={{ fontFamily: 'var(--font-heading)' }}>{content.hero_subheading}</p>
             <p className="text-white/60 leading-[1.8] mb-8 max-w-[440px] text-[15px]">
               {content.hero_description}
             </p>
@@ -317,7 +314,7 @@ export default function HomePage() {
       <section id="vehicles" className="py-24 px-6 md:px-8 bg-[#0a0a0a]">
         <div className="max-w-[1200px] mx-auto mb-8">
           <div className="flex items-center gap-2 text-[11px] tracking-[3px] uppercase text-[#2a8aad] font-semibold mb-3">
-            <span className="w-6 h-0.5 bg-[#2a8aad]" /> Our Stock
+            <span className="w-6 h-0.5 bg-[#2a8aad]" /> Our Catalogue
           </div>
           <h2 className="text-[2.2rem] md:text-[3rem] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>
             🚗 <span className="text-[#e63030]">Cars</span>

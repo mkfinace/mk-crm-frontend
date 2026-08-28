@@ -7,7 +7,10 @@ import { IconEdit } from '@/components/AdminIcons';
 
 type LoanItem = { icon: string; name: string; desc: string; rate: string };
 type ServiceItem = { icon: string; title: string; desc: string };
+type HeroMedia = { type: 'icon' | 'image' | 'video'; url: string; animation: 'fade' | 'slide' | 'zoom' | 'none' };
 type SettingRow = { key: string; label: string; group: string; value: any };
+
+const DEFAULT_HERO_MEDIA: HeroMedia = { type: 'icon', url: '', animation: 'fade' };
 
 const DEFAULT_LOANS: Record<string, LoanItem> = {
   loan_new_car: { icon: '🚗', name: 'New Car Loan', desc: 'Up to 90% financing on brand new vehicles.', rate: '7.5%' },
@@ -64,6 +67,7 @@ export default function SiteContentAdminPage() {
 
   const [loans, setLoans] = useState<Record<string, LoanItem>>(DEFAULT_LOANS);
   const [services, setServices] = useState<Record<string, ServiceItem>>(DEFAULT_SERVICES);
+  const [heroMedia, setHeroMedia] = useState<HeroMedia>(DEFAULT_HERO_MEDIA);
   const [simple, setSimple] = useState<Record<string, string>>(
     Object.fromEntries(Object.entries(FIELD_META).map(([k, m]) => [k, m.default]))
   );
@@ -81,13 +85,16 @@ export default function SiteContentAdminPage() {
       const nextLoans = { ...DEFAULT_LOANS };
       const nextServices = { ...DEFAULT_SERVICES };
       const nextSimple = { ...simple };
+      let nextHeroMedia = DEFAULT_HERO_MEDIA;
       for (const r of raw) {
         if (LOAN_KEYS.includes(r.key)) nextLoans[r.key] = r.value;
         else if (SERVICE_KEYS.includes(r.key)) nextServices[r.key] = r.value;
+        else if (r.key === 'hero_media') nextHeroMedia = r.value;
         else if (r.key in FIELD_META) nextSimple[r.key] = r.value;
       }
       setLoans(nextLoans);
       setServices(nextServices);
+      setHeroMedia(nextHeroMedia);
       setSimple(nextSimple);
     } catch (e: any) {
       setError(e.message);
@@ -121,6 +128,20 @@ export default function SiteContentAdminPage() {
     try {
       await api.updateSiteSetting(key, { label: services[key].title, group: 'services', value: services[key] });
       setSavedKey(key);
+      setTimeout(() => setSavedKey(null), 1800);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
+  async function saveHeroMedia() {
+    setSavingKey('hero_media');
+    setError('');
+    try {
+      await api.updateSiteSetting('hero_media', { label: 'Hero — Image / Video', group: 'hero', value: heroMedia });
+      setSavedKey('hero_media');
       setTimeout(() => setSavedKey(null), 1800);
     } catch (e: any) {
       setError(e.message);
@@ -249,6 +270,65 @@ export default function SiteContentAdminPage() {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {activeGroup === 'hero' && (
+            <div className={`${cardCls} p-5 mb-4`}>
+              <h3 className="text-[13px] font-semibold text-slate-700 mb-1">Hero Image / Video</h3>
+              <p className="text-[12px] text-slate-500 mb-4">
+                Replace the animated car icon with your own image or video. Paste a hosted URL (e.g. a Google Drive share link converted to direct-view, or any image/video hosting link) — there's no file upload here yet, just a link field.
+              </p>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className="text-[11px] text-slate-500 block mb-1">Media Type</label>
+                  <select
+                    className={`${inputCls} w-full`}
+                    value={heroMedia.type}
+                    onChange={(e) => setHeroMedia((p) => ({ ...p, type: e.target.value as HeroMedia['type'] }))}
+                  >
+                    <option value="icon">Car Icon (default)</option>
+                    <option value="image">Image</option>
+                    <option value="video">Video</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-500 block mb-1">Entrance Animation</label>
+                  <select
+                    className={`${inputCls} w-full`}
+                    value={heroMedia.animation}
+                    onChange={(e) => setHeroMedia((p) => ({ ...p, animation: e.target.value as HeroMedia['animation'] }))}
+                  >
+                    <option value="fade">Fade In</option>
+                    <option value="slide">Slide Up</option>
+                    <option value="zoom">Zoom In</option>
+                    <option value="none">None</option>
+                  </select>
+                </div>
+              </div>
+              {heroMedia.type !== 'icon' && (
+                <div className="mb-4">
+                  <label className="text-[11px] text-slate-500 block mb-1">Media URL</label>
+                  <input
+                    className={`${inputCls} w-full`}
+                    placeholder="https://…"
+                    value={heroMedia.url}
+                    onChange={(e) => setHeroMedia((p) => ({ ...p, url: e.target.value }))}
+                  />
+                  {heroMedia.url && heroMedia.type === 'image' && (
+                    <img src={heroMedia.url} alt="Preview" className="mt-3 h-28 w-auto rounded-lg border border-slate-200 object-cover" />
+                  )}
+                  {heroMedia.url && heroMedia.type === 'video' && (
+                    <video src={heroMedia.url} className="mt-3 h-28 w-auto rounded-lg border border-slate-200" muted autoPlay loop playsInline />
+                  )}
+                </div>
+              )}
+              <div className="flex items-center gap-3">
+                <button className={primaryBtnCls} disabled={savingKey === 'hero_media'} onClick={saveHeroMedia}>
+                  {savingKey === 'hero_media' ? 'Saving…' : 'Save'}
+                </button>
+                {savedKey === 'hero_media' && <span className="text-[12.5px] text-emerald-600 font-medium">✓ Saved — live on the website now</span>}
+              </div>
             </div>
           )}
 

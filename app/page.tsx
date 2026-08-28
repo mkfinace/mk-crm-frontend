@@ -23,6 +23,13 @@ function formatLakh(n: number) {
   return '₹' + (n / 100000).toFixed(2) + ' L';
 }
 
+function heroAnimClass(anim: string) {
+  if (anim === 'fade') return 'animate-hero-fade';
+  if (anim === 'slide') return 'animate-hero-slide';
+  if (anim === 'zoom') return 'animate-hero-zoom';
+  return '';
+}
+
 // Stretches text so its start/end line up exactly with another element's
 // rendered width (e.g. the tagline spanning the same width as "Finance"
 // above it) — measures live, so it adapts to text edits and screen size.
@@ -155,6 +162,7 @@ export default function HomePage() {
     contact_city: 'Valsad, Gujarat',
     contact_service_area: 'Based in Dharampur, Valsad — serving South Gujarat including Vapi, Surat, Navsari, Bharuch and Silvassa.',
     footer_tagline: 'Your trusted financial partner for all vehicle needs — buying, financing, and insuring, all under one roof.',
+    hero_media: { type: 'icon', url: '', animation: 'fade' } as { type: 'icon' | 'image' | 'video'; url: string; animation: 'fade' | 'slide' | 'zoom' | 'none' },
   });
   const phoneDigits = content.contact_phone.replace(/\s/g, '');
 
@@ -301,9 +309,28 @@ export default function HomePage() {
             <div className="w-[400px] h-[300px] bg-gradient-to-br from-[#0d1f28] to-[#0a151c] border border-[#1a6e8e]/25 rounded-2xl flex items-center justify-center relative overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.45)]">
               <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'radial-gradient(circle, rgba(42,138,173,0.25) 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
               <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#e63030]/10 rounded-full blur-3xl" />
-              <div className="relative w-44 h-44 rounded-full bg-[#1a6e8e]/10 border border-[#1a6e8e]/20 flex items-center justify-center">
-                <span className="text-8xl drop-shadow-[0_12px_20px_rgba(0,0,0,0.5)]">🚗</span>
-              </div>
+              {content.hero_media.type === 'image' && content.hero_media.url ? (
+                <img
+                  key={content.hero_media.url}
+                  src={content.hero_media.url}
+                  alt="MK Finance"
+                  className={`relative w-full h-full object-cover ${heroAnimClass(content.hero_media.animation)}`}
+                />
+              ) : content.hero_media.type === 'video' && content.hero_media.url ? (
+                <video
+                  key={content.hero_media.url}
+                  src={content.hero_media.url}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  className={`relative w-full h-full object-cover ${heroAnimClass(content.hero_media.animation)}`}
+                />
+              ) : (
+                <div className={`relative w-44 h-44 rounded-full bg-[#1a6e8e]/10 border border-[#1a6e8e]/20 flex items-center justify-center ${heroAnimClass(content.hero_media.animation)}`}>
+                  <span className="text-8xl drop-shadow-[0_12px_20px_rgba(0,0,0,0.5)]">🚗</span>
+                </div>
+              )}
             </div>
             <div className="absolute bottom-5 -left-6 bg-black/95 border border-[#1a6e8e]/30 rounded-lg px-4 py-3 text-xs shadow-lg backdrop-blur">
               <div className="text-white/40 mb-0.5">Today's Best Rate</div>

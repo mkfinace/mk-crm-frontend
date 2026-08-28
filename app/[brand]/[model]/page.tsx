@@ -88,6 +88,22 @@ export default function ModelDetailPage() {
   };
   const CATEGORY = data?.model?.category ? (CATEGORY_LABEL[data.model.category] || data.model.category) : 'Car';
 
+  // Site-wide contact info — admin-editable via /admin/site-content.
+  const [contactInfo, setContactInfo] = useState({ contact_phone: '98247 42356', contact_city: 'Valsad, Gujarat' });
+  const contactPhoneDigits = contactInfo.contact_phone.replace(/\s/g, '');
+
+  useEffect(() => {
+    api
+      .getSiteSettings()
+      .then((s: Record<string, any>) => {
+        setContactInfo((prev) => ({
+          contact_phone: s.contact_phone || prev.contact_phone,
+          contact_city: s.contact_city || prev.contact_city,
+        }));
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     setLoading(true);
     setNotFound(false);
@@ -651,8 +667,8 @@ export default function ModelDetailPage() {
         <div className="container topbar-inner">
           <Link className="logo" href="/"><span>MK</span> <span>Finance</span></Link>
           <div className="top-links">
-            <span className="city">📍 Valsad, Gujarat</span>
-            <a className="call" href="tel:9824742356">📞 98247 42356</a>
+            <span className="city">📍 {contactInfo.contact_city}</span>
+            <a className="call" href={`tel:${contactPhoneDigits}`}>📞 {contactInfo.contact_phone}</a>
           </div>
         </div>
       </header>
@@ -660,8 +676,8 @@ export default function ModelDetailPage() {
       <nav className="mainnav">
         <div className="container nav">
           <Link href="/cars">New Vehicles</Link>
-          <a href="tel:9824742356">Vehicle Loans</a>
-          <a href="tel:9824742356">Insurance</a>
+          <a href={`tel:${contactPhoneDigits}`}>Vehicle Loans</a>
+          <a href={`tel:${contactPhoneDigits}`}>Insurance</a>
           <button onClick={() => scrollToSec('reviews')}>Reviews</button>
         </div>
       </nav>
@@ -733,7 +749,7 @@ export default function ModelDetailPage() {
                   </div>
                   <div className="btn-row">
                     <button className="btn" onClick={() => setModalOpen(true)}>Get Finance Quote</button>
-                    <a href="https://wa.me/919824742356" target="_blank" className="btn outline">💬 Ask on WhatsApp</a>
+                    <a href={`https://wa.me/91${contactPhoneDigits}`} target="_blank" className="btn outline">💬 Ask on WhatsApp</a>
                   </div>
                   <div className="offer"><b>Special Finance Offer</b><p>Get a personalised EMI and loan quote from MK Finance within 24-48 hours.</p></div>
                 </div>
@@ -1043,10 +1059,10 @@ export default function ModelDetailPage() {
             </div>
             <div>
               <h4>Finance</h4>
-              <a href="tel:9824742356">Car Loan</a>
-              <a href="tel:9824742356">Commercial Vehicle Loan</a>
-              <a href="tel:9824742356">EMI Calculator</a>
-              <a href="tel:9824742356">Insurance</a>
+              <a href={`tel:${contactPhoneDigits}`}>Car Loan</a>
+              <a href={`tel:${contactPhoneDigits}`}>Commercial Vehicle Loan</a>
+              <a href={`tel:${contactPhoneDigits}`}>EMI Calculator</a>
+              <a href={`tel:${contactPhoneDigits}`}>Insurance</a>
             </div>
             <div>
               <h4>Quick Links</h4>
@@ -1056,7 +1072,7 @@ export default function ModelDetailPage() {
               <Link href="/">Home</Link>
             </div>
           </div>
-          <div className="copyright"><span>© 2026 MK Finance. All Rights Reserved.</span><span>Call: 9824742356</span></div>
+          <div className="copyright"><span>© 2026 MK Finance. All Rights Reserved.</span><span>Call: {contactInfo.contact_phone}</span></div>
         </div>
       </footer>
 

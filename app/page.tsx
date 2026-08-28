@@ -79,14 +79,49 @@ export default function HomePage() {
   ];
   const [loanProducts, setLoanProducts] = useState(DEFAULT_LOAN_PRODUCTS);
 
+  const DEFAULT_SERVICES = [
+    { icon: '🚗', title: 'New Car Sales', desc: 'Maruti, Hyundai, Tata, Mahindra and more — best price guarantee.' },
+    { icon: '🚛', title: 'Commercial Vehicles', desc: 'Trucks, Tempos, Pickup, Tractors — full range of business vehicles.' },
+    { icon: '💰', title: 'Vehicle Loan', desc: 'Fast approval, minimum documents. Starting at 7.5% p.a.' },
+    { icon: '🔄', title: 'Refinance & Top-Up', desc: 'Switch to a better rate or get a fresh loan on your vehicle.' },
+    { icon: '🛡️', title: 'Vehicle Insurance', desc: 'Compare plans from every insurer for the best premium.' },
+    { icon: '📋', title: 'Document Assistance', desc: 'RC Transfer, NOC, Insurance renewal — full paperwork support.' },
+  ];
+  const [services, setServices] = useState(DEFAULT_SERVICES);
+
+  const [content, setContent] = useState({
+    hero_tagline: 'Your Financial Partner',
+    hero_subheading: 'Vehicle & Loan Solutions',
+    hero_description: 'Buy new cars, commercial vehicles, trucks, tempos, and tractors — take a loan, get insurance. All at one place.',
+    hero_trust_1: 'Fast Approval',
+    hero_trust_2: 'Minimum Documents',
+    hero_trust_3: 'No Hidden Charges',
+    hero_rate_badge: '7.5% p.a.',
+    hero_rating_badge: '4.8 / 5',
+    stat_approval_rate: '98%',
+    stat_approval_time: '24-48hr',
+    contact_phone: '98247 42356',
+    contact_email: 'mkfinance.guj@gmail.com',
+    contact_city: 'Valsad, Gujarat',
+    contact_service_area: 'Based in Dharampur, Valsad — serving South Gujarat including Vapi, Surat, Navsari, Bharuch and Silvassa.',
+    footer_tagline: 'Your trusted financial partner for all vehicle needs — buying, financing, and insuring, all under one roof.',
+  });
+  const phoneDigits = content.contact_phone.replace(/\s/g, '');
+
   useEffect(() => {
     api.getFullCatalogue().then(setCatalogue).catch(() => {}).finally(() => setLoading(false));
     api
       .getSiteSettings()
       .then((s: Record<string, any>) => {
-        const order = ['loan_new_car', 'loan_commercial', 'loan_refinance', 'loan_topup'];
-        const fromApi = order.map((k, i) => s[k] || DEFAULT_LOAN_PRODUCTS[i]);
-        if (fromApi.every(Boolean)) setLoanProducts(fromApi);
+        const loanOrder = ['loan_new_car', 'loan_commercial', 'loan_refinance', 'loan_topup'];
+        const loans = loanOrder.map((k, i) => s[k] || DEFAULT_LOAN_PRODUCTS[i]);
+        if (loans.every(Boolean)) setLoanProducts(loans);
+
+        const serviceOrder = ['service_1', 'service_2', 'service_3', 'service_4', 'service_5', 'service_6'];
+        const svc = serviceOrder.map((k, i) => s[k] || DEFAULT_SERVICES[i]);
+        if (svc.every(Boolean)) setServices(svc);
+
+        setContent((prev) => ({ ...prev, ...Object.fromEntries(Object.entries(s).filter(([k]) => k in prev)) }));
       })
       .catch(() => {});
   }, []);
@@ -175,24 +210,24 @@ export default function HomePage() {
         <div className="max-w-[1200px] mx-auto px-6 md:px-8 py-16 grid md:grid-cols-2 gap-12 items-center relative z-10">
           <div>
             <div className="flex items-center gap-2 text-[11px] tracking-[3px] uppercase text-[#2a8aad] font-semibold mb-6">
-              <span className="w-8 h-0.5 bg-[#2a8aad]" /> Your Financial Partner
+              <span className="w-8 h-0.5 bg-[#2a8aad]" /> {content.hero_tagline}
             </div>
             <h1 className="text-[2.8rem] md:text-[4.5rem] font-bold leading-[1.05] mb-6" style={{ fontFamily: 'var(--font-heading)' }}>
               <span className="text-[#e63030]">MK</span> <span className="text-[#2a8aad]">Finance</span>
               <br />
-              <span className="text-[0.5em] text-white/85">Vehicle &amp; Loan Solutions</span>
+              <span className="text-[0.5em] text-white/85">{content.hero_subheading}</span>
             </h1>
             <p className="text-white/60 leading-[1.8] mb-8 max-w-[440px] text-[15px]">
-              Buy new cars, commercial vehicles, trucks, tempos, and tractors — take a loan, get insurance. All at one place.
+              {content.hero_description}
             </p>
             <div className="flex gap-4 flex-wrap mb-6">
               <Link href="/cars" className="bg-[#e63030] hover:bg-[#b01c1c] px-8 py-3.5 rounded font-semibold text-sm transition-colors">Browse Vehicles</Link>
               <button onClick={() => scrollTo('loans')} className="border-2 border-white/30 hover:border-[#2a8aad] hover:text-[#2a8aad] px-8 py-3.5 rounded font-semibold text-sm transition-colors">Calculate EMI</button>
             </div>
             <div className="flex flex-wrap gap-x-5 gap-y-2 mb-6 text-[12px] text-white/50">
-              <span className="flex items-center gap-1.5"><span className="text-[#4ecb70]">✓</span> Fast Approval</span>
-              <span className="flex items-center gap-1.5"><span className="text-[#4ecb70]">✓</span> Minimum Documents</span>
-              <span className="flex items-center gap-1.5"><span className="text-[#4ecb70]">✓</span> No Hidden Charges</span>
+              <span className="flex items-center gap-1.5"><span className="text-[#4ecb70]">✓</span> {content.hero_trust_1}</span>
+              <span className="flex items-center gap-1.5"><span className="text-[#4ecb70]">✓</span> {content.hero_trust_2}</span>
+              <span className="flex items-center gap-1.5"><span className="text-[#4ecb70]">✓</span> {content.hero_trust_3}</span>
             </div>
             <div className="flex gap-8 pt-6 border-t border-white/[0.08] mt-6">
               <div>
@@ -200,11 +235,11 @@ export default function HomePage() {
                 <div className="text-[11px] text-white/50 tracking-wide">Vehicles Listed</div>
               </div>
               <div>
-                <div className="text-[2rem] font-bold text-[#2a8aad]" style={{ fontFamily: 'var(--font-heading)' }}>98<span className="text-[#e63030]">%</span></div>
+                <div className="text-[2rem] font-bold text-[#2a8aad]" style={{ fontFamily: 'var(--font-heading)' }}>{content.stat_approval_rate}</div>
                 <div className="text-[11px] text-white/50 tracking-wide">Loan Approval Rate</div>
               </div>
               <div>
-                <div className="text-[2rem] font-bold text-[#2a8aad]" style={{ fontFamily: 'var(--font-heading)' }}>24-48<span className="text-[#e63030] text-[1.1rem]">hr</span></div>
+                <div className="text-[2rem] font-bold text-[#2a8aad]" style={{ fontFamily: 'var(--font-heading)' }}>{content.stat_approval_time}</div>
                 <div className="text-[11px] text-white/50 tracking-wide">Approval Time</div>
               </div>
             </div>
@@ -219,11 +254,11 @@ export default function HomePage() {
             </div>
             <div className="absolute bottom-5 -left-6 bg-black/95 border border-[#1a6e8e]/30 rounded-lg px-4 py-3 text-xs shadow-lg backdrop-blur">
               <div className="text-white/40 mb-0.5">Today's Best Rate</div>
-              <div className="font-bold text-[#2a8aad] text-base">7.5% p.a.</div>
+              <div className="font-bold text-[#2a8aad] text-base">{content.hero_rate_badge}</div>
             </div>
             <div className="absolute top-6 -right-4 bg-black/95 border border-[#e63030]/30 rounded-lg px-4 py-3 text-xs shadow-lg backdrop-blur">
               <div className="text-white/40 mb-0.5">Customer Rating</div>
-              <div className="font-bold text-white text-base">⭐ 4.8 / 5</div>
+              <div className="font-bold text-white text-base">⭐ {content.hero_rating_badge}</div>
             </div>
           </div>
         </div>
@@ -240,24 +275,27 @@ export default function HomePage() {
           </h2>
         </div>
         <div className="max-w-[1200px] mx-auto grid md:grid-cols-3 gap-px">
-          {[
-            { icon: '🚗', title: 'New Car Sales', desc: 'Maruti, Hyundai, Tata, Mahindra and more — best price guarantee.', action: () => { setActiveTab('cars'); scrollTo('vehicles'); } },
-            { icon: '🚛', title: 'Commercial Vehicles', desc: 'Trucks, Tempos, Pickup, Tractors — full range of business vehicles.', action: () => { setActiveTab('commercial'); scrollTo('vehicles'); } },
-            { icon: '💰', title: 'Vehicle Loan', desc: 'Fast approval, minimum documents. Starting at 7.5% p.a.', action: () => scrollTo('loans') },
-            { icon: '🔄', title: 'Refinance & Top-Up', desc: 'Switch to a better rate or get a fresh loan on your vehicle.', action: () => scrollTo('loans') },
-            { icon: '🛡️', title: 'Vehicle Insurance', desc: 'Compare plans from every insurer for the best premium.', action: () => scrollTo('contact') },
-            { icon: '📋', title: 'Document Assistance', desc: 'RC Transfer, NOC, Insurance renewal — full paperwork support.', action: () => scrollTo('contact') },
-          ].map((s, i) => (
+          {services.map((s, i) => {
+            const actions = [
+              () => { setActiveTab('cars'); scrollTo('vehicles'); },
+              () => { setActiveTab('commercial'); scrollTo('vehicles'); },
+              () => scrollTo('loans'),
+              () => scrollTo('loans'),
+              () => scrollTo('contact'),
+              () => scrollTo('contact'),
+            ];
+            return (
             <div
               key={i}
-              onClick={s.action}
+              onClick={actions[i] || (() => {})}
               className="bg-[#141414] p-8 border border-white/[0.08] cursor-pointer transition-all hover:bg-[#1a6e8e]/[0.08] hover:border-[#1a6e8e]/40 hover:-translate-y-1 relative"
             >
               <div className="w-14 h-14 mb-5 bg-[#1a6e8e]/15 border border-[#1a6e8e]/25 rounded-lg flex items-center justify-center text-2xl">{s.icon}</div>
               <h3 className="text-xl font-bold mb-2" style={{ fontFamily: 'var(--font-heading)' }}>{s.title}</h3>
               <p className="text-[13px] text-white/50 leading-[1.7]">{s.desc}</p>
             </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -550,7 +588,7 @@ export default function HomePage() {
               Submit Inquiry →
             </button>
             <a
-              href="https://wa.me/919824742356"
+              href={`https://wa.me/91${phoneDigits}`}
               target="_blank"
               className="block text-center py-3.5 bg-[#25d366] hover:bg-[#1eb857] rounded-md font-bold text-sm text-white"
             >
@@ -568,10 +606,10 @@ export default function HomePage() {
               <span className="text-[#e63030]">MK</span> <span className="text-[#2a8aad]">Finance</span>
             </div>
             <p className="text-[13px] text-white/40 leading-[1.7] max-w-[280px] mb-4">
-              Your trusted financial partner for all vehicle needs — buying, financing, and insuring, all under one roof.
+              {content.footer_tagline}
             </p>
-            <a href="tel:+919824742356" className="block text-xs text-white/50 mb-1.5">📞 +91 98247 42356</a>
-            <a href="mailto:mkfinance.guj@gmail.com" className="block text-xs text-white/50">✉️ mkfinance.guj@gmail.com</a>
+            <a href={`tel:+91${phoneDigits}`} className="block text-xs text-white/50 mb-1.5">📞 +91 {content.contact_phone}</a>
+            <a href={`mailto:${content.contact_email}`} className="block text-xs text-white/50">✉️ {content.contact_email}</a>
           </div>
           <div>
             <h5 className="text-xs font-bold tracking-[1.5px] uppercase text-white/30 mb-5">Quick Links</h5>
@@ -585,7 +623,7 @@ export default function HomePage() {
           <div>
             <h5 className="text-xs font-bold tracking-[1.5px] uppercase text-white/30 mb-5">Service Area</h5>
             <p className="text-[13px] text-white/50 leading-[1.7]">
-              Based in Dharampur, Valsad — serving South Gujarat including Vapi, Surat, Navsari, Bharuch and Silvassa.
+              {content.contact_service_area}
             </p>
           </div>
         </div>
@@ -595,7 +633,7 @@ export default function HomePage() {
       </footer>
 
       <a
-        href="https://wa.me/919824742356"
+        href={`https://wa.me/91${phoneDigits}`}
         target="_blank"
         className="fixed bottom-6 right-6 z-[400] w-14 h-14 rounded-full bg-[#25d366] flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
       >
@@ -633,7 +671,7 @@ export default function HomePage() {
                   Get Quote →
                 </button>
                 <a
-                  href="https://wa.me/919824742356"
+                  href={`https://wa.me/91${phoneDigits}`}
                   target="_blank"
                   className="py-3 bg-[#25d366] hover:bg-[#1eb857] rounded-md font-bold text-sm text-center"
                 >

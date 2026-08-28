@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Manrope } from 'next/font/google';
 import { api } from '@/lib/api';
-import { saveStaffUser } from '@/lib/auth';
+import { saveStaffUser, saveToken } from '@/lib/auth';
 
 const manrope = Manrope({ subsets: ['latin'], weight: ['600', '700', '800'], variable: '--font-display' });
 
@@ -26,6 +26,7 @@ export default function StaffLoginPage() {
         return;
       }
       saveStaffUser(res.user);
+      saveToken(res.token);
       router.push('/admin');
     } catch (e: any) {
       setError(e.message);

@@ -1,12 +1,27 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://mk-crm-backend.onrender.com';
 
+function getToken() {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('mk_crm_token');
+}
+
 async function apiFetch(path: string, options: RequestInit = {}) {
+  const token = getToken();
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
-    headers: { 'Content-Type': 'application/json', ...options.headers },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
     cache: 'no-store',
   });
   const data = await res.json().catch(() => null);
+  if (res.status === 401 && typeof window !== 'undefined' && window.location.pathname.startsWith('/admin') && window.location.pathname !== '/admin/login') {
+    localStorage.removeItem('mk_crm_token');
+    localStorage.removeItem('mk_staff_user');
+    window.location.href = '/admin/login';
+  }
   if (!res.ok) {
     throw new Error(data?.message || data?.error || 'Something went wrong.');
   }

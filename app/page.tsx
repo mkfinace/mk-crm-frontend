@@ -53,7 +53,37 @@ function StretchedTagline({
         const selfWidth = selfRef.current?.offsetWidth || 0;
         setStyle({ display: 'block', whiteSpace: 'nowrap', marginLeft: `${left + width / 2 - selfWidth / 2}px` });
       } else {
-        setStyle({ display: 'block', marginLeft: `${left}px`, width: `${width}px`, textAlign: 'center', whiteSpace: 'nowrap' });
+        // Must stay strictly within [left, left+width] — never spill past
+        // "Finance"'s edges. If the text is naturally wider than that (e.g.
+        // small mobile screens), shrink the font size to fit rather than
+        // overflow or wrap to a second line.
+        let fontSizePx: number | undefined;
+        if (selfRef.current) {
+          const el = selfRef.current;
+          const prevFontSize = el.style.fontSize;
+          const prevWhiteSpace = el.style.whiteSpace;
+          const prevWidth = el.style.width;
+          el.style.fontSize = '';
+          el.style.whiteSpace = 'nowrap';
+          el.style.width = 'auto';
+          const naturalWidth = el.scrollWidth;
+          const computedSize = parseFloat(window.getComputedStyle(el).fontSize) || 14;
+          if (naturalWidth > width && naturalWidth > 0) {
+            fontSizePx = Math.max(8, computedSize * (width / naturalWidth) * 0.97); // small safety margin
+          }
+          el.style.fontSize = prevFontSize;
+          el.style.whiteSpace = prevWhiteSpace;
+          el.style.width = prevWidth;
+        }
+        setStyle({
+          display: 'block',
+          marginLeft: `${left}px`,
+          width: `${width}px`,
+          textAlign: 'center',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          ...(fontSizePx ? { fontSize: `${fontSizePx}px` } : {}),
+        });
       }
     }
     measure();

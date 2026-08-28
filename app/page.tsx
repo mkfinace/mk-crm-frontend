@@ -163,7 +163,7 @@ export default function HomePage() {
     contact_city: 'Valsad, Gujarat',
     contact_service_area: 'Based in Dharampur, Valsad — serving South Gujarat including Vapi, Surat, Navsari, Bharuch and Silvassa.',
     footer_tagline: 'Your trusted financial partner for all vehicle needs — buying, financing, and insuring, all under one roof.',
-    hero_slides: [{ type: 'icon', url: '', animation: 'fade', showText: true, fit: 'cover' }] as { type: 'icon' | 'image' | 'video'; url: string; animation: 'fade' | 'slide' | 'zoom' | 'none'; showText?: boolean; fit?: 'cover' | 'contain' }[],
+    hero_slides: [{ type: 'icon', url: '', animation: 'fade', showText: true }] as { type: 'icon' | 'image' | 'video'; url: string; animation: 'fade' | 'slide' | 'zoom' | 'none'; showText?: boolean }[],
   });
   const phoneDigits = content.contact_phone.replace(/\s/g, '');
 
@@ -289,10 +289,9 @@ export default function HomePage() {
         const activeSlideData = content.hero_slides[activeSlide] || content.hero_slides[0];
         const isBanner = activeSlideData.type !== 'icon' && !!activeSlideData.url && !heroMediaError;
         const showText = isBanner ? activeSlideData.showText !== false : true;
-        const fitClass = activeSlideData.fit === 'cover' ? 'object-cover' : 'object-contain';
 
         return (
-          <section className={`flex items-center pt-[70px] relative overflow-hidden bg-gradient-to-br from-[#050e14] via-[#0a1a24] to-[#0d1010] ${isBanner ? 'min-h-[520px] h-[75vh] max-h-[760px]' : 'min-h-screen'}`}>
+          <section className="min-h-screen flex items-center pt-[70px] relative overflow-hidden bg-gradient-to-br from-[#050e14] via-[#0a1a24] to-[#0d1010]">
             {isBanner ? (
               <>
                 {activeSlideData.type === 'image' ? (
@@ -301,7 +300,7 @@ export default function HomePage() {
                     src={activeSlideData.url}
                     alt="MK Finance"
                     onError={() => setHeroMediaError(true)}
-                    className={`absolute inset-0 w-full h-full ${fitClass} ${heroAnimClass(activeSlideData.animation)}`}
+                    className={`absolute inset-0 w-full h-full object-cover ${heroAnimClass(activeSlideData.animation)}`}
                   />
                 ) : (
                   <video
@@ -312,7 +311,7 @@ export default function HomePage() {
                     loop
                     playsInline
                     onError={() => setHeroMediaError(true)}
-                    className={`absolute inset-0 w-full h-full ${fitClass} ${heroAnimClass(activeSlideData.animation)}`}
+                    className={`absolute inset-0 w-full h-full object-cover ${heroAnimClass(activeSlideData.animation)}`}
                   />
                 )}
                 {showText && (

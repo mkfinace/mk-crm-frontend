@@ -223,10 +223,10 @@ export default function HomePage() {
         <div className="absolute bottom-[-15%] left-[-10%] w-[400px] h-[400px] bg-[#e63030]/[0.08] rounded-full blur-[120px]" />
         <div className="max-w-[1200px] mx-auto px-6 md:px-8 py-16 grid md:grid-cols-2 gap-12 items-center relative z-10">
           <div>
-            <h1 className="text-[2.8rem] md:text-[4.5rem] font-bold leading-[1.05] mb-1" style={{ fontFamily: 'var(--font-heading)' }}>
+            <h1 className="text-[2.8rem] md:text-[4.5rem] font-bold leading-[1.05]" style={{ fontFamily: 'var(--font-heading)' }}>
               <span className="text-[#e63030]">MK</span> <span className="text-[#2a8aad]">Finance</span>
             </h1>
-            <p className="text-[#2a8aad] text-[14px] font-semibold tracking-wide mb-5 pl-1 md:pl-[7.5rem]">{content.hero_tagline}</p>
+            <p className="text-[#2a8aad] text-[14px] font-semibold tracking-wide mb-5 pl-1 md:pl-[7.5rem] -mt-2 md:-mt-3">{content.hero_tagline}</p>
             <p className="text-white/85 text-[1.35rem] font-bold mb-6" style={{ fontFamily: 'var(--font-heading)' }}>{content.hero_subheading}</p>
             <p className="text-white/60 leading-[1.8] mb-8 max-w-[440px] text-[15px]">
               {content.hero_description}

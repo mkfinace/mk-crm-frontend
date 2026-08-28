@@ -136,6 +136,31 @@ export default function SiteContentAdminPage() {
     }
   }
 
+  const [uploadError, setUploadError] = useState('');
+  const [uploading, setUploading] = useState(false);
+
+  function handleFileSelect(file: File | undefined) {
+    if (!file) return;
+    setUploadError('');
+    const isVideo = file.type.startsWith('video/');
+    const maxBytes = isVideo ? 12 * 1024 * 1024 : 4 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      setUploadError(`File too large — max ${isVideo ? '12MB for video' : '4MB for images'}. Try a smaller/compressed file.`);
+      return;
+    }
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setHeroMedia((p) => ({ ...p, type: isVideo ? 'video' : 'image', url: reader.result as string }));
+      setUploading(false);
+    };
+    reader.onerror = () => {
+      setUploadError('Could not read that file — try again.');
+      setUploading(false);
+    };
+    reader.readAsDataURL(file);
+  }
+
   async function saveHeroMedia() {
     setSavingKey('hero_media');
     setError('');
@@ -277,7 +302,7 @@ export default function SiteContentAdminPage() {
             <div className={`${cardCls} p-5 mb-4`}>
               <h3 className="text-[13px] font-semibold text-slate-700 mb-1">Hero Image / Video</h3>
               <p className="text-[12px] text-slate-500 mb-4">
-                Replace the animated car icon with your own image or video. Paste a hosted URL (e.g. a Google Drive share link converted to direct-view, or any image/video hosting link) — there's no file upload here yet, just a link field.
+                Replace the animated car icon with your own image or video — upload a file from your computer, or paste a hosted link instead.
               </p>
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
@@ -308,13 +333,29 @@ export default function SiteContentAdminPage() {
               </div>
               {heroMedia.type !== 'icon' && (
                 <div className="mb-4">
-                  <label className="text-[11px] text-slate-500 block mb-1">Media URL</label>
+                  <label className="text-[11px] text-slate-500 block mb-1">Upload from your computer</label>
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    className={`${inputCls} w-full`}
+                    onChange={(e) => handleFileSelect(e.target.files?.[0])}
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1">Max 4MB for images, 12MB for video.</p>
+                  {uploading && <p className="text-[12px] text-slate-500 mt-2">Reading file…</p>}
+                  {uploadError && <p className="text-[12px] text-red-600 mt-2">{uploadError}</p>}
+
+                  <div className="flex items-center gap-3 my-3">
+                    <div className="h-px bg-slate-200 flex-1" />
+                    <span className="text-[11px] text-slate-400">OR paste a link</span>
+                    <div className="h-px bg-slate-200 flex-1" />
+                  </div>
                   <input
                     className={`${inputCls} w-full`}
                     placeholder="https://…"
-                    value={heroMedia.url}
+                    value={heroMedia.url.startsWith('data:') ? '' : heroMedia.url}
                     onChange={(e) => setHeroMedia((p) => ({ ...p, url: e.target.value }))}
                   />
+
                   {heroMedia.url && heroMedia.type === 'image' && (
                     <img src={heroMedia.url} alt="Preview" className="mt-3 h-28 w-auto rounded-lg border border-slate-200 object-cover" />
                   )}
@@ -324,7 +365,7 @@ export default function SiteContentAdminPage() {
                 </div>
               )}
               <div className="flex items-center gap-3">
-                <button className={primaryBtnCls} disabled={savingKey === 'hero_media'} onClick={saveHeroMedia}>
+                <button className={primaryBtnCls} disabled={savingKey === 'hero_media' || uploading} onClick={saveHeroMedia}>
                   {savingKey === 'hero_media' ? 'Saving…' : 'Save'}
                 </button>
                 {savedKey === 'hero_media' && <span className="text-[12.5px] text-emerald-600 font-medium">✓ Saved — live on the website now</span>}

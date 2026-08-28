@@ -27,24 +27,37 @@ function VehicleCard({ v, onOpenDetail, onQuickQuote }: { v: any; onOpenDetail: 
   return (
     <div
       onClick={onOpenDetail}
-      className="bg-[#141414] border border-white/[0.08] rounded-lg overflow-hidden cursor-pointer transition-all hover:border-[#1a6e8e]/40 hover:-translate-y-1 hover:shadow-2xl"
+      className="group bg-[#111111] border border-white/[0.08] rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:border-[#2a8aad]/50 hover:-translate-y-1.5 hover:shadow-[0_20px_45px_rgba(0,0,0,0.5)]"
     >
-      <div className="h-[170px] bg-[#1a6e8e]/[0.06] border-b border-white/[0.08] flex items-center justify-center text-5xl relative overflow-hidden">
-        {v.icon}
-        <span className="absolute top-2.5 left-2.5 bg-black/70 backdrop-blur px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide text-white/70 border border-white/[0.08]">
+      <div
+        className="h-[175px] flex items-center justify-center relative overflow-hidden"
+        style={{ background: 'radial-gradient(circle at 50% 35%, rgba(42,138,173,0.16), rgba(10,10,10,0.4) 70%)' }}
+      >
+        <div
+          className="absolute inset-0 opacity-30 transition-opacity group-hover:opacity-50"
+          style={{ backgroundImage: 'radial-gradient(circle, rgba(42,138,173,0.4) 1px, transparent 1px)', backgroundSize: '16px 16px' }}
+        />
+        <span className="text-6xl relative z-10 drop-shadow-[0_10px_16px_rgba(0,0,0,0.55)] transition-transform duration-300 group-hover:scale-110">
+          {v.icon}
+        </span>
+        <span className="absolute top-3 left-3 bg-black/75 backdrop-blur-sm px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide text-white/80 border border-white/[0.1]">
           {v.brand}
         </span>
-        <span className="absolute top-2.5 right-2.5 bg-white text-black px-2.5 py-1 rounded-md text-[9px] font-extrabold tracking-wide uppercase">
+        <span className="absolute top-3 right-3 bg-gradient-to-br from-white to-white/90 text-black px-2.5 py-1 rounded-md text-[9px] font-extrabold tracking-wide uppercase shadow-sm">
           New
         </span>
+        <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[#111111] to-transparent" />
       </div>
-      <div className="p-5">
-        <h4 className="text-[1.05rem] font-bold mb-1" style={{ fontFamily: 'var(--font-heading)' }}>{v.model}</h4>
-        <p className="text-xs text-white/40 mb-3">{v.fuelType} · {v.transmission}</p>
-        <p className="text-[1.3rem] font-bold text-[#2a8aad] mb-3" style={{ fontFamily: 'var(--font-heading)' }}>{v.price}</p>
+      <div className="p-5 border-t border-white/[0.06]">
+        <h4 className="text-[1.05rem] font-bold mb-1.5 group-hover:text-[#4db4dd] transition-colors" style={{ fontFamily: 'var(--font-heading)' }}>{v.model}</h4>
+        <div className="flex items-center gap-1.5 mb-3">
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.06] text-white/50 border border-white/[0.08]">{v.fuelType}</span>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.06] text-white/50 border border-white/[0.08]">{v.transmission}</span>
+        </div>
+        <p className="text-[1.35rem] font-bold text-[#2a8aad] mb-4" style={{ fontFamily: 'var(--font-heading)' }}>{v.price}</p>
         <button
           onClick={(e) => { e.stopPropagation(); onQuickQuote(); }}
-          className="w-full py-2.5 border border-[#e63030] text-[#e63030] hover:bg-[#e63030] hover:text-white rounded-md text-xs font-bold uppercase tracking-wide transition-colors"
+          className="w-full py-2.5 border border-[#e63030]/70 text-[#e63030] hover:bg-[#e63030] hover:text-white rounded-md text-xs font-bold uppercase tracking-wide transition-all"
         >
           View Offers →
         </button>
@@ -61,7 +74,6 @@ export default function HomePage() {
   const [prefillVehicle, setPrefillVehicle] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState<any | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'cars' | 'commercial'>('cars');
   const [activeCommercialCat, setActiveCommercialCat] = useState<string | null>(null);
 
   const [price, setPrice] = useState(1000000);
@@ -132,16 +144,18 @@ export default function HomePage() {
       for (const model of brand.models || []) {
         const variants = model.variants || [];
         if (variants.length === 0) continue;
+        const priced = variants.filter((v: any) => v.exShowroomPrice > 0);
         const sorted = [...variants].sort((a: any, b: any) => a.exShowroomPrice - b.exShowroomPrice);
-        const min = sorted[0].exShowroomPrice;
-        const max = sorted[sorted.length - 1].exShowroomPrice;
+        const pricedSorted = [...priced].sort((a: any, b: any) => a.exShowroomPrice - b.exShowroomPrice);
+        const min = pricedSorted[0]?.exShowroomPrice;
+        const max = pricedSorted[pricedSorted.length - 1]?.exShowroomPrice;
         const category = model.category || 'CAR';
         list.push({
           brand: brand.name,
           model: model.name,
           category,
           icon: category === 'CAR' ? '🚗' : CATEGORY_ICON[category] || '🚛',
-          price: min === max ? formatLakh(min) : `${formatLakh(min)} - ${formatLakh(max)}`,
+          price: !min ? 'Price on request' : min === max ? formatLakh(min) : `${formatLakh(min)} - ${formatLakh(max)}`,
           fuelType: [...new Set(sorted.map((v: any) => v.fuelType))].join('/'),
           transmission: [...new Set(sorted.map((v: any) => v.transmission))].join('/'),
           variants: sorted,
@@ -277,8 +291,8 @@ export default function HomePage() {
         <div className="max-w-[1200px] mx-auto grid md:grid-cols-3 gap-px">
           {services.map((s, i) => {
             const actions = [
-              () => { setActiveTab('cars'); scrollTo('vehicles'); },
-              () => { setActiveTab('commercial'); scrollTo('vehicles'); },
+              () => scrollTo('vehicles'),
+              () => scrollTo('commercial-vehicles'),
               () => scrollTo('loans'),
               () => scrollTo('loans'),
               () => scrollTo('contact'),
@@ -299,29 +313,15 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* VEHICLES */}
+      {/* CARS */}
       <section id="vehicles" className="py-24 px-6 md:px-8 bg-[#0a0a0a]">
         <div className="max-w-[1200px] mx-auto mb-8">
           <div className="flex items-center gap-2 text-[11px] tracking-[3px] uppercase text-[#2a8aad] font-semibold mb-3">
             <span className="w-6 h-0.5 bg-[#2a8aad]" /> Our Stock
           </div>
-          <h2 className="text-[2.2rem] md:text-[3rem] font-bold mb-8" style={{ fontFamily: 'var(--font-heading)' }}>
-            Browse <span className="text-[#e63030]">Vehicles</span>
+          <h2 className="text-[2.2rem] md:text-[3rem] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>
+            🚗 <span className="text-[#e63030]">Cars</span>
           </h2>
-          <div className="inline-flex border border-white/[0.08] rounded-md overflow-hidden">
-            <button
-              onClick={() => { setActiveTab('cars'); setActiveCommercialCat(null); }}
-              className={`px-7 py-3 text-[13px] font-semibold tracking-wide transition-colors ${activeTab === 'cars' ? 'bg-[#1a6e8e] text-white' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}
-            >
-              🚗 Cars
-            </button>
-            <button
-              onClick={() => setActiveTab('commercial')}
-              className={`px-7 py-3 text-[13px] font-semibold tracking-wide transition-colors ${activeTab === 'commercial' ? 'bg-[#1a6e8e] text-white' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}
-            >
-              🚛 Commercial
-            </button>
-          </div>
         </div>
 
         <div className="max-w-[1200px] mx-auto">
@@ -331,7 +331,7 @@ export default function HomePage() {
             </div>
           )}
 
-          {!loading && activeTab === 'cars' && (
+          {!loading && (
             cars.length === 0
               ? <p className="text-center text-white/40 py-12">No cars listed yet — check back soon.</p>
               : (
@@ -340,8 +340,22 @@ export default function HomePage() {
                 </div>
               )
           )}
+        </div>
+      </section>
 
-          {!loading && activeTab === 'commercial' && !activeCommercialCat && (
+      {/* COMMERCIAL VEHICLES */}
+      <section id="commercial-vehicles" className="py-24 px-6 md:px-8 bg-[#0f0f0f] border-t border-white/[0.06]">
+        <div className="max-w-[1200px] mx-auto mb-8">
+          <div className="flex items-center gap-2 text-[11px] tracking-[3px] uppercase text-[#2a8aad] font-semibold mb-3">
+            <span className="w-6 h-0.5 bg-[#2a8aad]" /> Business Fleet
+          </div>
+          <h2 className="text-[2.2rem] md:text-[3rem] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>
+            🚛 <span className="text-[#e63030]">Commercial</span> Vehicles
+          </h2>
+        </div>
+
+        <div className="max-w-[1200px] mx-auto">
+          {!loading && !activeCommercialCat && (
             <div className="grid md:grid-cols-3 gap-6">
               {COMMERCIAL_CATEGORIES.map((cat) => {
                 const count = (commercialByCategory[cat] || []).length;
@@ -362,7 +376,7 @@ export default function HomePage() {
             </div>
           )}
 
-          {!loading && activeTab === 'commercial' && activeCommercialCat && (
+          {!loading && activeCommercialCat && (
             <div>
               <div className="flex items-center gap-4 mb-6">
                 <button onClick={() => setActiveCommercialCat(null)} className="text-[13px] border border-white/20 text-white/70 hover:text-white px-4 py-2 rounded-md">← All Categories</button>
@@ -614,8 +628,8 @@ export default function HomePage() {
           <div>
             <h5 className="text-xs font-bold tracking-[1.5px] uppercase text-white/30 mb-5">Quick Links</h5>
             <ul className="space-y-2.5">
-              <li><button onClick={() => { setActiveTab('cars'); scrollTo('vehicles'); }} className="text-[13px] text-white/50 hover:text-[#2a8aad]">Cars</button></li>
-              <li><button onClick={() => { setActiveTab('commercial'); scrollTo('vehicles'); }} className="text-[13px] text-white/50 hover:text-[#2a8aad]">Commercial Vehicles</button></li>
+              <li><button onClick={() => scrollTo('vehicles')} className="text-[13px] text-white/50 hover:text-[#2a8aad]">Cars</button></li>
+              <li><button onClick={() => scrollTo('commercial-vehicles')} className="text-[13px] text-white/50 hover:text-[#2a8aad]">Commercial Vehicles</button></li>
               <li><button onClick={() => scrollTo('loans')} className="text-[13px] text-white/50 hover:text-[#2a8aad]">EMI Calculator</button></li>
               <li><button onClick={() => scrollTo('contact')} className="text-[13px] text-white/50 hover:text-[#2a8aad]">Contact Us</button></li>
             </ul>

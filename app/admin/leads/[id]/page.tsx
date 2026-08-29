@@ -71,6 +71,8 @@ export default function LeadDetailPage() {
   const [docUrl, setDocUrl] = useState('');
 
   const [banks, setBanks] = useState<any[]>([]);
+  const [dealerBanks, setDealerBanks] = useState<any[]>([]);
+  const [approving, setApproving] = useState(false);
   const [financeBank, setFinanceBank] = useState('');
   const [loanAmount, setLoanAmount] = useState('');
   const [downPayment, setDownPayment] = useState('');
@@ -106,6 +108,11 @@ export default function LeadDetailPage() {
       setAssignFinanceExec(data.financeExecutiveId || '');
       if (data.dealerId) loadDealerExecs(data.dealerId);
       if (data.bankId) loadFinanceExecs(data.bankId);
+      if (data.dealerId) {
+        api.getDealerBanks(data.dealerId).then(setDealerBanks).catch(() => setDealerBanks([]));
+      } else {
+        setDealerBanks([]);
+      }
 
       setEditCustomerName(data.customer?.name || '');
       setEditCustomerMobile(data.customer?.mobile || '');
@@ -275,6 +282,19 @@ export default function LeadDetailPage() {
     setRoi('');
     setEmi('');
   });
+
+  async function handleApproveFinanceCase() {
+    setApproving(true);
+    setError('');
+    try {
+      await api.approveFinanceCase(lead.financeCase.id);
+      await loadLead();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setApproving(false);
+    }
+  }
 
   const handleAddBooking = withSaving(async () => {
     await api.createBooking({ leadId: id, bookingAmount: Number(bookingAmount), bookedBy: staff!.id });
@@ -592,6 +612,16 @@ export default function LeadDetailPage() {
         <Section title="Finance Case">
           {lead.financeCase ? (
             <div className="text-sm space-y-1">
+              {lead.financeCase.stage === 'PENDING_APPROVAL' && (
+                <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-2">
+                  <span className="text-amber-700 text-[13px] font-medium">⏳ Awaiting Admin Approval</span>
+                  {canAssignFinance && (
+                    <button disabled={approving} onClick={handleApproveFinanceCase} className="bg-amber-600 hover:bg-amber-700 text-white text-[12.5px] font-medium rounded-md px-3 py-1.5 disabled:opacity-60">
+                      {approving ? 'Approving…' : '✓ Approve'}
+                    </button>
+                  )}
+                </div>
+              )}
               <p><span className="text-gray-500">Bank:</span> {banks.find((b) => b.id === lead.financeCase.bankId)?.name || lead.financeCase.bankId}</p>
               <p><span className="text-gray-500">Loan Amount:</span> ₹{(lead.financeCase.loanAmount / 100000).toFixed(2)}L</p>
               <p><span className="text-gray-500">EMI:</span> ₹{lead.financeCase.emi}/mo</p>
@@ -599,9 +629,12 @@ export default function LeadDetailPage() {
             </div>
           ) : (
             <form onSubmit={handleCreateFinanceCase} className="space-y-3">
+              {dealerBanks.length > 0 && (
+                <p className="text-[12px] text-gray-500">Showing banks tied to this lead's dealer.</p>
+              )}
               <select className="w-full border rounded-lg px-3 py-2 text-sm" value={financeBank} onChange={(e) => setFinanceBank(e.target.value)} required>
                 <option value="">Select bank</option>
-                {banks.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                {(dealerBanks.length > 0 ? dealerBanks : banks).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
               <div className="grid grid-cols-2 gap-3">
                 <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Loan amount" value={loanAmount} onChange={(e) => setLoanAmount(e.target.value)} required />
@@ -610,7 +643,9 @@ export default function LeadDetailPage() {
                 <input type="number" step="0.1" className="border rounded-lg px-3 py-2 text-sm" placeholder="ROI %" value={roi} onChange={(e) => setRoi(e.target.value)} required />
               </div>
               <input type="number" className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="EMI" value={emi} onChange={(e) => setEmi(e.target.value)} required />
-              <button disabled={saving} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">Create Finance Case</button>
+              <button disabled={saving} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">
+                {staff?.role === 'DEALER_EXECUTIVE' || staff?.role === 'DEALER_MANAGER' ? 'Submit for Admin Approval' : 'Create Finance Case'}
+              </button>
             </form>
           )}
         </Section>

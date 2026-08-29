@@ -8,6 +8,8 @@ import { IconBuilding } from '@/components/AdminIcons';
 export default function DealersAdminPage() {
   const [dealers, setDealers] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [allBanks, setAllBanks] = useState<any[]>([]);
+  const [dealerBanks, setDealerBanksState] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [detail, setDetail] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -51,6 +53,7 @@ export default function DealersAdminPage() {
   useEffect(() => {
     loadDealers();
     api.listUsers('DEALER_EXECUTIVE').then(setUsers).catch(() => {});
+    api.listBanks().then(setAllBanks).catch(() => {});
   }, []);
 
   async function loadDealers() {
@@ -70,8 +73,23 @@ export default function DealersAdminPage() {
     setExpanded(id);
     try {
       setDetail(await api.getDealer(id));
+      setDealerBanksState(await api.getDealerBanks(id));
     } catch (e: any) {
       setError(e.message);
+    }
+  }
+
+  async function handleToggleBank(dealerId: string, bankId: string) {
+    setSaving(true);
+    setError('');
+    const currentIds = dealerBanks.map((b) => b.id);
+    const nextIds = currentIds.includes(bankId) ? currentIds.filter((id) => id !== bankId) : [...currentIds, bankId];
+    try {
+      setDealerBanksState(await api.setDealerBanks(dealerId, nextIds));
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -218,6 +236,32 @@ export default function DealersAdminPage() {
                     </select>
                     <button disabled={saving} className={primaryBtnCls}>Assign</button>
                   </form>
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Tied-up Banks</p>
+                  <p className="text-[12px] text-slate-400 mb-2.5">Finance cases created for this dealer's leads will only offer these banks. Leave none selected to allow any bank.</p>
+                  {allBanks.length === 0 ? (
+                    <p className="text-[13px] text-slate-400">No banks added yet — add one from the Banks page first.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {allBanks.map((b) => {
+                        const tied = dealerBanks.some((db) => db.id === b.id);
+                        return (
+                          <button
+                            key={b.id}
+                            disabled={saving}
+                            onClick={() => handleToggleBank(d.id, b.id)}
+                            className={`text-[12px] rounded-full px-3 py-1 border transition-colors ${
+                              tied ? 'bg-[#FBF3E1] border-[#D8B155]/50 text-[#96701F] font-medium' : 'bg-slate-50 border-slate-100 text-slate-500 hover:border-slate-300'
+                            }`}
+                          >
+                            {tied ? '✓ ' : ''}{b.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

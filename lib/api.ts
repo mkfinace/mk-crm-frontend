@@ -97,6 +97,8 @@ export const api = {
   listDealers: () => apiFetch('/dealers'),
   createDealer: (data: any) => apiFetch('/dealers', { method: 'POST', body: JSON.stringify(data) }),
   getDealer: (id: string) => apiFetch(`/dealers/${id}`),
+  getDealerBanks: (id: string) => apiFetch(`/dealers/${id}/banks`),
+  setDealerBanks: (id: string, bankIds: string[]) => apiFetch(`/dealers/${id}/banks`, { method: 'PUT', body: JSON.stringify({ bankIds }) }),
   updateDealer: (id: string, data: any) => apiFetch(`/dealers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteDealer: (id: string) => apiFetch(`/dealers/${id}`, { method: 'DELETE' }),
   createDealerBranch: (id: string, data: any) => apiFetch(`/dealers/${id}/branches`, { method: 'POST', body: JSON.stringify(data) }),
@@ -130,6 +132,7 @@ export const api = {
   getFinanceCase: (id: string) => apiFetch(`/finance-cases/${id}`),
   listFinanceCases: (leadId: string) => apiFetch(`/finance-cases?leadId=${leadId}`),
   createFinanceCase: (data: any) => apiFetch('/finance-cases', { method: 'POST', body: JSON.stringify(data) }),
+  approveFinanceCase: (id: string) => apiFetch(`/finance-cases/${id}/approve`, { method: 'PUT' }),
   updateFinanceStage: (id: string, data: any) => apiFetch(`/finance-cases/${id}/stage`, { method: 'PUT', body: JSON.stringify(data) }),
 
   // Bookings / Deliveries

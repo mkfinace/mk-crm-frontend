@@ -17,10 +17,16 @@ async function apiFetch(path: string, options: RequestInit = {}) {
     cache: 'no-store',
   });
   const data = await res.json().catch(() => null);
-  if (res.status === 401 && typeof window !== 'undefined' && window.location.pathname.startsWith('/admin') && window.location.pathname !== '/admin/login') {
-    localStorage.removeItem('mk_crm_token');
-    localStorage.removeItem('mk_staff_user');
-    window.location.href = '/admin/login';
+  if (res.status === 401 && typeof window !== 'undefined') {
+    if (window.location.pathname.startsWith('/admin') && window.location.pathname !== '/admin/login') {
+      localStorage.removeItem('mk_crm_token');
+      localStorage.removeItem('mk_staff_user');
+      window.location.href = '/admin/login';
+    } else if (window.location.pathname.startsWith('/portal') && window.location.pathname !== '/portal/login') {
+      localStorage.removeItem('mk_crm_token');
+      localStorage.removeItem('mk_portal_customer');
+      window.location.href = '/portal/login';
+    }
   }
   if (!res.ok) {
     throw new Error(data?.message || data?.error || 'Something went wrong.');
@@ -51,6 +57,9 @@ export const api = {
 
   // Leads
   createLead: (data: any) => apiFetch('/leads', { method: 'POST', body: JSON.stringify(data) }),
+  listMyLeads: () => apiFetch('/leads/my'),
+  getMyLead: (id: string) => apiFetch(`/leads/my/${id}`),
+  sendMyMessage: (id: string, body: string) => apiFetch(`/leads/my/${id}/messages`, { method: 'POST', body: JSON.stringify({ body }) }),
   listLeads: (params?: string) => apiFetch(`/leads${params ? `?${params}` : ''}`),
 
   // Reports

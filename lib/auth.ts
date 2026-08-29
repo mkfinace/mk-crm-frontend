@@ -42,3 +42,35 @@ export function getToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem(TOKEN_KEY);
 }
+
+// Customer Portal session (separate from staff session above, but shares
+// the same 'mk_crm_token' key used by api.ts's Authorization header — a
+// customer and staff member are never logged in in the same browser at once
+// in practice, so one active token is fine).
+export type PortalCustomer = {
+  id: string;
+  name: string;
+  mobile: string;
+};
+
+const CUSTOMER_KEY = 'mk_portal_customer';
+
+export function saveCustomer(customer: PortalCustomer) {
+  localStorage.setItem(CUSTOMER_KEY, JSON.stringify(customer));
+}
+
+export function getCustomer(): PortalCustomer | null {
+  if (typeof window === 'undefined') return null;
+  const raw = localStorage.getItem(CUSTOMER_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+export function clearCustomer() {
+  localStorage.removeItem(CUSTOMER_KEY);
+  localStorage.removeItem('mk_crm_token');
+}

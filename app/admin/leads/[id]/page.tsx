@@ -88,6 +88,16 @@ export default function LeadDetailPage() {
   const [quoteOnRoad, setQuoteOnRoad] = useState('');
   const [quoteExchange, setQuoteExchange] = useState('');
   const [quoteValidTill, setQuoteValidTill] = useState('');
+  const [showQuoteBreakdown, setShowQuoteBreakdown] = useState(false);
+  const [quoteExShowroom, setQuoteExShowroom] = useState('');
+  const [quoteRto, setQuoteRto] = useState('');
+  const [quoteInsurance, setQuoteInsurance] = useState('');
+  const [quoteAccessories, setQuoteAccessories] = useState('');
+  const [quoteOtherCharges, setQuoteOtherCharges] = useState('');
+  const [quoteDiscount, setQuoteDiscount] = useState('');
+  const [quoteExchangeBonus, setQuoteExchangeBonus] = useState('');
+  const [quoteDealerOffer, setQuoteDealerOffer] = useState('');
+  const [quoteManufacturerOffer, setQuoteManufacturerOffer] = useState('');
 
   const [testDriveDate, setTestDriveDate] = useState('');
 
@@ -104,6 +114,21 @@ export default function LeadDetailPage() {
   const [roi, setRoi] = useState('');
   const [emi, setEmi] = useState('');
   const [otherCharges, setOtherCharges] = useState<any>(null);
+  const [negotiations, setNegotiations] = useState<any[]>([]);
+  const [negoExpected, setNegoExpected] = useState('');
+  const [negoOffered, setNegoOffered] = useState('');
+  const [negoDiscount, setNegoDiscount] = useState('');
+  const [negoExchange, setNegoExchange] = useState('');
+  const [negoAccessories, setNegoAccessories] = useState('');
+  const [negoSpecialOffer, setNegoSpecialOffer] = useState('');
+  const [negoNotes, setNegoNotes] = useState('');
+  const canApproveNegotiation = staff?.role === 'SUPER_ADMIN' || staff?.role === 'SALES_ADMIN' || staff?.role === 'DEALER_MANAGER';
+  const [bankQueries, setBankQueries] = useState<any[]>([]);
+  const [bqText, setBqText] = useState('');
+  const [bqDoc, setBqDoc] = useState('');
+  const [bqDueDate, setBqDueDate] = useState('');
+  const [resolvingQueryId, setResolvingQueryId] = useState<string | null>(null);
+  const [bqResolutionNotes, setBqResolutionNotes] = useState('');
   const [editingFinanceCase, setEditingFinanceCase] = useState(false);
   const [editLoanAmount, setEditLoanAmount] = useState('');
   const [editDownPayment, setEditDownPayment] = useState('');
@@ -168,6 +193,7 @@ export default function LeadDetailPage() {
   useEffect(() => {
     loadLead();
     loadMessages();
+    loadNegotiations();
     api.listDealers().then(setDealers).catch(() => {});
     api.listBanks().then(setBanks).catch(() => {});
     api.getFullCatalogue().then(setCatalogue).catch(() => {});
@@ -192,6 +218,11 @@ export default function LeadDetailPage() {
         api.getDealerBanks(data.dealerId).then(setDealerBanks).catch(() => setDealerBanks([]));
       } else {
         setDealerBanks([]);
+      }
+      if (data.financeCase) {
+        loadBankQueries(data.financeCase.id);
+      } else {
+        setBankQueries([]);
       }
 
       setEditCustomerName(data.customer?.name || '');
@@ -350,12 +381,97 @@ export default function LeadDetailPage() {
       onRoadPrice: Number(quoteOnRoad),
       exchangeValue: quoteExchange ? Number(quoteExchange) : undefined,
       validTill: new Date(quoteValidTill).toISOString(),
+      exShowroomPrice: quoteExShowroom ? Number(quoteExShowroom) : undefined,
+      rto: quoteRto ? Number(quoteRto) : undefined,
+      insurance: quoteInsurance ? Number(quoteInsurance) : undefined,
+      accessories: quoteAccessories ? Number(quoteAccessories) : undefined,
+      otherCharges: quoteOtherCharges ? Number(quoteOtherCharges) : undefined,
+      discount: quoteDiscount ? Number(quoteDiscount) : undefined,
+      exchangeBonus: quoteExchangeBonus ? Number(quoteExchangeBonus) : undefined,
+      dealerOffer: quoteDealerOffer ? Number(quoteDealerOffer) : undefined,
+      manufacturerOffer: quoteManufacturerOffer ? Number(quoteManufacturerOffer) : undefined,
     });
     setQuotePrice('');
     setQuoteOnRoad('');
     setQuoteExchange('');
     setQuoteValidTill('');
+    setQuoteExShowroom(''); setQuoteRto(''); setQuoteInsurance(''); setQuoteAccessories('');
+    setQuoteOtherCharges(''); setQuoteDiscount(''); setQuoteExchangeBonus('');
+    setQuoteDealerOffer(''); setQuoteManufacturerOffer('');
+    setShowQuoteBreakdown(false);
   });
+
+  async function loadNegotiations() {
+    try {
+      setNegotiations(await api.listNegotiations(id));
+    } catch {
+      // non-fatal — negotiation history just won't show
+    }
+  }
+
+  const handleAddNegotiation = withSaving(async () => {
+    await api.createNegotiation({
+      leadId: id,
+      customerExpectedPrice: negoExpected ? Number(negoExpected) : undefined,
+      dealerOfferedPrice: negoOffered ? Number(negoOffered) : undefined,
+      discountRequested: negoDiscount ? Number(negoDiscount) : undefined,
+      exchangeValueOffered: negoExchange ? Number(negoExchange) : undefined,
+      accessoriesOffered: negoAccessories || undefined,
+      specialOffer: negoSpecialOffer || undefined,
+      notes: negoNotes || undefined,
+    });
+    setNegoExpected(''); setNegoOffered(''); setNegoDiscount(''); setNegoExchange('');
+    setNegoAccessories(''); setNegoSpecialOffer(''); setNegoNotes('');
+    await loadNegotiations();
+  });
+
+  async function handleDecideNegotiation(negId: string, approve: boolean) {
+    setSaving(true);
+    setError('');
+    try {
+      await api.decideNegotiation(negId, approve);
+      await loadNegotiations();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function loadBankQueries(financeCaseId: string) {
+    try {
+      setBankQueries(await api.listBankQueries(financeCaseId));
+    } catch {
+      // non-fatal
+    }
+  }
+
+  const handleAddBankQuery = withSaving(async () => {
+    await api.createBankQuery(lead.financeCase.id, {
+      query: bqText,
+      requestedDocument: bqDoc || undefined,
+      dueDate: bqDueDate ? new Date(bqDueDate).toISOString() : undefined,
+    });
+    setBqText(''); setBqDoc(''); setBqDueDate('');
+    await loadBankQueries(lead.financeCase.id);
+    await loadLead();
+  });
+
+  async function handleResolveBankQuery(queryId: string) {
+    setSaving(true);
+    setError('');
+    try {
+      await api.resolveBankQuery(lead.financeCase.id, queryId, bqResolutionNotes);
+      setResolvingQueryId(null);
+      setBqResolutionNotes('');
+      await loadBankQueries(lead.financeCase.id);
+      await loadLead();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const handleAddTestDrive = withSaving(async () => {
     await api.createTestDrive({ leadId: id, scheduledAt: new Date(testDriveDate).toISOString() });
@@ -813,20 +929,88 @@ export default function LeadDetailPage() {
       <>
       <Section title="Quotations">
         {canCreateQuotation && (
-          <form onSubmit={handleAddQuotation} className="grid grid-cols-2 gap-3 mb-4">
-            <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Price" value={quotePrice} onChange={(e) => setQuotePrice(e.target.value)} required />
-            <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="On-road price" value={quoteOnRoad} onChange={(e) => setQuoteOnRoad(e.target.value)} required />
-            <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Exchange value (optional)" value={quoteExchange} onChange={(e) => setQuoteExchange(e.target.value)} />
-            <input type="date" className="border rounded-lg px-3 py-2 text-sm" value={quoteValidTill} onChange={(e) => setQuoteValidTill(e.target.value)} required />
-            <button disabled={saving} className="col-span-2 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-60">Add Quotation</button>
+          <form onSubmit={handleAddQuotation} className="space-y-3 mb-4">
+            <div className="grid grid-cols-2 gap-3">
+              <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Price" value={quotePrice} onChange={(e) => setQuotePrice(e.target.value)} required />
+              <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="On-road price" value={quoteOnRoad} onChange={(e) => setQuoteOnRoad(e.target.value)} required />
+              <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Exchange value (optional)" value={quoteExchange} onChange={(e) => setQuoteExchange(e.target.value)} />
+              <input type="date" className="border rounded-lg px-3 py-2 text-sm" value={quoteValidTill} onChange={(e) => setQuoteValidTill(e.target.value)} required />
+            </div>
+
+            <button type="button" onClick={() => setShowQuoteBreakdown((v) => !v)} className="text-blue-600 text-xs font-medium">
+              {showQuoteBreakdown ? '− Hide' : '+ Add'} itemized breakdown (optional)
+            </button>
+
+            {showQuoteBreakdown && (
+              <div className="grid grid-cols-3 gap-2 bg-gray-50 rounded-lg p-3">
+                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Ex-showroom" value={quoteExShowroom} onChange={(e) => setQuoteExShowroom(e.target.value)} />
+                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="RTO" value={quoteRto} onChange={(e) => setQuoteRto(e.target.value)} />
+                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Insurance" value={quoteInsurance} onChange={(e) => setQuoteInsurance(e.target.value)} />
+                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Accessories" value={quoteAccessories} onChange={(e) => setQuoteAccessories(e.target.value)} />
+                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Other charges" value={quoteOtherCharges} onChange={(e) => setQuoteOtherCharges(e.target.value)} />
+                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Discount" value={quoteDiscount} onChange={(e) => setQuoteDiscount(e.target.value)} />
+                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Exchange bonus" value={quoteExchangeBonus} onChange={(e) => setQuoteExchangeBonus(e.target.value)} />
+                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Dealer offer" value={quoteDealerOffer} onChange={(e) => setQuoteDealerOffer(e.target.value)} />
+                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Manufacturer offer" value={quoteManufacturerOffer} onChange={(e) => setQuoteManufacturerOffer(e.target.value)} />
+              </div>
+            )}
+
+            <button disabled={saving} className="w-full bg-blue-600 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-60">Add Quotation</button>
           </form>
         )}
         {lead.quotations?.length === 0 && <p className="text-sm text-gray-500">No quotations yet.</p>}
         <div className="space-y-2">
           {lead.quotations?.map((q: any) => (
             <div key={q.id} className="border-t pt-2 text-sm flex justify-between">
-              <span>₹{(q.price / 100000).toFixed(2)}L (on-road ₹{(q.onRoadPrice / 100000).toFixed(2)}L)</span>
+              <span>
+                <span className="text-[10.5px] bg-gray-100 rounded-full px-2 py-0.5 mr-1.5">v{q.version || 1}</span>
+                ₹{(q.price / 100000).toFixed(2)}L (on-road ₹{(q.onRoadPrice / 100000).toFixed(2)}L)
+              </span>
               <span className="text-xs text-gray-400">Valid till {new Date(q.validTill).toLocaleDateString()}</span>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Negotiation">
+        {canCreateQuotation && (
+          <form onSubmit={handleAddNegotiation} className="space-y-3 mb-4">
+            <div className="grid grid-cols-2 gap-2">
+              <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Customer expected price" value={negoExpected} onChange={(e) => setNegoExpected(e.target.value)} />
+              <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Dealer offered price" value={negoOffered} onChange={(e) => setNegoOffered(e.target.value)} />
+              <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Discount requested" value={negoDiscount} onChange={(e) => setNegoDiscount(e.target.value)} />
+              <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Exchange value offered" value={negoExchange} onChange={(e) => setNegoExchange(e.target.value)} />
+            </div>
+            <input className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Accessories offered" value={negoAccessories} onChange={(e) => setNegoAccessories(e.target.value)} />
+            <input className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Special offer" value={negoSpecialOffer} onChange={(e) => setNegoSpecialOffer(e.target.value)} />
+            <textarea className="w-full border rounded-lg px-3 py-2 text-sm" rows={2} placeholder="Notes" value={negoNotes} onChange={(e) => setNegoNotes(e.target.value)} />
+            <button disabled={saving} className="w-full bg-blue-600 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-60">Record Negotiation</button>
+          </form>
+        )}
+        {negotiations.length === 0 && <p className="text-sm text-gray-500">No negotiation recorded yet.</p>}
+        <div className="space-y-3">
+          {negotiations.map((n: any) => (
+            <div key={n.id} className="border-t pt-2 text-sm">
+              <div className="flex items-center justify-between">
+                <p>
+                  Expected ₹{n.customerExpectedPrice ? (n.customerExpectedPrice / 100000).toFixed(2) : '—'}L · Offered ₹{n.dealerOfferedPrice ? (n.dealerOfferedPrice / 100000).toFixed(2) : '—'}L
+                  {n.discountRequested ? ` · Discount ₹${n.discountRequested.toLocaleString('en-IN')}` : ''}
+                </p>
+                {n.requiresApproval && (
+                  <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${
+                    n.approvalStatus === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : n.approvalStatus === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {n.approvalStatus === 'PENDING' ? '⏳ Needs Approval' : n.approvalStatus === 'APPROVED' ? '✓ Approved' : '✗ Rejected'}
+                  </span>
+                )}
+              </div>
+              {n.notes && <p className="text-xs text-gray-500 mt-0.5">{n.notes}</p>}
+              {n.requiresApproval && n.approvalStatus === 'PENDING' && canApproveNegotiation && (
+                <div className="flex gap-2 mt-2">
+                  <button disabled={saving} onClick={() => handleDecideNegotiation(n.id, true)} className="bg-emerald-600 text-white rounded-md px-3 py-1.5 text-xs font-medium">Approve</button>
+                  <button disabled={saving} onClick={() => handleDecideNegotiation(n.id, false)} className="bg-red-600 text-white rounded-md px-3 py-1.5 text-xs font-medium">Reject</button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -1015,6 +1199,54 @@ export default function LeadDetailPage() {
           ) : (
             <p className="text-[13px] text-gray-500">⏳ Waiting for the finance team to set up the loan details. You can share documents and questions in Documents / Messages below.</p>
           )}
+        </Section>
+      )}
+
+      {lead.financeRequired && lead.financeCase && (
+        <Section title="Bank Queries">
+          {canCreateFinanceCase && (
+            <form onSubmit={handleAddBankQuery} className="space-y-2 mb-4">
+              <textarea className="w-full border rounded-lg px-3 py-2 text-sm" rows={2} placeholder="e.g. 6 months bank statement required" value={bqText} onChange={(e) => setBqText(e.target.value)} required />
+              <div className="grid grid-cols-2 gap-2">
+                <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Requested document (optional)" value={bqDoc} onChange={(e) => setBqDoc(e.target.value)} />
+                <input type="date" className="border rounded-lg px-3 py-2 text-sm" value={bqDueDate} onChange={(e) => setBqDueDate(e.target.value)} />
+              </div>
+              <button disabled={saving} className="w-full bg-blue-600 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-60">Raise Bank Query</button>
+            </form>
+          )}
+          {bankQueries.length === 0 && <p className="text-sm text-gray-500">No bank queries raised.</p>}
+          <div className="space-y-2">
+            {bankQueries.map((bq: any) => (
+              <div key={bq.id} className="border-t pt-2 text-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p>{bq.query}</p>
+                    {bq.requestedDocument && <p className="text-xs text-gray-500">📄 {bq.requestedDocument}</p>}
+                    {bq.dueDate && <p className="text-xs text-gray-400">Due {new Date(bq.dueDate).toLocaleDateString()}</p>}
+                  </div>
+                  <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${bq.status === 'RESOLVED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                    {bq.status === 'RESOLVED' ? '✓ Resolved' : '⏳ Open'}
+                  </span>
+                </div>
+                {bq.status === 'RESOLVED' && bq.resolutionNotes && (
+                  <p className="text-xs text-gray-500 mt-1">Resolution: {bq.resolutionNotes}</p>
+                )}
+                {bq.status === 'OPEN' && canCreateFinanceCase && (
+                  resolvingQueryId === bq.id ? (
+                    <div className="mt-2 space-y-2">
+                      <input className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Resolution notes" value={bqResolutionNotes} onChange={(e) => setBqResolutionNotes(e.target.value)} />
+                      <div className="flex gap-2">
+                        <button disabled={saving} onClick={() => handleResolveBankQuery(bq.id)} className="bg-emerald-600 text-white rounded-md px-3 py-1.5 text-xs font-medium">Mark Resolved</button>
+                        <button onClick={() => setResolvingQueryId(null)} className="bg-gray-100 text-gray-700 rounded-md px-3 py-1.5 text-xs font-medium">Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setResolvingQueryId(bq.id)} className="text-blue-600 text-xs font-medium mt-1.5">Mark Resolved</button>
+                  )
+                )}
+              </div>
+            ))}
+          </div>
         </Section>
       )}
       </>

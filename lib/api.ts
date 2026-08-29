@@ -118,6 +118,10 @@ export const api = {
   // Quotations
   listQuotations: (leadId: string) => apiFetch(`/quotations?leadId=${leadId}`),
   createQuotation: (data: any) => apiFetch('/quotations', { method: 'POST', body: JSON.stringify(data) }),
+  createNegotiation: (data: any) => apiFetch('/negotiations', { method: 'POST', body: JSON.stringify(data) }),
+  listNegotiations: (leadId: string) => apiFetch(`/negotiations?leadId=${leadId}`),
+  decideNegotiation: (id: string, approve: boolean, discountApproved?: number) =>
+    apiFetch(`/negotiations/${id}/decide`, { method: 'PUT', body: JSON.stringify({ approve, discountApproved }) }),
 
   // Test drives
   listTestDrives: (leadId: string) => apiFetch(`/test-drives?leadId=${leadId}`),
@@ -133,6 +137,10 @@ export const api = {
   getFinanceCase: (id: string) => apiFetch(`/finance-cases/${id}`),
   listFinanceCases: (leadId: string) => apiFetch(`/finance-cases?leadId=${leadId}`),
   createFinanceCase: (data: any) => apiFetch('/finance-cases', { method: 'POST', body: JSON.stringify(data) }),
+  createBankQuery: (financeCaseId: string, data: any) => apiFetch(`/finance-cases/${financeCaseId}/bank-queries`, { method: 'POST', body: JSON.stringify(data) }),
+  listBankQueries: (financeCaseId: string) => apiFetch(`/finance-cases/${financeCaseId}/bank-queries`),
+  resolveBankQuery: (financeCaseId: string, queryId: string, resolutionNotes: string) =>
+    apiFetch(`/finance-cases/${financeCaseId}/bank-queries/${queryId}/resolve`, { method: 'PUT', body: JSON.stringify({ resolutionNotes }) }),
   updateFinanceCaseDetails: (id: string, data: any) => apiFetch(`/finance-cases/${id}/details`, { method: 'PUT', body: JSON.stringify(data) }),
   approveFinanceCase: (id: string) => apiFetch(`/finance-cases/${id}/approve`, { method: 'PUT' }),
   updateFinanceStage: (id: string, data: any) => apiFetch(`/finance-cases/${id}/stage`, { method: 'PUT', body: JSON.stringify(data) }),

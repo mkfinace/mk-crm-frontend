@@ -117,6 +117,7 @@ export default function LeadDetailPage() {
       setAssignDealerId(data.dealerId || '');
       setAssignDealerExec(data.dealerExecutiveId || '');
       setAssignBankId(data.bankId || '');
+      if (data.bankId && !data.financeCase) setFinanceBank(data.bankId);
       setAssignFinanceExec(data.financeExecutiveId || '');
       if (data.dealerId) loadDealerExecs(data.dealerId);
       if (data.bankId) loadFinanceExecs(data.bankId);
@@ -458,6 +459,35 @@ export default function LeadDetailPage() {
 
       {activeStep === 'assignment' && (
       <>
+      <Section title="Team on this Lead">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Sales Side</p>
+            <p className="text-sm font-medium">{lead.dealer?.name || 'No dealer assigned'}</p>
+            {lead.dealerExecutive ? (
+              <>
+                <p className="text-sm text-gray-700">{lead.dealerExecutive.name}</p>
+                <a href={`tel:${lead.dealerExecutive.mobile}`} className="text-xs text-blue-600">📞 {lead.dealerExecutive.mobile}</a>
+              </>
+            ) : (
+              <p className="text-sm text-gray-400">Unassigned</p>
+            )}
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Finance Side</p>
+            <p className="text-sm font-medium">{lead.bank?.name || (lead.financeRequired ? 'No bank assigned' : 'Not required')}</p>
+            {lead.financeExecutive ? (
+              <>
+                <p className="text-sm text-gray-700">{lead.financeExecutive.name}</p>
+                <a href={`tel:${lead.financeExecutive.mobile}`} className="text-xs text-blue-600">📞 {lead.financeExecutive.mobile}</a>
+              </>
+            ) : lead.financeRequired ? (
+              <p className="text-sm text-gray-400">Unassigned</p>
+            ) : null}
+          </div>
+        </div>
+      </Section>
+
       {(canAssignSales || (lead.financeRequired && canAssignFinance)) && (
         <Section title="Assignment">
           {canAssignSales && (
@@ -690,12 +720,12 @@ export default function LeadDetailPage() {
                 {(dealerBanks.length > 0 ? dealerBanks : banks).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
               <div className="grid grid-cols-2 gap-3">
-                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Loan amount" value={loanAmount} onChange={(e) => setLoanAmount(e.target.value)} required />
-                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Down payment" value={downPayment} onChange={(e) => setDownPayment(e.target.value)} required />
-                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Tenure (months)" value={tenure} onChange={(e) => setTenure(e.target.value)} required />
-                <input type="number" step="0.1" className="border rounded-lg px-3 py-2 text-sm" placeholder="ROI %" value={roi} onChange={(e) => setRoi(e.target.value)} required />
+                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Loan amount" value={loanAmount} onChange={(e) => setLoanAmount(e.target.value)} />
+                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Down payment" value={downPayment} onChange={(e) => setDownPayment(e.target.value)} />
+                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Tenure (months)" value={tenure} onChange={(e) => setTenure(e.target.value)} />
+                <input type="number" step="0.1" className="border rounded-lg px-3 py-2 text-sm" placeholder="ROI %" value={roi} onChange={(e) => setRoi(e.target.value)} />
               </div>
-              <input type="number" className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="EMI" value={emi} onChange={(e) => setEmi(e.target.value)} required />
+              <input type="number" className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="EMI" value={emi} onChange={(e) => setEmi(e.target.value)} />
               <button disabled={saving} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">Create Finance Case</button>
             </form>
           ) : (

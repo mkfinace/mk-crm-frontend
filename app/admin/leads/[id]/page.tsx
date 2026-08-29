@@ -24,6 +24,7 @@ export default function LeadDetailPage() {
   const staff = getStaffUser();
   const canAssignSales = staff?.role === 'SUPER_ADMIN' || staff?.role === 'SALES_ADMIN' || staff?.role === 'DEALER_MANAGER';
   const canAssignFinance = staff?.role === 'SUPER_ADMIN' || staff?.role === 'FINANCE_ADMIN';
+  const canCreateFinanceCase = staff?.role === 'SUPER_ADMIN' || staff?.role === 'FINANCE_ADMIN' || staff?.role === 'FINANCE_EXECUTIVE';
 
   const [lead, setLead] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -627,7 +628,7 @@ export default function LeadDetailPage() {
               <p><span className="text-gray-500">EMI:</span> ₹{lead.financeCase.emi}/mo</p>
               <p><span className="text-gray-500">Stage:</span> {lead.financeCase.stage}</p>
             </div>
-          ) : (
+          ) : canCreateFinanceCase ? (
             <form onSubmit={handleCreateFinanceCase} className="space-y-3">
               {dealerBanks.length > 0 && (
                 <p className="text-[12px] text-gray-500">Showing banks tied to this lead's dealer.</p>
@@ -643,10 +644,10 @@ export default function LeadDetailPage() {
                 <input type="number" step="0.1" className="border rounded-lg px-3 py-2 text-sm" placeholder="ROI %" value={roi} onChange={(e) => setRoi(e.target.value)} required />
               </div>
               <input type="number" className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="EMI" value={emi} onChange={(e) => setEmi(e.target.value)} required />
-              <button disabled={saving} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">
-                {staff?.role === 'DEALER_EXECUTIVE' || staff?.role === 'DEALER_MANAGER' ? 'Submit for Admin Approval' : 'Create Finance Case'}
-              </button>
+              <button disabled={saving} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">Create Finance Case</button>
             </form>
+          ) : (
+            <p className="text-[13px] text-gray-500">⏳ Waiting for the finance team to set up the loan details. You can share documents and questions in Documents / Messages below.</p>
           )}
         </Section>
       )}

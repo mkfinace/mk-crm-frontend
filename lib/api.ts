@@ -52,6 +52,12 @@ export const api = {
   // Leads
   createLead: (data: any) => apiFetch('/leads', { method: 'POST', body: JSON.stringify(data) }),
   listLeads: (params?: string) => apiFetch(`/leads${params ? `?${params}` : ''}`),
+
+  // Reports
+  getSalesReport: (from?: string, to?: string) => apiFetch(`/reports/sales${from || to ? `?from=${from || ''}&to=${to || ''}` : ''}`),
+  getFinanceReport: (from?: string, to?: string) => apiFetch(`/reports/finance${from || to ? `?from=${from || ''}&to=${to || ''}` : ''}`),
+  getDealerPerformanceReport: (from?: string, to?: string) => apiFetch(`/reports/dealer-performance${from || to ? `?from=${from || ''}&to=${to || ''}` : ''}`),
+  getExportUrl: (from?: string, to?: string) => `${API_URL}/reports/export?from=${from || ''}&to=${to || ''}`,
   getLead: (id: string) => apiFetch(`/leads/${id}`),
   updateLead: (id: string, data: any) => apiFetch(`/leads/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteLead: (id: string) => apiFetch(`/leads/${id}`, { method: 'DELETE' }),

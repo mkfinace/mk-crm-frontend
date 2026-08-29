@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Manrope } from 'next/font/google';
 import { getStaffUser, clearStaffUser, StaffUser } from '@/lib/auth';
 import {
-  IconGrid, IconUsers, IconCar, IconBuilding, IconBank, IconUser, IconBell, IconLogout, IconLayers, IconEdit,
+  IconGrid, IconUsers, IconCar, IconBuilding, IconBank, IconUser, IconBell, IconLogout, IconLayers, IconEdit, IconChart,
 } from '@/components/AdminIcons';
 
 const manrope = Manrope({ subsets: ['latin'], weight: ['500', '600', '700', '800'], variable: '--font-display' });
@@ -49,6 +49,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const navItems = [
     { href: '/admin', label: 'Dashboard', exact: true, icon: IconGrid, roles: null },
     { href: '/admin/leads', label: user?.role === 'DEALER_EXECUTIVE' || user?.role === 'FINANCE_EXECUTIVE' ? 'My Leads' : 'Leads', icon: IconUsers, roles: null },
+    { href: '/admin/reports', label: 'Reports', icon: IconChart, roles: ['SUPER_ADMIN', 'SALES_ADMIN', 'FINANCE_ADMIN', 'DEALER_MANAGER'] },
     { href: '/admin/catalogue', label: 'Catalogue', icon: IconCar, roles: ['SUPER_ADMIN', 'SALES_ADMIN'] },
     { href: '/admin/car-data', label: 'Car Data', icon: IconCar, roles: ['SUPER_ADMIN', 'SALES_ADMIN'] },
     { href: '/admin/field-builder', label: 'Field Builder', icon: IconLayers, roles: ['SUPER_ADMIN', 'SALES_ADMIN'] },

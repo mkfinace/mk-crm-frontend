@@ -161,6 +161,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [prefillVehicle, setPrefillVehicle] = useState('');
+  const [enquiryIds, setEnquiryIds] = useState<{ brandId?: string; modelId?: string }>({});
   const [selectedVehicle, setSelectedVehicle] = useState<any | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeCommercialCat, setActiveCommercialCat] = useState<string | null>(null);
@@ -262,7 +263,9 @@ export default function HomePage() {
         const category = model.category || 'CAR';
         list.push({
           brand: brand.name,
+          brandId: brand.id,
           model: model.name,
+          modelId: model.id,
           category,
           icon: category === 'CAR' ? '🚗' : CATEGORY_ICON[category] || '🚛',
           price: !min ? 'Price on request' : min === max ? formatLakh(min) : `${formatLakh(min)} - ${formatLakh(max)}`,
@@ -295,8 +298,9 @@ export default function HomePage() {
   const interest = totalPayable - loan;
   const fmt = (n: number) => '₹' + Math.round(n).toLocaleString('en-IN');
 
-  function openEnquiry(vehicleName?: string) {
+  function openEnquiry(vehicleName?: string, ids?: { brandId?: string; modelId?: string }) {
     setPrefillVehicle(vehicleName || '');
+    setEnquiryIds(ids || {});
     setModalOpen(true);
   }
 
@@ -865,7 +869,7 @@ export default function HomePage() {
 
               <div className="grid grid-cols-2 gap-2.5">
                 <button
-                  onClick={() => { openEnquiry(`${selectedVehicle.brand} ${selectedVehicle.model}`); setSelectedVehicle(null); }}
+                  onClick={() => { openEnquiry(`${selectedVehicle.brand} ${selectedVehicle.model}`, { brandId: selectedVehicle.brandId, modelId: selectedVehicle.modelId }); setSelectedVehicle(null); }}
                   className="py-3 bg-[#1a6e8e] hover:bg-[#0d4d6b] rounded-md font-bold text-sm"
                 >
                   Get Quote →
@@ -883,7 +887,7 @@ export default function HomePage() {
         </div>
       )}
 
-      <EnquiryModal open={modalOpen} onClose={() => setModalOpen(false)} prefillVehicle={prefillVehicle} />
+      <EnquiryModal open={modalOpen} onClose={() => setModalOpen(false)} prefillVehicle={prefillVehicle} brandId={enquiryIds.brandId} modelId={enquiryIds.modelId} />
     </div>
   );
 }

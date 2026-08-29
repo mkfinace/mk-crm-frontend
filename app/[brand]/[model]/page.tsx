@@ -1210,6 +1210,9 @@ export default function ModelDetailPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         prefillVehicle={data ? `${data.brand.name} ${data.model.name} ${variant?.name || ''}`.trim() : ''}
+        brandId={data?.brand?.id}
+        modelId={data?.model?.id}
+        variantId={variant?.id}
       />
     </div>
   );

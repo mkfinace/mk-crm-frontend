@@ -4,12 +4,13 @@ import { useState } from 'react';
 import { api } from '@/lib/api';
 
 export default function EnquiryModal({
-  open, onClose, prefillVehicle,
-}: { open: boolean; onClose: () => void; prefillVehicle?: string }) {
+  open, onClose, prefillVehicle, brandId, modelId, variantId,
+}: { open: boolean; onClose: () => void; prefillVehicle?: string; brandId?: string; modelId?: string; variantId?: string }) {
   const [step, setStep] = useState<'form' | 'otp' | 'done'>('form');
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [city, setCity] = useState('');
+  const [needsFinance, setNeedsFinance] = useState(true);
   const [otp, setOtp] = useState('');
   const [devOtp, setDevOtp] = useState('');
   const [error, setError] = useState('');
@@ -47,6 +48,10 @@ export default function EnquiryModal({
         customerMobile: mobile,
         city: city || undefined,
         source: 'WEBSITE',
+        brandId: brandId || undefined,
+        modelId: modelId || undefined,
+        variantId: variantId || undefined,
+        financeRequired: needsFinance,
       });
       setStep('done');
     } catch (e: any) {
@@ -58,7 +63,7 @@ export default function EnquiryModal({
 
   function handleClose() {
     setStep('form');
-    setName(''); setMobile(''); setCity(''); setOtp(''); setDevOtp(''); setError('');
+    setName(''); setMobile(''); setCity(''); setOtp(''); setDevOtp(''); setError(''); setNeedsFinance(true);
     onClose();
   }
 
@@ -101,6 +106,10 @@ export default function EnquiryModal({
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
               />
+              <label className="flex items-center gap-2.5 px-1 py-1 text-white/70 text-[13px] cursor-pointer">
+                <input type="checkbox" checked={needsFinance} onChange={(e) => setNeedsFinance(e.target.checked)} className="w-4 h-4 accent-[#1a6e8e]" />
+                I&apos;m interested in a vehicle loan / EMI
+              </label>
               {error && <p className="text-[#e63030] text-xs">{error}</p>}
               <button
                 disabled={loading}

@@ -91,6 +91,55 @@ export default function LeadDetailPage() {
   const [tenure, setTenure] = useState('');
   const [roi, setRoi] = useState('');
   const [emi, setEmi] = useState('');
+  const [otherCharges, setOtherCharges] = useState<any>(null);
+
+  // ---- Loan Calculator (on-road price → funding % → loan → EMI → net disbursed) ----
+  const [showCalculator, setShowCalculator] = useState(false);
+  const [calcExShowroom, setCalcExShowroom] = useState('');
+  const [calcRto, setCalcRto] = useState('');
+  const [calcInsurance, setCalcInsurance] = useState('');
+  const [calcTcs, setCalcTcs] = useState('');
+  const [calcFastag, setCalcFastag] = useState('');
+  const [calcWarranty, setCalcWarranty] = useState('');
+  const [calcAccessories, setCalcAccessories] = useState('');
+  const [calcDiscount, setCalcDiscount] = useState('');
+  const [calcFundingPct, setCalcFundingPct] = useState('90');
+  const [calcSuraksha, setCalcSuraksha] = useState('');
+  const [calcRoi, setCalcRoi] = useState('');
+  const [calcTenure, setCalcTenure] = useState('');
+  const [calcServiceCharge, setCalcServiceCharge] = useState('');
+  const [calcDocCharges, setCalcDocCharges] = useState('');
+  const [calcStamping, setCalcStamping] = useState('');
+
+  const n = (v: string) => Number(v) || 0;
+  const calcOnRoad = n(calcExShowroom) + n(calcRto) + n(calcInsurance) + n(calcTcs) + n(calcFastag) + n(calcWarranty) + n(calcAccessories) - n(calcDiscount);
+  const calcBaseLoan = Math.round(n(calcExShowroom) * n(calcFundingPct) / 100);
+  const calcTotalLoan = calcBaseLoan + n(calcSuraksha);
+  const calcMonthlyRate = n(calcRoi) / 12 / 100;
+  const calcTenureN = n(calcTenure);
+  const calcEmi =
+    calcTotalLoan > 0 && calcMonthlyRate > 0 && calcTenureN > 0
+      ? Math.round((calcTotalLoan * calcMonthlyRate * Math.pow(1 + calcMonthlyRate, calcTenureN)) / (Math.pow(1 + calcMonthlyRate, calcTenureN) - 1))
+      : 0;
+  const calcTotalDeductions = n(calcServiceCharge) + n(calcDocCharges) + n(calcStamping);
+  const calcNetDisbursed = calcTotalLoan - calcTotalDeductions;
+  const calcDownPayment = calcOnRoad - calcTotalLoan;
+
+  function applyCalculatorToForm() {
+    setLoanAmount(String(calcTotalLoan));
+    setDownPayment(String(calcDownPayment > 0 ? calcDownPayment : 0));
+    setTenure(calcTenure);
+    setRoi(calcRoi);
+    setEmi(String(calcEmi));
+    setOtherCharges({
+      exShowroomPrice: n(calcExShowroom), rto: n(calcRto), insurance: n(calcInsurance), tcs: n(calcTcs),
+      fastag: n(calcFastag), extraWarranty: n(calcWarranty), accessories: n(calcAccessories), discount: n(calcDiscount), onRoadPrice: calcOnRoad,
+      fundingPercent: n(calcFundingPct), loanSurakshaAmount: n(calcSuraksha),
+      serviceCharge: n(calcServiceCharge), documentCharges: n(calcDocCharges), stampingCharges: n(calcStamping),
+      totalDeductions: calcTotalDeductions, netDisbursedAmount: calcNetDisbursed,
+    });
+    setShowCalculator(false);
+  }
 
   const [bookingAmount, setBookingAmount] = useState('');
   const [deliveryDate, setDeliveryDate] = useState('');
@@ -288,6 +337,8 @@ export default function LeadDetailPage() {
       tenureMonths: Number(tenure),
       roi: Number(roi),
       emi: Number(emi),
+      processingFee: otherCharges?.serviceCharge || undefined,
+      otherChargesJson: otherCharges ? JSON.stringify(otherCharges) : undefined,
     });
     setLoanAmount('');
     setDownPayment('');
@@ -712,6 +763,74 @@ export default function LeadDetailPage() {
             </div>
           ) : canCreateFinanceCase ? (
             <form onSubmit={handleCreateFinanceCase} className="space-y-3">
+              <button
+                type="button"
+                onClick={() => setShowCalculator((v) => !v)}
+                className="w-full text-left bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg px-4 py-2.5 text-sm font-medium flex items-center justify-between"
+              >
+                <span>🧮 Loan Calculator {otherCharges ? '(applied ✓)' : '(optional — auto-fills loan/EMI below)'}</span>
+                <span>{showCalculator ? '▲' : '▼'}</span>
+              </button>
+
+              {showCalculator && (
+                <div className="border border-emerald-200 rounded-lg p-4 bg-emerald-50/40 space-y-4">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 mb-2">On-Road Price Breakdown</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Ex-showroom price" value={calcExShowroom} onChange={(e) => setCalcExShowroom(e.target.value)} />
+                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="RTO" value={calcRto} onChange={(e) => setCalcRto(e.target.value)} />
+                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Insurance" value={calcInsurance} onChange={(e) => setCalcInsurance(e.target.value)} />
+                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="TCS" value={calcTcs} onChange={(e) => setCalcTcs(e.target.value)} />
+                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="FASTag" value={calcFastag} onChange={(e) => setCalcFastag(e.target.value)} />
+                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Extra Warranty" value={calcWarranty} onChange={(e) => setCalcWarranty(e.target.value)} />
+                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Accessories" value={calcAccessories} onChange={(e) => setCalcAccessories(e.target.value)} />
+                      <input type="number" className="border rounded-lg px-3 py-2 text-sm col-span-2" placeholder="Discount (subtracted)" value={calcDiscount} onChange={(e) => setCalcDiscount(e.target.value)} />
+                    </div>
+                    <p className="text-sm font-semibold mt-2 text-gray-700">On-Road Price: ₹{calcOnRoad.toLocaleString('en-IN')}</p>
+                  </div>
+
+                  <div className="border-t border-emerald-200 pt-3">
+                    <p className="text-xs font-semibold text-gray-600 mb-2">Loan Amount</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[11px] text-gray-500">% Funding on ex-showroom</label>
+                        <input type="number" className="border rounded-lg px-3 py-2 text-sm w-full" value={calcFundingPct} onChange={(e) => setCalcFundingPct(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-gray-500">Loan Suraksha (insurance) amount</label>
+                        <input type="number" className="border rounded-lg px-3 py-2 text-sm w-full" value={calcSuraksha} onChange={(e) => setCalcSuraksha(e.target.value)} />
+                      </div>
+                    </div>
+                    <p className="text-sm mt-2 text-gray-700">Base Loan (funding %): ₹{calcBaseLoan.toLocaleString('en-IN')}</p>
+                    <p className="text-sm font-semibold text-gray-700">Total Loan Amount: ₹{calcTotalLoan.toLocaleString('en-IN')}</p>
+                    <p className="text-xs text-gray-500">Approx. Down Payment: ₹{Math.max(0, calcDownPayment).toLocaleString('en-IN')}</p>
+                  </div>
+
+                  <div className="border-t border-emerald-200 pt-3">
+                    <p className="text-xs font-semibold text-gray-600 mb-2">EMI</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input type="number" step="0.1" className="border rounded-lg px-3 py-2 text-sm" placeholder="ROI %" value={calcRoi} onChange={(e) => setCalcRoi(e.target.value)} />
+                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Tenure (months)" value={calcTenure} onChange={(e) => setCalcTenure(e.target.value)} />
+                    </div>
+                    <p className="text-sm font-semibold mt-2 text-gray-700">EMI: ₹{calcEmi.toLocaleString('en-IN')}/mo</p>
+                  </div>
+
+                  <div className="border-t border-emerald-200 pt-3">
+                    <p className="text-xs font-semibold text-gray-600 mb-2">Deductions (from loan amount)</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Service charge" value={calcServiceCharge} onChange={(e) => setCalcServiceCharge(e.target.value)} />
+                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Document charges" value={calcDocCharges} onChange={(e) => setCalcDocCharges(e.target.value)} />
+                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Stamping" value={calcStamping} onChange={(e) => setCalcStamping(e.target.value)} />
+                    </div>
+                    <p className="text-sm font-semibold mt-2 text-gray-700">Net Disbursed Amount: ₹{calcNetDisbursed.toLocaleString('en-IN')}</p>
+                  </div>
+
+                  <button type="button" onClick={applyCalculatorToForm} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-4 py-2.5 text-sm font-semibold">
+                    ✓ Apply to Finance Case Below
+                  </button>
+                </div>
+              )}
+
               {dealerBanks.length > 0 && (
                 <p className="text-[12px] text-gray-500">Showing banks tied to this lead's dealer.</p>
               )}

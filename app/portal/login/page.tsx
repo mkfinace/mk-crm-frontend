@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { saveCustomer, saveToken } from '@/lib/auth';
+import { saveCustomer, savePortalToken } from '@/lib/auth';
 
 export default function PortalLoginPage() {
   const router = useRouter();
@@ -44,7 +44,7 @@ export default function PortalLoginPage() {
         return;
       }
       saveCustomer({ id: res.customer.id, name: res.customer.name, mobile: res.customer.mobile });
-      saveToken(res.token);
+      savePortalToken(res.token);
       router.push('/portal');
     } catch (e: any) {
       setError(e.message);

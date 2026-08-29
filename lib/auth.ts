@@ -54,6 +54,7 @@ export type PortalCustomer = {
 };
 
 const CUSTOMER_KEY = 'mk_portal_customer';
+const PORTAL_TOKEN_KEY = 'mk_portal_token';
 
 export function saveCustomer(customer: PortalCustomer) {
   localStorage.setItem(CUSTOMER_KEY, JSON.stringify(customer));
@@ -72,5 +73,14 @@ export function getCustomer(): PortalCustomer | null {
 
 export function clearCustomer() {
   localStorage.removeItem(CUSTOMER_KEY);
-  localStorage.removeItem('mk_crm_token');
+  localStorage.removeItem(PORTAL_TOKEN_KEY);
+}
+
+export function savePortalToken(token: string) {
+  localStorage.setItem(PORTAL_TOKEN_KEY, token);
+}
+
+export function getPortalToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(PORTAL_TOKEN_KEY);
 }

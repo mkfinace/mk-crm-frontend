@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { getStaffUser } from '@/lib/auth';
 
 const STATUS_LABEL: Record<string, string> = {
   NEW: 'New', CONTACTED: 'Contacted', QUALIFIED: 'Qualified', INTERESTED: 'Interested',
@@ -31,6 +32,11 @@ function initialsFor(name?: string) {
 }
 
 export default function LeadsListPage() {
+  const staff = getStaffUser();
+  const isDealerExec = staff?.role === 'DEALER_EXECUTIVE';
+  const isFinanceExec = staff?.role === 'FINANCE_EXECUTIVE';
+  const canDelete = staff?.role === 'SUPER_ADMIN' || staff?.role === 'SALES_ADMIN';
+
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -85,8 +91,11 @@ export default function LeadsListPage() {
     setLoading(true);
     setError('');
     try {
-      const params = statusFilter ? `salesStatus=${statusFilter}` : '';
-      const data = await api.listLeads(params);
+      const parts: string[] = [];
+      if (statusFilter) parts.push(`salesStatus=${statusFilter}`);
+      if (isDealerExec && staff?.id) parts.push(`dealerExecutiveId=${staff.id}`);
+      if (isFinanceExec && staff?.id) parts.push(`financeExecutiveId=${staff.id}`);
+      const data = await api.listLeads(parts.join('&'));
       setLeads(data);
     } catch (e: any) {
       setError(e.message);
@@ -100,7 +109,7 @@ export default function LeadsListPage() {
       <div className="flex items-center justify-between mb-7">
         <div>
           <h1 className="text-[22px] font-semibold text-slate-900 tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
-            Leads
+            {isDealerExec || isFinanceExec ? 'My Leads' : 'Leads'}
           </h1>
           <p className="text-[13px] text-slate-500 mt-0.5">{leads.length} lead{leads.length === 1 ? '' : 's'}{statusFilter ? ` · ${STATUS_LABEL[statusFilter]}` : ''}</p>
         </div>
@@ -188,13 +197,15 @@ export default function LeadsListPage() {
                         <button onClick={(e) => copyId(e, lead.id)} className="text-[10.5px] font-mono text-slate-400 hover:text-slate-600 whitespace-nowrap">
                           {copiedId === lead.id ? '✓ copied' : 'copy id'}
                         </button>
-                        {deleteConfirmId === lead.id ? (
-                          <span className="flex items-center gap-1.5 whitespace-nowrap">
-                            <button disabled={deleting} onClick={(e) => handleDeleteLead(e, lead.id)} className="text-[12px] font-medium text-red-600 hover:text-red-700">Yes</button>
-                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteConfirmId(null); }} className="text-[12px] text-slate-400 hover:text-slate-600">No</button>
-                          </span>
-                        ) : (
-                          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteConfirmId(lead.id); }} className="text-[11.5px] text-red-500 hover:text-red-700 whitespace-nowrap">Delete</button>
+                        {canDelete && (
+                          deleteConfirmId === lead.id ? (
+                            <span className="flex items-center gap-1.5 whitespace-nowrap">
+                              <button disabled={deleting} onClick={(e) => handleDeleteLead(e, lead.id)} className="text-[12px] font-medium text-red-600 hover:text-red-700">Yes</button>
+                              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteConfirmId(null); }} className="text-[12px] text-slate-400 hover:text-slate-600">No</button>
+                            </span>
+                          ) : (
+                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteConfirmId(lead.id); }} className="text-[11.5px] text-red-500 hover:text-red-700 whitespace-nowrap">Delete</button>
+                          )
                         )}
                       </div>
                     </td>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { getStaffUser } from '@/lib/auth';
 import { IconArrowUpRight, IconTarget, IconRupee, IconFlag, IconUsers } from '@/components/AdminIcons';
 
 const PIPELINE_ORDER = [
@@ -71,12 +72,19 @@ function initialsFor(name?: string) {
 }
 
 export default function DashboardPage() {
+  const staff = getStaffUser();
+  const isDealerExec = staff?.role === 'DEALER_EXECUTIVE';
+  const isFinanceExec = staff?.role === 'FINANCE_EXECUTIVE';
+
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api.listLeads()
+    const parts: string[] = [];
+    if (isDealerExec && staff?.id) parts.push(`dealerExecutiveId=${staff.id}`);
+    if (isFinanceExec && staff?.id) parts.push(`financeExecutiveId=${staff.id}`);
+    api.listLeads(parts.join('&'))
       .then(setLeads)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -116,7 +124,7 @@ export default function DashboardPage() {
     <div>
       <div className="mb-7">
         <h1 className="text-[22px] font-semibold text-slate-900 tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
-          Dashboard
+          {isDealerExec || isFinanceExec ? 'My Dashboard' : 'Dashboard'}
         </h1>
         <p className="text-[13px] text-slate-500 mt-0.5">{today}</p>
       </div>

@@ -47,17 +47,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   const navItems = [
-    { href: '/admin', label: 'Dashboard', exact: true, icon: IconGrid },
-    { href: '/admin/leads', label: 'Leads', icon: IconUsers },
-    { href: '/admin/catalogue', label: 'Catalogue', icon: IconCar },
-    { href: '/admin/car-data', label: 'Car Data', icon: IconCar },
-    { href: '/admin/field-builder', label: 'Field Builder', icon: IconLayers },
-    { href: '/admin/site-content', label: 'Site Content', icon: IconEdit },
-    { href: '/admin/dealers', label: 'Dealers', icon: IconBuilding },
-    { href: '/admin/banks', label: 'Banks', icon: IconBank },
-    { href: '/admin/users', label: 'Users', icon: IconUser },
-    { href: '/admin/notifications', label: 'Notifications', icon: IconBell },
-  ];
+    { href: '/admin', label: 'Dashboard', exact: true, icon: IconGrid, roles: null },
+    { href: '/admin/leads', label: user?.role === 'DEALER_EXECUTIVE' || user?.role === 'FINANCE_EXECUTIVE' ? 'My Leads' : 'Leads', icon: IconUsers, roles: null },
+    { href: '/admin/catalogue', label: 'Catalogue', icon: IconCar, roles: ['SUPER_ADMIN', 'SALES_ADMIN'] },
+    { href: '/admin/car-data', label: 'Car Data', icon: IconCar, roles: ['SUPER_ADMIN', 'SALES_ADMIN'] },
+    { href: '/admin/field-builder', label: 'Field Builder', icon: IconLayers, roles: ['SUPER_ADMIN', 'SALES_ADMIN'] },
+    { href: '/admin/site-content', label: 'Site Content', icon: IconEdit, roles: ['SUPER_ADMIN', 'SALES_ADMIN'] },
+    { href: '/admin/dealers', label: 'Dealers', icon: IconBuilding, roles: ['SUPER_ADMIN', 'SALES_ADMIN', 'DEALER_MANAGER'] },
+    { href: '/admin/banks', label: 'Banks', icon: IconBank, roles: ['SUPER_ADMIN', 'FINANCE_ADMIN'] },
+    { href: '/admin/users', label: 'Users', icon: IconUser, roles: ['SUPER_ADMIN'] },
+    { href: '/admin/notifications', label: 'Notifications', icon: IconBell, roles: null },
+  ].filter((item) => !item.roles || item.roles.includes(user?.role || ''));
 
   const initials = (user?.name || '?')
     .split(' ')

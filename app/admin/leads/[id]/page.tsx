@@ -22,6 +22,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default function LeadDetailPage() {
   const { id } = useParams<{ id: string }>();
   const staff = getStaffUser();
+  const canAssignSales = staff?.role === 'SUPER_ADMIN' || staff?.role === 'SALES_ADMIN' || staff?.role === 'DEALER_MANAGER';
+  const canAssignFinance = staff?.role === 'SUPER_ADMIN' || staff?.role === 'FINANCE_ADMIN';
 
   const [lead, setLead] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -404,26 +406,28 @@ export default function LeadDetailPage() {
         </div>
       )}
 
-      <Section title="Sales Assignment (Dealer → Executive)">
-        <p className="text-xs text-gray-500 mb-3">
-          Currently: {lead.dealer?.name || 'No dealer'} → {lead.dealerExecutive?.name || 'Unassigned'}
-        </p>
-        <div className="grid grid-cols-2 gap-2 mb-2">
-          <select className="border rounded-lg px-3 py-2 text-sm" value={assignDealerId} onChange={(e) => handleDealerChange(e.target.value)}>
-            <option value="">Select dealer</option>
-            {dealers.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-          </select>
-          <select className="border rounded-lg px-3 py-2 text-sm" value={assignDealerExec} onChange={(e) => setAssignDealerExec(e.target.value)} disabled={!assignDealerId}>
-            <option value="">{assignDealerId ? 'Select executive' : 'Select a dealer first'}</option>
-            {dealerExecOptions.map((ex) => <option key={ex.id} value={ex.user?.id}>{ex.user?.name}</option>)}
-          </select>
-        </div>
-        <button disabled={saving} onClick={handleAssign} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">
-          Save Assignment
-        </button>
-      </Section>
+      {canAssignSales && (
+        <Section title="Sales Assignment (Dealer → Executive)">
+          <p className="text-xs text-gray-500 mb-3">
+            Currently: {lead.dealer?.name || 'No dealer'} → {lead.dealerExecutive?.name || 'Unassigned'}
+          </p>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <select className="border rounded-lg px-3 py-2 text-sm" value={assignDealerId} onChange={(e) => handleDealerChange(e.target.value)}>
+              <option value="">Select dealer</option>
+              {dealers.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+            <select className="border rounded-lg px-3 py-2 text-sm" value={assignDealerExec} onChange={(e) => setAssignDealerExec(e.target.value)} disabled={!assignDealerId}>
+              <option value="">{assignDealerId ? 'Select executive' : 'Select a dealer first'}</option>
+              {dealerExecOptions.map((ex) => <option key={ex.id} value={ex.user?.id}>{ex.user?.name}</option>)}
+            </select>
+          </div>
+          <button disabled={saving} onClick={handleAssign} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">
+            Save Assignment
+          </button>
+        </Section>
+      )}
 
-      {lead.financeRequired && (
+      {lead.financeRequired && canAssignFinance && (
         <Section title="Finance Assignment (Bank → Finance Executive)">
           <p className="text-xs text-gray-500 mb-3">
             Currently: {lead.bank?.name || 'No bank'} → {lead.financeExecutive?.name || 'Unassigned'}

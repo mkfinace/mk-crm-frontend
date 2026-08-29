@@ -34,6 +34,7 @@ export default function LeadDetailPage() {
   const canAssignSales = staff?.role === 'SUPER_ADMIN' || staff?.role === 'SALES_ADMIN' || staff?.role === 'DEALER_MANAGER';
   const canAssignFinance = staff?.role === 'SUPER_ADMIN' || staff?.role === 'FINANCE_ADMIN';
   const canCreateFinanceCase = staff?.role === 'SUPER_ADMIN' || staff?.role === 'FINANCE_ADMIN' || staff?.role === 'FINANCE_EXECUTIVE';
+  const canCreateQuotation = staff?.role === 'SUPER_ADMIN' || staff?.role === 'SALES_ADMIN' || staff?.role === 'DEALER_MANAGER' || staff?.role === 'DEALER_EXECUTIVE';
 
   const [lead, setLead] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -92,6 +93,12 @@ export default function LeadDetailPage() {
   const [roi, setRoi] = useState('');
   const [emi, setEmi] = useState('');
   const [otherCharges, setOtherCharges] = useState<any>(null);
+  const [editingFinanceCase, setEditingFinanceCase] = useState(false);
+  const [editLoanAmount, setEditLoanAmount] = useState('');
+  const [editDownPayment, setEditDownPayment] = useState('');
+  const [editTenure, setEditTenure] = useState('');
+  const [editRoi, setEditRoi] = useState('');
+  const [editEmi, setEditEmi] = useState('');
 
   // ---- Loan Calculator (on-road price → funding % → loan → EMI → net disbursed) ----
   const [showCalculator, setShowCalculator] = useState(false);
@@ -359,6 +366,27 @@ export default function LeadDetailPage() {
       setApproving(false);
     }
   }
+
+  function startEditingFinanceCase() {
+    setEditLoanAmount(String(lead.financeCase.loanAmount ?? ''));
+    setEditDownPayment(String(lead.financeCase.downPayment ?? ''));
+    setEditTenure(String(lead.financeCase.tenureMonths ?? ''));
+    setEditRoi(String(lead.financeCase.roi ?? ''));
+    setEditEmi(String(lead.financeCase.emi ?? ''));
+    setEditingFinanceCase(true);
+  }
+
+  const handleUpdateFinanceCase = withSaving(async () => {
+    await api.updateFinanceCaseDetails(lead.financeCase.id, {
+      loanAmount: Number(editLoanAmount),
+      downPayment: Number(editDownPayment),
+      tenureMonths: Number(editTenure),
+      roi: Number(editRoi),
+      emi: Number(editEmi),
+    });
+    setEditingFinanceCase(false);
+    await loadLead();
+  });
 
   const handleAddBooking = withSaving(async () => {
     await api.createBooking({ leadId: id, bookingAmount: Number(bookingAmount), bookedBy: staff!.id });
@@ -685,13 +713,15 @@ export default function LeadDetailPage() {
       {activeStep === 'sales' && (
       <>
       <Section title="Quotations">
-        <form onSubmit={handleAddQuotation} className="grid grid-cols-2 gap-3 mb-4">
-          <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Price" value={quotePrice} onChange={(e) => setQuotePrice(e.target.value)} required />
-          <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="On-road price" value={quoteOnRoad} onChange={(e) => setQuoteOnRoad(e.target.value)} required />
-          <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Exchange value (optional)" value={quoteExchange} onChange={(e) => setQuoteExchange(e.target.value)} />
-          <input type="date" className="border rounded-lg px-3 py-2 text-sm" value={quoteValidTill} onChange={(e) => setQuoteValidTill(e.target.value)} required />
-          <button disabled={saving} className="col-span-2 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-60">Add Quotation</button>
-        </form>
+        {canCreateQuotation && (
+          <form onSubmit={handleAddQuotation} className="grid grid-cols-2 gap-3 mb-4">
+            <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Price" value={quotePrice} onChange={(e) => setQuotePrice(e.target.value)} required />
+            <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="On-road price" value={quoteOnRoad} onChange={(e) => setQuoteOnRoad(e.target.value)} required />
+            <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Exchange value (optional)" value={quoteExchange} onChange={(e) => setQuoteExchange(e.target.value)} />
+            <input type="date" className="border rounded-lg px-3 py-2 text-sm" value={quoteValidTill} onChange={(e) => setQuoteValidTill(e.target.value)} required />
+            <button disabled={saving} className="col-span-2 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-60">Add Quotation</button>
+          </form>
+        )}
         {lead.quotations?.length === 0 && <p className="text-sm text-gray-500">No quotations yet.</p>}
         <div className="space-y-2">
           {lead.quotations?.map((q: any) => (
@@ -734,9 +764,17 @@ export default function LeadDetailPage() {
         {lead.documents?.length === 0 && <p className="text-sm text-gray-500">No documents uploaded.</p>}
         <div className="space-y-2">
           {lead.documents?.map((d: any) => (
-            <div key={d.id} className="border-t pt-2 text-sm flex justify-between">
-              <span>{d.type}</span>
-              <span className="text-xs bg-gray-100 rounded-full px-2 py-1">{d.status}</span>
+            <div key={d.id} className="border-t pt-2 text-sm flex items-center justify-between gap-2">
+              <div>
+                <p className="font-medium">{d.type}</p>
+                <p className="text-[11px] text-gray-400">{new Date(d.createdAt).toLocaleString()}</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs bg-gray-100 rounded-full px-2 py-1">{d.status}</span>
+                <a href={d.fileUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 font-medium border border-blue-200 rounded-md px-2.5 py-1 hover:bg-blue-50">
+                  View / Download
+                </a>
+              </div>
             </div>
           ))}
         </div>
@@ -756,10 +794,38 @@ export default function LeadDetailPage() {
                   )}
                 </div>
               )}
-              <p><span className="text-gray-500">Bank:</span> {banks.find((b) => b.id === lead.financeCase.bankId)?.name || lead.financeCase.bankId}</p>
-              <p><span className="text-gray-500">Loan Amount:</span> ₹{(lead.financeCase.loanAmount / 100000).toFixed(2)}L</p>
-              <p><span className="text-gray-500">EMI:</span> ₹{lead.financeCase.emi}/mo</p>
-              <p><span className="text-gray-500">Stage:</span> {lead.financeCase.stage}</p>
+
+              {editingFinanceCase ? (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Loan amount" value={editLoanAmount} onChange={(e) => setEditLoanAmount(e.target.value)} />
+                    <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Down payment" value={editDownPayment} onChange={(e) => setEditDownPayment(e.target.value)} />
+                    <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Tenure (months)" value={editTenure} onChange={(e) => setEditTenure(e.target.value)} />
+                    <input type="number" step="0.1" className="border rounded-lg px-3 py-2 text-sm" placeholder="ROI %" value={editRoi} onChange={(e) => setEditRoi(e.target.value)} />
+                  </div>
+                  <input type="number" className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="EMI" value={editEmi} onChange={(e) => setEditEmi(e.target.value)} />
+                  <div className="flex gap-2">
+                    <button disabled={saving} onClick={handleUpdateFinanceCase} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">Save Changes</button>
+                    <button onClick={() => setEditingFinanceCase(false)} className="bg-gray-100 text-gray-700 rounded-lg px-4 py-2 text-sm font-medium">Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p><span className="text-gray-500">Bank:</span> {banks.find((b) => b.id === lead.financeCase.bankId)?.name || lead.financeCase.bankId}</p>
+                  <p><span className="text-gray-500">Loan Amount:</span> ₹{(lead.financeCase.loanAmount / 100000).toFixed(2)}L</p>
+                  <p><span className="text-gray-500">Down Payment:</span> ₹{(lead.financeCase.downPayment / 100000).toFixed(2)}L</p>
+                  <p><span className="text-gray-500">Tenure:</span> {lead.financeCase.tenureMonths} months · <span className="text-gray-500">ROI:</span> {lead.financeCase.roi}%</p>
+                  <p><span className="text-gray-500">EMI:</span> ₹{lead.financeCase.emi}/mo</p>
+                  <p><span className="text-gray-500">Stage:</span> {lead.financeCase.stage}</p>
+                  {canCreateFinanceCase && (
+                    lead.financeCase.stage === 'FINANCE_COMPLETED' ? (
+                      <p className="text-xs text-gray-400 mt-2">🔒 Case closed — details locked.</p>
+                    ) : (
+                      <button onClick={startEditingFinanceCase} className="text-blue-600 text-xs font-medium mt-2">Edit Details</button>
+                    )
+                  )}
+                </>
+              )}
             </div>
           ) : canCreateFinanceCase ? (
             <form onSubmit={handleCreateFinanceCase} className="space-y-3">

@@ -132,6 +132,7 @@ export const api = {
   getFinanceCase: (id: string) => apiFetch(`/finance-cases/${id}`),
   listFinanceCases: (leadId: string) => apiFetch(`/finance-cases?leadId=${leadId}`),
   createFinanceCase: (data: any) => apiFetch('/finance-cases', { method: 'POST', body: JSON.stringify(data) }),
+  updateFinanceCaseDetails: (id: string, data: any) => apiFetch(`/finance-cases/${id}/details`, { method: 'PUT', body: JSON.stringify(data) }),
   approveFinanceCase: (id: string) => apiFetch(`/finance-cases/${id}/approve`, { method: 'PUT' }),
   updateFinanceStage: (id: string, data: any) => apiFetch(`/finance-cases/${id}/stage`, { method: 'PUT', body: JSON.stringify(data) }),
 

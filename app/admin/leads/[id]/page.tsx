@@ -10,6 +10,15 @@ const FINANCE_STATUSES = ['NOT_REQUIRED', 'PENDING', 'DOCUMENTS', 'LOGIN', 'VERI
 const LOST_REASONS = ['Price High', 'Other Brand', 'Other Dealer', 'Finance Rejected', 'Loan Amount Issue', 'Purchase Postponed', 'No Response', 'Not Interested', 'Other'];
 const DOC_TYPES = ['Aadhaar', 'PAN', 'Address Proof', 'Income Proof', 'Bank Statement', 'ITR', 'GST'];
 
+const STEPS = [
+  { key: 'overview', label: '1. Overview' },
+  { key: 'assignment', label: '2. Assignment & Status' },
+  { key: 'followup', label: '3. Follow-ups & Notes' },
+  { key: 'sales', label: '4. Sales Process' },
+  { key: 'finance', label: '5. Documents & Finance' },
+  { key: 'closing', label: '6. Booking & Delivery' },
+];
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="bg-white rounded-xl border p-4 mb-6">
@@ -32,6 +41,8 @@ export default function LeadDetailPage() {
   const [saving, setSaving] = useState(false);
 
   const [editingLead, setEditingLead] = useState(false);
+  const [activeStep, setActiveStep] = useState('overview');
+  const stepIndex = STEPS.findIndex((s) => s.key === activeStep);
   const [catalogue, setCatalogue] = useState<any[]>([]);
   const [editCustomerName, setEditCustomerName] = useState('');
   const [editCustomerMobile, setEditCustomerMobile] = useState('');
@@ -351,6 +362,22 @@ export default function LeadDetailPage() {
 
       {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
 
+      <div className="flex gap-1.5 mb-6 overflow-x-auto pb-1 -mx-1 px-1">
+        {STEPS.map((s) => (
+          <button
+            key={s.key}
+            onClick={() => setActiveStep(s.key)}
+            className={`text-[12.5px] font-medium px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
+              activeStep === s.key ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {activeStep === 'overview' && (
+      <>
       {editingLead ? (
         <Section title="Edit Lead Details">
           <form onSubmit={handleSaveLeadEdit} className="space-y-3">
@@ -426,79 +453,96 @@ export default function LeadDetailPage() {
           </div>
         </div>
       )}
-
-      {canAssignSales && (
-        <Section title="Sales Assignment (Dealer → Executive)">
-          <p className="text-xs text-gray-500 mb-3">
-            Currently: {lead.dealer?.name || 'No dealer'} → {lead.dealerExecutive?.name || 'Unassigned'}
-          </p>
-          <div className="grid grid-cols-2 gap-2 mb-2">
-            <select className="border rounded-lg px-3 py-2 text-sm" value={assignDealerId} onChange={(e) => handleDealerChange(e.target.value)}>
-              <option value="">Select dealer</option>
-              {dealers.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
-            <select className="border rounded-lg px-3 py-2 text-sm" value={assignDealerExec} onChange={(e) => setAssignDealerExec(e.target.value)} disabled={!assignDealerId}>
-              <option value="">{assignDealerId ? 'Select executive' : 'Select a dealer first'}</option>
-              {dealerExecOptions.map((ex) => <option key={ex.id} value={ex.user?.id}>{ex.user?.name}</option>)}
-            </select>
-          </div>
-          <button disabled={saving} onClick={handleAssign} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">
-            Save Assignment
-          </button>
-        </Section>
+      </>
       )}
 
-      {lead.financeRequired && canAssignFinance && (
-        <Section title="Finance Assignment (Bank → Finance Executive)">
-          <p className="text-xs text-gray-500 mb-3">
-            Currently: {lead.bank?.name || 'No bank'} → {lead.financeExecutive?.name || 'Unassigned'}
-          </p>
-          <div className="grid grid-cols-2 gap-2 mb-2">
-            <select className="border rounded-lg px-3 py-2 text-sm" value={assignBankId} onChange={(e) => handleBankChange(e.target.value)}>
-              <option value="">Select bank</option>
-              {banks.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
-            <select className="border rounded-lg px-3 py-2 text-sm" value={assignFinanceExec} onChange={(e) => setAssignFinanceExec(e.target.value)} disabled={!assignBankId}>
-              <option value="">{assignBankId ? 'Select executive' : 'Select a bank first'}</option>
-              {financeExecOptions.map((ex) => <option key={ex.id} value={ex.user?.id}>{ex.user?.name}</option>)}
-            </select>
-          </div>
-          <button disabled={saving} onClick={handleAssign} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">
-            Save Assignment
-          </button>
-        </Section>
-      )}
-
-      <Section title="Sales Status">
-        <div className="flex gap-2 items-center">
-          <select className="border rounded-lg px-3 py-2 text-sm flex-1" value={salesStatus} onChange={(e) => setSalesStatus(e.target.value)}>
-            {SALES_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-          {salesStatus === 'LOST' && (
-            <select className="border rounded-lg px-3 py-2 text-sm flex-1" value={lostReason} onChange={(e) => setLostReason(e.target.value)}>
-              <option value="">Select reason</option>
-              {LOST_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
-            </select>
+      {activeStep === 'assignment' && (
+      <>
+      {(canAssignSales || (lead.financeRequired && canAssignFinance)) && (
+        <Section title="Assignment">
+          {canAssignSales && (
+            <div className={lead.financeRequired && canAssignFinance ? 'mb-5 pb-5 border-b border-gray-100' : ''}>
+              <p className="text-xs font-semibold text-gray-600 mb-1">Sales — Dealer → Executive</p>
+              <p className="text-xs text-gray-500 mb-3">
+                Currently: {lead.dealer?.name || 'No dealer'} → {lead.dealerExecutive?.name || 'Unassigned'}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <select className="border rounded-lg px-3 py-2 text-sm" value={assignDealerId} onChange={(e) => handleDealerChange(e.target.value)}>
+                  <option value="">Select dealer</option>
+                  {dealers.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+                <select className="border rounded-lg px-3 py-2 text-sm" value={assignDealerExec} onChange={(e) => setAssignDealerExec(e.target.value)} disabled={!assignDealerId}>
+                  <option value="">{assignDealerId ? 'Select executive' : 'Select a dealer first'}</option>
+                  {dealerExecOptions.map((ex) => <option key={ex.id} value={ex.user?.id}>{ex.user?.name}</option>)}
+                </select>
+              </div>
+            </div>
           )}
-          <button disabled={saving} onClick={handleSalesStatusUpdate} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">
-            Update
-          </button>
-        </div>
-      </Section>
 
-      {lead.financeRequired && (
-        <Section title="Finance Status">
-          <div className="flex gap-2 items-center">
-            <select className="border rounded-lg px-3 py-2 text-sm flex-1" value={financeStatus} onChange={(e) => setFinanceStatus(e.target.value)}>
-              {FINANCE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <button disabled={saving} onClick={handleFinanceStatusUpdate} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">
-              Update
-            </button>
-          </div>
+          {lead.financeRequired && canAssignFinance && (
+            <div className="mb-4">
+              <p className="text-xs font-semibold text-gray-600 mb-1">Finance — Bank → Finance Executive</p>
+              <p className="text-xs text-gray-500 mb-3">
+                Currently: {lead.bank?.name || 'No bank'} → {lead.financeExecutive?.name || 'Unassigned'}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <select className="border rounded-lg px-3 py-2 text-sm" value={assignBankId} onChange={(e) => handleBankChange(e.target.value)}>
+                  <option value="">Select bank</option>
+                  {banks.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+                <select className="border rounded-lg px-3 py-2 text-sm" value={assignFinanceExec} onChange={(e) => setAssignFinanceExec(e.target.value)} disabled={!assignBankId}>
+                  <option value="">{assignBankId ? 'Select executive' : 'Select a bank first'}</option>
+                  {financeExecOptions.map((ex) => <option key={ex.id} value={ex.user?.id}>{ex.user?.name}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
+
+          <button disabled={saving} onClick={handleAssign} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">
+            Save Assignment
+          </button>
         </Section>
       )}
 
+      <Section title="Status">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-xs font-semibold text-gray-600 mb-1.5">Sales Status</p>
+            <select className="border rounded-lg px-3 py-2 text-sm w-full" value={salesStatus} onChange={(e) => setSalesStatus(e.target.value)}>
+              {SALES_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          {lead.financeRequired && (
+            <div>
+              <p className="text-xs font-semibold text-gray-600 mb-1.5">Finance Status</p>
+              <select className="border rounded-lg px-3 py-2 text-sm w-full" value={financeStatus} onChange={(e) => setFinanceStatus(e.target.value)}>
+                {FINANCE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          )}
+        </div>
+        {salesStatus === 'LOST' && (
+          <select className="border rounded-lg px-3 py-2 text-sm w-full mt-3" value={lostReason} onChange={(e) => setLostReason(e.target.value)}>
+            <option value="">Select reason</option>
+            {LOST_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+          </select>
+        )}
+        <button
+          disabled={saving}
+          onClick={async () => {
+            await handleSalesStatusUpdate();
+            if (lead.financeRequired) await handleFinanceStatusUpdate();
+          }}
+          className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60 mt-3"
+        >
+          Update Status
+        </button>
+      </Section>
+      </>
+      )}
+
+      {activeStep === 'followup' && (
+      <>
       <Section title="Add Follow-up">
         <form onSubmit={handleAddFollowUp} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
@@ -554,7 +598,11 @@ export default function LeadDetailPage() {
           ))}
         </div>
       </Section>
+      </>
+      )}
 
+      {activeStep === 'sales' && (
+      <>
       <Section title="Quotations">
         <form onSubmit={handleAddQuotation} className="grid grid-cols-2 gap-3 mb-4">
           <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Price" value={quotePrice} onChange={(e) => setQuotePrice(e.target.value)} required />
@@ -589,7 +637,11 @@ export default function LeadDetailPage() {
           ))}
         </div>
       </Section>
+      </>
+      )}
 
+      {activeStep === 'finance' && (
+      <>
       <Section title="Documents">
         <form onSubmit={handleAddDocument} className="grid grid-cols-2 gap-3 mb-4">
           <select className="border rounded-lg px-3 py-2 text-sm" value={docType} onChange={(e) => setDocType(e.target.value)}>
@@ -651,7 +703,11 @@ export default function LeadDetailPage() {
           )}
         </Section>
       )}
+      </>
+      )}
 
+      {activeStep === 'closing' && (
+      <>
       <Section title="Booking">
         {lead.booking ? (
           <p className="text-sm">Booked for ₹{lead.booking.bookingAmount} on {new Date(lead.booking.bookedAt).toLocaleDateString()}</p>
@@ -680,6 +736,30 @@ export default function LeadDetailPage() {
           </form>
         )}
       </Section>
+      </>
+      )}
+
+      {/* Back / Next footer — jumps between the tabs above; nothing here is a separate save, each tab's own button already saves that tab's data. */}
+      <div className="flex items-center justify-between mt-8 pt-5 border-t">
+        <button
+          disabled={stepIndex <= 0}
+          onClick={() => setActiveStep(STEPS[stepIndex - 1].key)}
+          className="text-sm font-medium text-gray-600 disabled:text-gray-300 disabled:cursor-not-allowed px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:hover:bg-transparent"
+        >
+          ← Back
+        </button>
+        <span className="text-xs text-gray-400">Step {stepIndex + 1} of {STEPS.length}</span>
+        {stepIndex < STEPS.length - 1 ? (
+          <button
+            onClick={() => setActiveStep(STEPS[stepIndex + 1].key)}
+            className="text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg"
+          >
+            Next →
+          </button>
+        ) : (
+          <span className="text-sm font-medium text-green-700 px-4 py-2">✓ Last step</span>
+        )}
+      </div>
     </div>
   );
 }

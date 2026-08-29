@@ -54,6 +54,17 @@ export default function LeadDetailPage() {
   const [editBudget, setEditBudget] = useState('');
   const [editFinanceRequired, setEditFinanceRequired] = useState(false);
   const [editSource, setEditSource] = useState('');
+  const [editTemperature, setEditTemperature] = useState('WARM');
+  const [editPurpose, setEditPurpose] = useState('');
+  const [editDecisionMaker, setEditDecisionMaker] = useState('');
+  const [editCurrentCar, setEditCurrentCar] = useState('');
+  const [editExchangeValue, setEditExchangeValue] = useState('');
+  const [editCustomerPriority, setEditCustomerPriority] = useState('');
+  const [editFuelPref, setEditFuelPref] = useState('');
+  const [editTransmissionPref, setEditTransmissionPref] = useState('');
+  const [editColourPref, setEditColourPref] = useState('');
+  const [editSpecialReq, setEditSpecialReq] = useState('');
+  const [editCustomerNotes, setEditCustomerNotes] = useState('');
 
   const [salesStatus, setSalesStatus] = useState('');
   const [lostReason, setLostReason] = useState('');
@@ -192,6 +203,17 @@ export default function LeadDetailPage() {
       setEditBudget(data.budget ? String(data.budget) : '');
       setEditFinanceRequired(!!data.financeRequired);
       setEditSource(data.source || 'WEBSITE');
+      setEditTemperature(data.temperature || 'WARM');
+      setEditPurpose(data.purpose || '');
+      setEditDecisionMaker(data.decisionMaker || '');
+      setEditCurrentCar(data.currentCar || '');
+      setEditExchangeValue(data.exchangeValue ? String(data.exchangeValue) : '');
+      setEditCustomerPriority(data.customerPriority || '');
+      setEditFuelPref(data.fuelPreference || '');
+      setEditTransmissionPref(data.transmissionPreference || '');
+      setEditColourPref(data.colourPreference || '');
+      setEditSpecialReq(data.specialRequirements || '');
+      setEditCustomerNotes(data.customerNotes || '');
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -272,6 +294,17 @@ export default function LeadDetailPage() {
       budget: editBudget ? Number(editBudget) : undefined,
       financeRequired: editFinanceRequired,
       source: editSource || undefined,
+      temperature: editTemperature || undefined,
+      purpose: editPurpose || undefined,
+      decisionMaker: editDecisionMaker || undefined,
+      currentCar: editCurrentCar || undefined,
+      exchangeValue: editExchangeValue ? Number(editExchangeValue) : undefined,
+      customerPriority: editCustomerPriority || undefined,
+      fuelPreference: editFuelPref || undefined,
+      transmissionPreference: editTransmissionPref || undefined,
+      colourPreference: editColourPref || undefined,
+      specialRequirements: editSpecialReq || undefined,
+      customerNotes: editCustomerNotes || undefined,
     });
     setEditingLead(false);
   });
@@ -511,6 +544,48 @@ export default function LeadDetailPage() {
               Finance required
             </label>
 
+            <div className="border-t pt-3 mt-1">
+              <p className="text-xs font-semibold text-gray-600 mb-2">Customer Qualification</p>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <select className="border rounded-lg px-3 py-2 text-sm" value={editTemperature} onChange={(e) => setEditTemperature(e.target.value)}>
+                  <option value="HOT">🔥 Hot</option>
+                  <option value="WARM">🌤️ Warm</option>
+                  <option value="COLD">❄️ Cold</option>
+                </select>
+                <select className="border rounded-lg px-3 py-2 text-sm" value={editPurpose} onChange={(e) => setEditPurpose(e.target.value)}>
+                  <option value="">Purpose</option>
+                  <option value="Family">Family</option>
+                  <option value="Personal">Personal</option>
+                  <option value="Business">Business</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Decision maker" value={editDecisionMaker} onChange={(e) => setEditDecisionMaker(e.target.value)} />
+                <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Current car (if any)" value={editCurrentCar} onChange={(e) => setEditCurrentCar(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Exchange value" value={editExchangeValue} onChange={(e) => setEditExchangeValue(e.target.value)} />
+                <select className="border rounded-lg px-3 py-2 text-sm" value={editCustomerPriority} onChange={(e) => setEditCustomerPriority(e.target.value)}>
+                  <option value="">Top priority</option>
+                  <option value="Price">Price</option>
+                  <option value="Features">Features</option>
+                  <option value="Mileage">Mileage</option>
+                  <option value="Safety">Safety</option>
+                  <option value="Performance">Performance</option>
+                  <option value="DeliveryTime">Delivery Time</option>
+                  <option value="Colour">Colour</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Fuel pref." value={editFuelPref} onChange={(e) => setEditFuelPref(e.target.value)} />
+                <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Transmission pref." value={editTransmissionPref} onChange={(e) => setEditTransmissionPref(e.target.value)} />
+                <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Colour pref." value={editColourPref} onChange={(e) => setEditColourPref(e.target.value)} />
+              </div>
+              <input className="w-full border rounded-lg px-3 py-2 text-sm mb-2" placeholder="Special requirements" value={editSpecialReq} onChange={(e) => setEditSpecialReq(e.target.value)} />
+              <textarea className="w-full border rounded-lg px-3 py-2 text-sm" rows={2} placeholder="Customer notes" value={editCustomerNotes} onChange={(e) => setEditCustomerNotes(e.target.value)} />
+            </div>
+
             <div className="flex gap-2">
               <button disabled={saving} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">Save Changes</button>
               <button type="button" onClick={() => setEditingLead(false)} className="bg-gray-100 text-gray-700 rounded-lg px-4 py-2 text-sm font-medium">Cancel</button>
@@ -520,7 +595,14 @@ export default function LeadDetailPage() {
       ) : (
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="bg-white rounded-xl border p-4">
-            <p className="text-xs text-gray-500 mb-1">Vehicle</p>
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs text-gray-500">Vehicle</p>
+              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                lead.temperature === 'HOT' ? 'bg-red-100 text-red-700' : lead.temperature === 'COLD' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+              }`}>
+                {lead.temperature === 'HOT' ? '🔥 Hot' : lead.temperature === 'COLD' ? '❄️ Cold' : '🌤️ Warm'}
+              </span>
+            </div>
             <p className="font-medium">{lead.brand?.name} {lead.model?.name} {lead.variant?.name}</p>
             <p className="text-xs text-gray-500 mt-2">Budget</p>
             <p className="font-medium">{lead.budget ? `₹${(lead.budget / 100000).toFixed(2)}L` : '—'}</p>
@@ -531,6 +613,23 @@ export default function LeadDetailPage() {
             <p className="text-xs text-gray-500 mt-2">Finance Required</p>
             <p className="font-medium">{lead.financeRequired ? 'Yes' : 'No'}</p>
           </div>
+          {(lead.purpose || lead.decisionMaker || lead.currentCar || lead.customerPriority || lead.fuelPreference || lead.transmissionPreference || lead.colourPreference || lead.specialRequirements || lead.customerNotes) && (
+            <div className="bg-white rounded-xl border p-4 col-span-2">
+              <p className="text-xs text-gray-500 mb-2">Customer Qualification</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                {lead.purpose && <p><span className="text-gray-400">Purpose:</span> {lead.purpose}</p>}
+                {lead.decisionMaker && <p><span className="text-gray-400">Decision maker:</span> {lead.decisionMaker}</p>}
+                {lead.currentCar && <p><span className="text-gray-400">Current car:</span> {lead.currentCar}</p>}
+                {lead.exchangeValue ? <p><span className="text-gray-400">Exchange value:</span> ₹{lead.exchangeValue.toLocaleString('en-IN')}</p> : null}
+                {lead.customerPriority && <p><span className="text-gray-400">Top priority:</span> {lead.customerPriority}</p>}
+                {(lead.fuelPreference || lead.transmissionPreference || lead.colourPreference) && (
+                  <p><span className="text-gray-400">Preferences:</span> {[lead.fuelPreference, lead.transmissionPreference, lead.colourPreference].filter(Boolean).join(', ')}</p>
+                )}
+              </div>
+              {lead.specialRequirements && <p className="text-sm mt-2"><span className="text-gray-400">Special requirements:</span> {lead.specialRequirements}</p>}
+              {lead.customerNotes && <p className="text-sm mt-2"><span className="text-gray-400">Notes:</span> {lead.customerNotes}</p>}
+            </div>
+          )}
         </div>
       )}
       </>

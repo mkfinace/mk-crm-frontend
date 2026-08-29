@@ -68,6 +68,7 @@ export const api = {
   getMyLead: (id: string) => apiFetch(`/leads/my/${id}`),
   sendMyMessage: (id: string, body: string) => apiFetch(`/leads/my/${id}/messages`, { method: 'POST', body: JSON.stringify({ body }) }),
   listLeads: (params?: string) => apiFetch(`/leads${params ? `?${params}` : ''}`),
+  getFollowUpDashboard: (params?: string) => apiFetch(`/leads/follow-ups/dashboard${params ? `?${params}` : ''}`),
 
   // Reports
   getSalesReport: (from?: string, to?: string) => apiFetch(`/reports/sales${from || to ? `?from=${from || ''}&to=${to || ''}` : ''}`),

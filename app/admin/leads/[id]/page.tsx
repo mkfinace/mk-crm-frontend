@@ -17,6 +17,7 @@ const STEPS = [
   { key: 'sales', label: '4. Sales Process' },
   { key: 'finance', label: '5. Documents & Finance' },
   { key: 'closing', label: '6. Booking & Delivery' },
+  { key: 'timeline', label: '7. Timeline' },
 ];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -26,6 +27,131 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       {children}
     </div>
   );
+}
+
+const ACTION_LABEL: Record<string, string> = {
+  FINANCE_CASE_SUBMITTED_FOR_APPROVAL: 'Finance case submitted for approval',
+  FINANCE_CASE_CREATED: 'Finance case created',
+  FINANCE_CASE_APPROVED: 'Finance case approved',
+  FINANCE_STAGE_UPDATED: 'Finance stage updated',
+  FINANCE_CASE_DETAILS_UPDATED: 'Finance case details updated',
+  NEGOTIATION_RECORDED: 'Negotiation recorded',
+  NEGOTIATION_APPROVED: 'Negotiation discount approved',
+  NEGOTIATION_REJECTED: 'Negotiation discount rejected',
+  BANK_QUERY_CREATED: 'Bank query raised',
+  BANK_QUERY_RESOLVED: 'Bank query resolved',
+};
+
+function buildTimeline(lead: any, negotiations: any[], bankQueries: any[]) {
+  const events: { ts: string; icon: string; title: string; detail?: string; user?: string }[] = [];
+
+  events.push({ ts: lead.createdAt, icon: '🆕', title: 'Lead Created', detail: `Source: ${lead.source}` });
+
+  lead.activities?.forEach((a: any) => {
+    events.push({ ts: a.createdAt, icon: '📝', title: ACTION_LABEL[a.action] || a.action, user: a.user?.name });
+  });
+
+  lead.followUps?.forEach((f: any) => {
+    events.push({ ts: f.createdAt, icon: '📞', title: `Follow-up: ${f.type}`, detail: `${f.result}${f.notes ? ' — ' + f.notes : ''}`, user: f.user?.name });
+  });
+
+  lead.quotations?.forEach((q: any) => {
+    events.push({ ts: q.createdAt, icon: '💰', title: `Quotation v${q.version || 1} created`, detail: `On-road ₹${(q.onRoadPrice / 100000).toFixed(2)}L` });
+  });
+
+  (negotiations || []).forEach((n: any) => {
+    events.push({ ts: n.createdAt, icon: '🤝', title: 'Negotiation recorded', detail: n.discountRequested ? `Discount requested ₹${n.discountRequested.toLocaleString('en-IN')}` : undefined });
+  });
+
+  lead.testDrives?.forEach((t: any) => {
+    events.push({ ts: t.scheduledAt, icon: '🚗', title: 'Test Drive Scheduled', detail: t.status });
+  });
+
+  lead.documents?.forEach((d: any) => {
+    events.push({ ts: d.createdAt, icon: '📄', title: `Document uploaded: ${d.type}`, detail: d.status });
+  });
+
+  if (lead.financeCase) {
+    events.push({ ts: lead.financeCase.createdAt, icon: '🏦', title: 'Finance Case Created', detail: `₹${(lead.financeCase.loanAmount / 100000).toFixed(2)}L loan` });
+    lead.financeCase.statusHistory?.forEach((h: any) => {
+      events.push({ ts: h.createdAt, icon: '📊', title: `Finance: ${h.fromStage} → ${h.toStage}`, detail: h.notes });
+    });
+  }
+
+  (bankQueries || []).forEach((bq: any) => {
+    events.push({ ts: bq.createdAt, icon: '🏦', title: 'Bank Query Raised', detail: bq.query });
+    if (bq.resolvedAt) {
+      events.push({ ts: bq.resolvedAt, icon: '✅', title: 'Bank Query Resolved', detail: bq.resolutionNotes });
+    }
+  });
+
+  if (lead.booking) {
+    events.push({ ts: lead.booking.bookedAt || lead.booking.createdAt, icon: '📋', title: 'Booking Confirmed', detail: `₹${lead.booking.bookingAmount?.toLocaleString('en-IN')}` });
+  }
+
+  if (lead.delivery) {
+    events.push({ ts: lead.delivery.scheduledAt, icon: '🚚', title: 'Delivery Scheduled', detail: lead.delivery.status });
+    if (lead.delivery.deliveredAt) {
+      events.push({ ts: lead.delivery.deliveredAt, icon: '🎉', title: 'Vehicle Delivered' });
+    }
+  }
+
+  if (lead.isLost) {
+    events.push({ ts: lead.updatedAt, icon: '❌', title: 'Lead Lost', detail: lead.lostReasonId || undefined });
+  }
+
+  return events
+    .filter((e) => e.ts)
+    .sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime());
+}
+
+const FIRST_CONTACT_SLA_HOURS = 24;
+
+function computeSla(lead: any) {
+  const followUps = lead.followUps || [];
+  const firstContact = followUps.length > 0
+    ? [...followUps].sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0]
+    : null;
+  const createdAt = new Date(lead.createdAt).getTime();
+  const slaMs = FIRST_CONTACT_SLA_HOURS * 60 * 60 * 1000;
+
+  if (firstContact) {
+    const elapsedMs = new Date(firstContact.createdAt).getTime() - createdAt;
+    const hrs = Math.round(elapsedMs / 3600000 * 10) / 10;
+    return { met: elapsedMs <= slaMs, label: `First contact in ${hrs}h`, contacted: true };
+  }
+  const elapsedMs = Date.now() - createdAt;
+  const hrs = Math.round(elapsedMs / 3600000 * 10) / 10;
+  if (elapsedMs > slaMs) {
+    return { met: false, label: `SLA breached — ${hrs}h, no contact yet`, contacted: false };
+  }
+  const remaining = Math.round((slaMs - elapsedMs) / 3600000 * 10) / 10;
+  return { met: true, label: `${remaining}h left for first contact`, contacted: false };
+}
+
+function computeDealHealth(lead: any, negotiations: any[], bankQueries: any[]) {
+  const positives: string[] = [];
+  const risks: string[] = [];
+
+  if (lead.testDrives?.some((t: any) => t.status === 'Completed')) positives.push('Test Drive Completed');
+  if (lead.quotations?.length > 0) positives.push('Quotation Shared');
+  if (lead.financeCase && ['SANCTION', 'AGREEMENT', 'DISBURSEMENT', 'FINANCE_COMPLETED'].includes(lead.financeCase.stage)) positives.push('Finance Sanctioned');
+  if (lead.temperature === 'HOT') positives.push('Marked Hot');
+  const lastFollowUp = lead.followUps?.[0];
+  if (lastFollowUp && Date.now() - new Date(lastFollowUp.createdAt).getTime() < 3 * 86400000) positives.push('Recent Follow-up');
+
+  if (!lead.followUps || lead.followUps.length === 0) risks.push('No Follow-up Logged Yet');
+  if (lastFollowUp?.nextFollowUpAt && new Date(lastFollowUp.nextFollowUpAt).getTime() < Date.now()) risks.push('Follow-up Overdue');
+  if ((bankQueries || []).some((bq: any) => bq.status === 'OPEN')) risks.push('Open Bank Query');
+  if ((negotiations || []).some((n: any) => n.requiresApproval && n.approvalStatus === 'PENDING')) risks.push('Discount Awaiting Approval');
+  const sla = computeSla(lead);
+  if (!sla.met) risks.push('SLA Breach');
+
+  let level: 'HOT' | 'WARM' | 'AT_RISK' = 'WARM';
+  if (risks.length > positives.length && risks.length > 0) level = 'AT_RISK';
+  else if (positives.length >= 2) level = 'HOT';
+
+  return { level, positives, risks };
 }
 
 export default function LeadDetailPage() {
@@ -729,6 +855,33 @@ export default function LeadDetailPage() {
             <p className="text-xs text-gray-500 mt-2">Finance Required</p>
             <p className="font-medium">{lead.financeRequired ? 'Yes' : 'No'}</p>
           </div>
+          {!lead.isLost && lead.salesStatus !== 'CLOSED' && (() => {
+            const sla = computeSla(lead);
+            const health = computeDealHealth(lead, negotiations, bankQueries);
+            const healthStyle = health.level === 'HOT' ? 'bg-red-50 border-red-200 text-red-700' : health.level === 'AT_RISK' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-slate-50 border-slate-200 text-slate-600';
+            return (
+              <div className={`rounded-xl border p-4 col-span-2 ${healthStyle}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide">
+                    Deal Health: {health.level === 'HOT' ? '🔥 Hot' : health.level === 'AT_RISK' ? '⚠️ At Risk' : '🌤️ Warm'}
+                  </p>
+                  <span className={`text-[11px] font-medium ${sla.met ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {sla.met ? '✓' : '⏰'} {sla.label}
+                  </span>
+                </div>
+                {health.positives.length > 0 && (
+                  <p className="text-[12.5px] mb-1">
+                    {health.positives.map((p) => `✓ ${p}`).join('   ')}
+                  </p>
+                )}
+                {health.risks.length > 0 && (
+                  <p className="text-[12.5px]">
+                    {health.risks.map((r) => `⚠ ${r}`).join('   ')}
+                  </p>
+                )}
+              </div>
+            );
+          })()}
           {(lead.purpose || lead.decisionMaker || lead.currentCar || lead.customerPriority || lead.fuelPreference || lead.transmissionPreference || lead.colourPreference || lead.specialRequirements || lead.customerNotes) && (
             <div className="bg-white rounded-xl border p-4 col-span-2">
               <p className="text-xs text-gray-500 mb-2">Customer Qualification</p>
@@ -1283,6 +1436,33 @@ export default function LeadDetailPage() {
         )}
       </Section>
       </>
+      )}
+
+      {activeStep === 'timeline' && (
+      <Section title="Complete Activity Timeline">
+        {(() => {
+          const events = buildTimeline(lead, negotiations, bankQueries);
+          if (events.length === 0) return <p className="text-sm text-gray-500">No activity recorded yet.</p>;
+          return (
+            <div className="space-y-0">
+              {events.map((e, i) => (
+                <div key={i} className="flex gap-3 pb-4 relative">
+                  {i < events.length - 1 && <div className="absolute left-[15px] top-8 bottom-0 w-px bg-gray-200" />}
+                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm shrink-0 z-10">{e.icon}</div>
+                  <div className="pt-1">
+                    <p className="text-sm font-medium text-gray-800">{e.title}</p>
+                    {e.detail && <p className="text-[12.5px] text-gray-500">{e.detail}</p>}
+                    <p className="text-[11px] text-gray-400 mt-0.5">
+                      {new Date(e.ts).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                      {e.user ? ` · ${e.user}` : ''}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+      </Section>
       )}
 
       {/* Back / Next footer — jumps between the tabs above; nothing here is a separate save, each tab's own button already saves that tab's data. */}

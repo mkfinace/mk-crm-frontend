@@ -234,6 +234,10 @@ export default function LeadDetailPage() {
 
   const [docType, setDocType] = useState('Aadhaar');
   const [docUrl, setDocUrl] = useState('');
+  const [docPersonType, setDocPersonType] = useState('APPLICANT');
+  const [docPersonName, setDocPersonName] = useState('');
+  const [docUploading, setDocUploading] = useState(false);
+  const [docUploadError, setDocUploadError] = useState('');
 
   const [banks, setBanks] = useState<any[]>([]);
   const [dealerBanks, setDealerBanks] = useState<any[]>([]);
@@ -615,9 +619,34 @@ export default function LeadDetailPage() {
   });
 
   const handleAddDocument = withSaving(async () => {
-    await api.createDocument({ leadId: id, type: docType, fileUrl: docUrl, uploadedBy: staff!.id });
+    await api.createDocument({
+      leadId: id, type: docType, fileUrl: docUrl, uploadedBy: staff!.id,
+      personType: docPersonType, personName: docPersonName || undefined,
+    });
     setDocUrl('');
+    setDocPersonName('');
   });
+
+  function handleDocFileSelect(file: File | undefined) {
+    if (!file) return;
+    setDocUploadError('');
+    const maxBytes = 5 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      setDocUploadError('File too large — max 5MB. Try a smaller/compressed file, or paste a link instead.');
+      return;
+    }
+    setDocUploading(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setDocUrl(reader.result as string);
+      setDocUploading(false);
+    };
+    reader.onerror = () => {
+      setDocUploadError('Could not read that file — try again.');
+      setDocUploading(false);
+    };
+    reader.readAsDataURL(file);
+  }
 
   const handleCreateFinanceCase = withSaving(async () => {
     await api.createFinanceCase({
@@ -1208,30 +1237,72 @@ export default function LeadDetailPage() {
       {activeStep === 'finance' && (
       <>
       <Section title="Documents">
-        <form onSubmit={handleAddDocument} className="grid grid-cols-2 gap-3 mb-4">
-          <select className={inputCls} value={docType} onChange={(e) => setDocType(e.target.value)}>
-            {DOC_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
-          <input className={inputCls} placeholder="File URL" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} required />
-          <button disabled={saving} className={`${primaryBtnCls} col-span-2`}>Add Document</button>
+        <form onSubmit={handleAddDocument} className="space-y-3 mb-5">
+          <div className="grid grid-cols-2 gap-3">
+            <select className={selectCls} value={docType} onChange={(e) => setDocType(e.target.value)}>
+              {DOC_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <select className={selectCls} value={docPersonType} onChange={(e) => setDocPersonType(e.target.value)}>
+              <option value="APPLICANT">Applicant</option>
+              <option value="CO_APPLICANT">Co-Applicant</option>
+              <option value="GUARANTOR">Guarantor</option>
+            </select>
+          </div>
+          {docPersonType !== 'APPLICANT' && (
+            <input className={`${inputCls} w-full`} placeholder={`${docPersonType === 'CO_APPLICANT' ? 'Co-applicant' : 'Guarantor'} name`} value={docPersonName} onChange={(e) => setDocPersonName(e.target.value)} />
+          )}
+
+          <div>
+            <label className="text-[11px] text-slate-500 block mb-1">Upload from your computer</label>
+            <input type="file" accept="image/*,application/pdf" className={`${inputCls} w-full`} onChange={(e) => handleDocFileSelect(e.target.files?.[0])} />
+            <p className="text-[11px] text-slate-400 mt-1">Max 5MB — images or PDF.</p>
+            {docUploading && <p className="text-[12px] text-slate-500 mt-1">Reading file…</p>}
+            {docUploadError && <p className="text-[12px] text-red-600 mt-1">{docUploadError}</p>}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="h-px bg-slate-200 flex-1" />
+            <span className="text-[11px] text-slate-400">OR paste a link</span>
+            <div className="h-px bg-slate-200 flex-1" />
+          </div>
+          <input className={`${inputCls} w-full`} placeholder="https://…" value={docUrl.startsWith('data:') ? '' : docUrl} onChange={(e) => setDocUrl(e.target.value)} />
+
+          {docUrl && (
+            docUrl.startsWith('data:application/pdf')
+              ? <p className="text-[12px] text-emerald-600">✓ PDF ready to attach</p>
+              : <img src={docUrl} alt="Preview" className="h-20 w-auto rounded-lg border border-slate-200 object-cover" />
+          )}
+
+          <button disabled={saving || !docUrl} className={`${primaryBtnCls} w-full`}>Add Document</button>
         </form>
-        {lead.documents?.length === 0 && <p className="text-sm text-slate-500">No documents uploaded.</p>}
-        <div className="space-y-2">
-          {lead.documents?.map((d: any) => (
-            <div key={d.id} className="border-t pt-2 text-sm flex items-center justify-between gap-2">
-              <div>
-                <p className="font-medium">{d.type}</p>
-                <p className="text-[11px] text-slate-400">{new Date(d.createdAt).toLocaleString()}</p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs bg-slate-100 rounded-full px-2 py-1">{d.status}</span>
-                <a href={d.fileUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 font-medium border border-blue-200 rounded-md px-2.5 py-1 hover:bg-blue-50">
-                  View / Download
-                </a>
+
+        {lead.documents?.length === 0 && <p className="text-[13px] text-slate-500">No documents uploaded.</p>}
+        {['APPLICANT', 'CO_APPLICANT', 'GUARANTOR'].map((pt) => {
+          const docs = (lead.documents || []).filter((d: any) => (d.personType || 'APPLICANT') === pt);
+          if (docs.length === 0) return null;
+          const groupLabel = pt === 'APPLICANT' ? 'Applicant' : pt === 'CO_APPLICANT' ? 'Co-Applicant' : 'Guarantor';
+          return (
+            <div key={pt} className="mb-3 last:mb-0">
+              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">{groupLabel}</p>
+              <div className="space-y-2">
+                {docs.map((d: any) => (
+                  <div key={d.id} className="border-t border-slate-100 pt-2 text-[13.5px] flex items-center justify-between gap-2">
+                    <div>
+                      <p className="font-medium text-slate-800">{d.type}{d.personName ? ` — ${d.personName}` : ''}</p>
+                      <p className="text-[11px] text-slate-400">{new Date(d.createdAt).toLocaleString()}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`${pillCls} bg-slate-100 text-slate-600`}>{d.status}</span>
+                      <a href={d.fileUrl} target="_blank" rel="noreferrer" className={linkBtnCls}>
+                        View / Download
+                      </a>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
+          );
+        })}
       </Section>
 
       {lead.financeRequired && (

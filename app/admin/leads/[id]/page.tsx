@@ -1448,8 +1448,8 @@ export default function LeadDetailPage() {
               ) : (
                 <>
                   <p><span className="text-slate-500">Bank:</span> {banks.find((b) => b.id === lead.financeCase.bankId)?.name || lead.financeCase.bankId}</p>
-                  <p><span className="text-slate-500">Loan Amount:</span> ₹{(lead.financeCase.loanAmount / 100000).toFixed(2)}L</p>
-                  <p><span className="text-slate-500">Down Payment:</span> ₹{(lead.financeCase.downPayment / 100000).toFixed(2)}L</p>
+                  <p><span className="text-slate-500">Loan Amount:</span> ₹{Number(lead.financeCase.loanAmount).toLocaleString('en-IN')}</p>
+                  <p><span className="text-slate-500">Down Payment:</span> ₹{Number(lead.financeCase.downPayment).toLocaleString('en-IN')}</p>
                   <p><span className="text-slate-500">Tenure:</span> {lead.financeCase.tenureMonths} months · <span className="text-slate-500">ROI:</span> {lead.financeCase.roi}%</p>
                   <p><span className="text-slate-500">EMI:</span> ₹{lead.financeCase.emi}/mo</p>
                   <p><span className="text-slate-500">Stage:</span> {lead.financeCase.stage}</p>

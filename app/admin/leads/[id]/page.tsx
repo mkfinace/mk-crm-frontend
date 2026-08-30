@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { getStaffUser } from '@/lib/auth';
+import { inputCls, selectCls, primaryBtnCls, secondaryBtnCls, cardCls, pillCls, dangerTextBtnCls, linkBtnCls } from '@/components/adminStyles';
 
 const SALES_STATUSES = ['NEW', 'CONTACTED', 'QUALIFIED', 'INTERESTED', 'TEST_DRIVE', 'QUOTATION', 'NEGOTIATION', 'BOOKING', 'DELIVERY', 'CLOSED', 'HOLD', 'LOST'];
 const FINANCE_STATUSES = ['NOT_REQUIRED', 'PENDING', 'DOCUMENTS', 'LOGIN', 'VERIFICATION', 'BANK_QUERY', 'QUERY_RESOLVED', 'SANCTION', 'AGREEMENT', 'DISBURSEMENT', 'FINANCE_COMPLETED'];
@@ -22,8 +23,8 @@ const STEPS = [
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl border p-4 mb-6">
-      <p className="font-semibold mb-3">{title}</p>
+    <div className={`${cardCls} p-5 mb-5`}>
+      <p className="text-[13px] font-semibold text-slate-500 uppercase tracking-wide mb-4">{title}</p>
       {children}
     </div>
   );
@@ -693,7 +694,7 @@ export default function LeadDetailPage() {
     }
   }
 
-  if (loading) return <p className="text-gray-500 text-sm">Loading...</p>;
+  if (loading) return <p className="text-slate-500 text-sm">Loading...</p>;
   if (error && !lead) return <p className="text-red-600 text-sm">{error}</p>;
   if (!lead) return null;
 
@@ -701,29 +702,33 @@ export default function LeadDetailPage() {
   const selectedModelVariants = selectedBrandModels.find((m: any) => m.id === editModelId)?.variants || [];
 
   return (
-    <div className="max-w-3xl">
-      <div className="mb-6 flex items-start justify-between">
+    <div className="max-w-4xl">
+      <div className="mb-7 flex items-start justify-between">
         <div>
-          <p className="text-sm text-gray-500">{lead.leadCode}</p>
-          <h1 className="text-xl font-bold">{lead.customer?.name}</h1>
-          <p className="text-sm text-gray-500">{lead.customer?.mobile} · {lead.customer?.city || 'No city'}</p>
+          <p className="text-[12px] font-medium text-[#96701F] tracking-wide uppercase mb-1">{lead.leadCode}</p>
+          <h1 className="text-[22px] font-semibold text-slate-900 tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>{lead.customer?.name}</h1>
+          <p className="text-[13px] text-slate-500 mt-0.5">{lead.customer?.mobile} · {lead.customer?.city || 'No city'}</p>
         </div>
         {!editingLead && (
-          <button onClick={() => setEditingLead(true)} className="text-blue-600 text-sm font-medium">
+          <button onClick={() => setEditingLead(true)} className={linkBtnCls}>
             Edit Lead Details
           </button>
         )}
       </div>
 
-      {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
+      {error && (
+        <div className="mb-5 bg-red-50 border border-red-200 text-red-700 text-[13px] rounded-lg px-4 py-3">{error}</div>
+      )}
 
       <div className="flex gap-1.5 mb-6 overflow-x-auto pb-1 -mx-1 px-1">
         {STEPS.map((s) => (
           <button
             key={s.key}
             onClick={() => setActiveStep(s.key)}
-            className={`text-[12.5px] font-medium px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${
-              activeStep === s.key ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+            className={`text-[12.5px] font-medium px-3.5 py-2 rounded-full whitespace-nowrap border transition-colors ${
+              activeStep === s.key
+                ? 'bg-gradient-to-br from-[#D8B155] to-[#B4872E] text-[#0B1220] border-transparent shadow-sm'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-[#D8B155]/50 hover:text-[#96701F]'
             }`}
           >
             {s.label}
@@ -737,14 +742,14 @@ export default function LeadDetailPage() {
         <Section title="Edit Lead Details">
           <form onSubmit={handleSaveLeadEdit} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Customer name" value={editCustomerName} onChange={(e) => setEditCustomerName(e.target.value)} required />
-              <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Mobile" value={editCustomerMobile} onChange={(e) => setEditCustomerMobile(e.target.value)} required />
+              <input className={inputCls} placeholder="Customer name" value={editCustomerName} onChange={(e) => setEditCustomerName(e.target.value)} required />
+              <input className={inputCls} placeholder="Mobile" value={editCustomerMobile} onChange={(e) => setEditCustomerMobile(e.target.value)} required />
             </div>
-            <input className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="City" value={editCity} onChange={(e) => setEditCity(e.target.value)} />
+            <input className={`${inputCls} w-full`} placeholder="City" value={editCity} onChange={(e) => setEditCity(e.target.value)} />
 
             <div className="grid grid-cols-3 gap-3">
               <select
-                className="border rounded-lg px-3 py-2 text-sm"
+                className={inputCls}
                 value={editBrandId}
                 onChange={(e) => { setEditBrandId(e.target.value); setEditModelId(''); setEditVariantId(''); }}
               >
@@ -752,7 +757,7 @@ export default function LeadDetailPage() {
                 {catalogue.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
               <select
-                className="border rounded-lg px-3 py-2 text-sm"
+                className={inputCls}
                 value={editModelId}
                 onChange={(e) => { setEditModelId(e.target.value); setEditVariantId(''); }}
                 disabled={!editBrandId}
@@ -761,7 +766,7 @@ export default function LeadDetailPage() {
                 {selectedBrandModels.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
               </select>
               <select
-                className="border rounded-lg px-3 py-2 text-sm"
+                className={inputCls}
                 value={editVariantId}
                 onChange={(e) => setEditVariantId(e.target.value)}
                 disabled={!editModelId}
@@ -772,8 +777,8 @@ export default function LeadDetailPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Budget" value={editBudget} onChange={(e) => setEditBudget(e.target.value)} />
-              <select className="border rounded-lg px-3 py-2 text-sm" value={editSource} onChange={(e) => setEditSource(e.target.value)}>
+              <input type="number" className={inputCls} placeholder="Budget" value={editBudget} onChange={(e) => setEditBudget(e.target.value)} />
+              <select className={inputCls} value={editSource} onChange={(e) => setEditSource(e.target.value)}>
                 <option value="WEBSITE">Website</option>
                 <option value="WALK_IN">Walk-in</option>
                 <option value="REFERRAL">Referral</option>
@@ -787,14 +792,14 @@ export default function LeadDetailPage() {
             </label>
 
             <div className="border-t pt-3 mt-1">
-              <p className="text-xs font-semibold text-gray-600 mb-2">Customer Qualification</p>
+              <p className="text-xs font-semibold text-slate-600 mb-2">Customer Qualification</p>
               <div className="grid grid-cols-2 gap-2 mb-2">
-                <select className="border rounded-lg px-3 py-2 text-sm" value={editTemperature} onChange={(e) => setEditTemperature(e.target.value)}>
+                <select className={inputCls} value={editTemperature} onChange={(e) => setEditTemperature(e.target.value)}>
                   <option value="HOT">🔥 Hot</option>
                   <option value="WARM">🌤️ Warm</option>
                   <option value="COLD">❄️ Cold</option>
                 </select>
-                <select className="border rounded-lg px-3 py-2 text-sm" value={editPurpose} onChange={(e) => setEditPurpose(e.target.value)}>
+                <select className={inputCls} value={editPurpose} onChange={(e) => setEditPurpose(e.target.value)}>
                   <option value="">Purpose</option>
                   <option value="Family">Family</option>
                   <option value="Personal">Personal</option>
@@ -803,12 +808,12 @@ export default function LeadDetailPage() {
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-2 mb-2">
-                <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Decision maker" value={editDecisionMaker} onChange={(e) => setEditDecisionMaker(e.target.value)} />
-                <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Current car (if any)" value={editCurrentCar} onChange={(e) => setEditCurrentCar(e.target.value)} />
+                <input className={inputCls} placeholder="Decision maker" value={editDecisionMaker} onChange={(e) => setEditDecisionMaker(e.target.value)} />
+                <input className={inputCls} placeholder="Current car (if any)" value={editCurrentCar} onChange={(e) => setEditCurrentCar(e.target.value)} />
               </div>
               <div className="grid grid-cols-2 gap-2 mb-2">
-                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Exchange value" value={editExchangeValue} onChange={(e) => setEditExchangeValue(e.target.value)} />
-                <select className="border rounded-lg px-3 py-2 text-sm" value={editCustomerPriority} onChange={(e) => setEditCustomerPriority(e.target.value)}>
+                <input type="number" className={inputCls} placeholder="Exchange value" value={editExchangeValue} onChange={(e) => setEditExchangeValue(e.target.value)} />
+                <select className={inputCls} value={editCustomerPriority} onChange={(e) => setEditCustomerPriority(e.target.value)}>
                   <option value="">Top priority</option>
                   <option value="Price">Price</option>
                   <option value="Features">Features</option>
@@ -820,25 +825,25 @@ export default function LeadDetailPage() {
                 </select>
               </div>
               <div className="grid grid-cols-3 gap-2 mb-2">
-                <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Fuel pref." value={editFuelPref} onChange={(e) => setEditFuelPref(e.target.value)} />
-                <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Transmission pref." value={editTransmissionPref} onChange={(e) => setEditTransmissionPref(e.target.value)} />
-                <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Colour pref." value={editColourPref} onChange={(e) => setEditColourPref(e.target.value)} />
+                <input className={inputCls} placeholder="Fuel pref." value={editFuelPref} onChange={(e) => setEditFuelPref(e.target.value)} />
+                <input className={inputCls} placeholder="Transmission pref." value={editTransmissionPref} onChange={(e) => setEditTransmissionPref(e.target.value)} />
+                <input className={inputCls} placeholder="Colour pref." value={editColourPref} onChange={(e) => setEditColourPref(e.target.value)} />
               </div>
-              <input className="w-full border rounded-lg px-3 py-2 text-sm mb-2" placeholder="Special requirements" value={editSpecialReq} onChange={(e) => setEditSpecialReq(e.target.value)} />
-              <textarea className="w-full border rounded-lg px-3 py-2 text-sm" rows={2} placeholder="Customer notes" value={editCustomerNotes} onChange={(e) => setEditCustomerNotes(e.target.value)} />
+              <input className={`${inputCls} w-full mb-2`} placeholder="Special requirements" value={editSpecialReq} onChange={(e) => setEditSpecialReq(e.target.value)} />
+              <textarea className={`${inputCls} w-full`} rows={2} placeholder="Customer notes" value={editCustomerNotes} onChange={(e) => setEditCustomerNotes(e.target.value)} />
             </div>
 
             <div className="flex gap-2">
-              <button disabled={saving} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">Save Changes</button>
-              <button type="button" onClick={() => setEditingLead(false)} className="bg-gray-100 text-gray-700 rounded-lg px-4 py-2 text-sm font-medium">Cancel</button>
+              <button disabled={saving} className={primaryBtnCls}>Save Changes</button>
+              <button type="button" onClick={() => setEditingLead(false)} className={secondaryBtnCls}>Cancel</button>
             </div>
           </form>
         </Section>
       ) : (
         <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-white rounded-xl border p-4">
+          <div className={`${cardCls} p-4`}>
             <div className="flex items-center justify-between mb-1">
-              <p className="text-xs text-gray-500">Vehicle</p>
+              <p className="text-xs text-slate-500">Vehicle</p>
               <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
                 lead.temperature === 'HOT' ? 'bg-red-100 text-red-700' : lead.temperature === 'COLD' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
               }`}>
@@ -846,13 +851,13 @@ export default function LeadDetailPage() {
               </span>
             </div>
             <p className="font-medium">{lead.brand?.name} {lead.model?.name} {lead.variant?.name}</p>
-            <p className="text-xs text-gray-500 mt-2">Budget</p>
+            <p className="text-xs text-slate-500 mt-2">Budget</p>
             <p className="font-medium">{lead.budget ? `₹${(lead.budget / 100000).toFixed(2)}L` : '—'}</p>
           </div>
-          <div className="bg-white rounded-xl border p-4">
-            <p className="text-xs text-gray-500 mb-1">Source</p>
+          <div className={`${cardCls} p-4`}>
+            <p className="text-xs text-slate-500 mb-1">Source</p>
             <p className="font-medium">{lead.source}</p>
-            <p className="text-xs text-gray-500 mt-2">Finance Required</p>
+            <p className="text-xs text-slate-500 mt-2">Finance Required</p>
             <p className="font-medium">{lead.financeRequired ? 'Yes' : 'No'}</p>
           </div>
           {!lead.isLost && lead.salesStatus !== 'CLOSED' && (() => {
@@ -883,20 +888,20 @@ export default function LeadDetailPage() {
             );
           })()}
           {(lead.purpose || lead.decisionMaker || lead.currentCar || lead.customerPriority || lead.fuelPreference || lead.transmissionPreference || lead.colourPreference || lead.specialRequirements || lead.customerNotes) && (
-            <div className="bg-white rounded-xl border p-4 col-span-2">
-              <p className="text-xs text-gray-500 mb-2">Customer Qualification</p>
+            <div className={`${cardCls} p-4 col-span-2`}>
+              <p className="text-xs text-slate-500 mb-2">Customer Qualification</p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
-                {lead.purpose && <p><span className="text-gray-400">Purpose:</span> {lead.purpose}</p>}
-                {lead.decisionMaker && <p><span className="text-gray-400">Decision maker:</span> {lead.decisionMaker}</p>}
-                {lead.currentCar && <p><span className="text-gray-400">Current car:</span> {lead.currentCar}</p>}
-                {lead.exchangeValue ? <p><span className="text-gray-400">Exchange value:</span> ₹{lead.exchangeValue.toLocaleString('en-IN')}</p> : null}
-                {lead.customerPriority && <p><span className="text-gray-400">Top priority:</span> {lead.customerPriority}</p>}
+                {lead.purpose && <p><span className="text-slate-400">Purpose:</span> {lead.purpose}</p>}
+                {lead.decisionMaker && <p><span className="text-slate-400">Decision maker:</span> {lead.decisionMaker}</p>}
+                {lead.currentCar && <p><span className="text-slate-400">Current car:</span> {lead.currentCar}</p>}
+                {lead.exchangeValue ? <p><span className="text-slate-400">Exchange value:</span> ₹{lead.exchangeValue.toLocaleString('en-IN')}</p> : null}
+                {lead.customerPriority && <p><span className="text-slate-400">Top priority:</span> {lead.customerPriority}</p>}
                 {(lead.fuelPreference || lead.transmissionPreference || lead.colourPreference) && (
-                  <p><span className="text-gray-400">Preferences:</span> {[lead.fuelPreference, lead.transmissionPreference, lead.colourPreference].filter(Boolean).join(', ')}</p>
+                  <p><span className="text-slate-400">Preferences:</span> {[lead.fuelPreference, lead.transmissionPreference, lead.colourPreference].filter(Boolean).join(', ')}</p>
                 )}
               </div>
-              {lead.specialRequirements && <p className="text-sm mt-2"><span className="text-gray-400">Special requirements:</span> {lead.specialRequirements}</p>}
-              {lead.customerNotes && <p className="text-sm mt-2"><span className="text-gray-400">Notes:</span> {lead.customerNotes}</p>}
+              {lead.specialRequirements && <p className="text-sm mt-2"><span className="text-slate-400">Special requirements:</span> {lead.specialRequirements}</p>}
+              {lead.customerNotes && <p className="text-sm mt-2"><span className="text-slate-400">Notes:</span> {lead.customerNotes}</p>}
             </div>
           )}
         </div>
@@ -909,27 +914,27 @@ export default function LeadDetailPage() {
       <Section title="Team on this Lead">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-xs text-gray-500 mb-1">Sales Side</p>
+            <p className="text-xs text-slate-500 mb-1">Sales Side</p>
             <p className="text-sm font-medium">{lead.dealer?.name || 'No dealer assigned'}</p>
             {lead.dealerExecutive ? (
               <>
-                <p className="text-sm text-gray-700">{lead.dealerExecutive.name}</p>
+                <p className="text-sm text-slate-700">{lead.dealerExecutive.name}</p>
                 <a href={`tel:${lead.dealerExecutive.mobile}`} className="text-xs text-blue-600">📞 {lead.dealerExecutive.mobile}</a>
               </>
             ) : (
-              <p className="text-sm text-gray-400">Unassigned</p>
+              <p className="text-sm text-slate-400">Unassigned</p>
             )}
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-1">Finance Side</p>
+            <p className="text-xs text-slate-500 mb-1">Finance Side</p>
             <p className="text-sm font-medium">{lead.bank?.name || (lead.financeRequired ? 'No bank assigned' : 'Not required')}</p>
             {lead.financeExecutive ? (
               <>
-                <p className="text-sm text-gray-700">{lead.financeExecutive.name}</p>
+                <p className="text-sm text-slate-700">{lead.financeExecutive.name}</p>
                 <a href={`tel:${lead.financeExecutive.mobile}`} className="text-xs text-blue-600">📞 {lead.financeExecutive.mobile}</a>
               </>
             ) : lead.financeRequired ? (
-              <p className="text-sm text-gray-400">Unassigned</p>
+              <p className="text-sm text-slate-400">Unassigned</p>
             ) : null}
           </div>
         </div>
@@ -938,17 +943,17 @@ export default function LeadDetailPage() {
       {(canAssignSales || (lead.financeRequired && canAssignFinance)) && (
         <Section title="Assignment">
           {canAssignSales && (
-            <div className={lead.financeRequired && canAssignFinance ? 'mb-5 pb-5 border-b border-gray-100' : ''}>
-              <p className="text-xs font-semibold text-gray-600 mb-1">Sales — Dealer → Executive</p>
-              <p className="text-xs text-gray-500 mb-3">
+            <div className={lead.financeRequired && canAssignFinance ? 'mb-5 pb-5 border-b border-slate-100' : ''}>
+              <p className="text-xs font-semibold text-slate-600 mb-1">Sales — Dealer → Executive</p>
+              <p className="text-xs text-slate-500 mb-3">
                 Currently: {lead.dealer?.name || 'No dealer'} → {lead.dealerExecutive?.name || 'Unassigned'}
               </p>
               <div className="grid grid-cols-2 gap-2">
-                <select className="border rounded-lg px-3 py-2 text-sm" value={assignDealerId} onChange={(e) => handleDealerChange(e.target.value)}>
+                <select className={inputCls} value={assignDealerId} onChange={(e) => handleDealerChange(e.target.value)}>
                   <option value="">Select dealer</option>
                   {dealers.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
-                <select className="border rounded-lg px-3 py-2 text-sm" value={assignDealerExec} onChange={(e) => setAssignDealerExec(e.target.value)} disabled={!assignDealerId}>
+                <select className={inputCls} value={assignDealerExec} onChange={(e) => setAssignDealerExec(e.target.value)} disabled={!assignDealerId}>
                   <option value="">{assignDealerId ? 'Select executive' : 'Select a dealer first'}</option>
                   {dealerExecOptions.map((ex) => <option key={ex.id} value={ex.user?.id}>{ex.user?.name}</option>)}
                 </select>
@@ -958,16 +963,16 @@ export default function LeadDetailPage() {
 
           {lead.financeRequired && canAssignFinance && (
             <div className="mb-4">
-              <p className="text-xs font-semibold text-gray-600 mb-1">Finance — Bank → Finance Executive</p>
-              <p className="text-xs text-gray-500 mb-3">
+              <p className="text-xs font-semibold text-slate-600 mb-1">Finance — Bank → Finance Executive</p>
+              <p className="text-xs text-slate-500 mb-3">
                 Currently: {lead.bank?.name || 'No bank'} → {lead.financeExecutive?.name || 'Unassigned'}
               </p>
               <div className="grid grid-cols-2 gap-2">
-                <select className="border rounded-lg px-3 py-2 text-sm" value={assignBankId} onChange={(e) => handleBankChange(e.target.value)}>
+                <select className={inputCls} value={assignBankId} onChange={(e) => handleBankChange(e.target.value)}>
                   <option value="">Select bank</option>
                   {banks.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                 </select>
-                <select className="border rounded-lg px-3 py-2 text-sm" value={assignFinanceExec} onChange={(e) => setAssignFinanceExec(e.target.value)} disabled={!assignBankId}>
+                <select className={inputCls} value={assignFinanceExec} onChange={(e) => setAssignFinanceExec(e.target.value)} disabled={!assignBankId}>
                   <option value="">{assignBankId ? 'Select executive' : 'Select a bank first'}</option>
                   {financeExecOptions.map((ex) => <option key={ex.id} value={ex.user?.id}>{ex.user?.name}</option>)}
                 </select>
@@ -975,7 +980,7 @@ export default function LeadDetailPage() {
             </div>
           )}
 
-          <button disabled={saving} onClick={handleAssign} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">
+          <button disabled={saving} onClick={handleAssign} className={primaryBtnCls}>
             Save Assignment
           </button>
         </Section>
@@ -984,22 +989,22 @@ export default function LeadDetailPage() {
       <Section title="Status">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-xs font-semibold text-gray-600 mb-1.5">Sales Status</p>
-            <select className="border rounded-lg px-3 py-2 text-sm w-full" value={salesStatus} onChange={(e) => setSalesStatus(e.target.value)}>
+            <p className="text-xs font-semibold text-slate-600 mb-1.5">Sales Status</p>
+            <select className={`${inputCls} w-full`} value={salesStatus} onChange={(e) => setSalesStatus(e.target.value)}>
               {SALES_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           {lead.financeRequired && (
             <div>
-              <p className="text-xs font-semibold text-gray-600 mb-1.5">Finance Status</p>
-              <select className="border rounded-lg px-3 py-2 text-sm w-full" value={financeStatus} onChange={(e) => setFinanceStatus(e.target.value)}>
+              <p className="text-xs font-semibold text-slate-600 mb-1.5">Finance Status</p>
+              <select className={`${inputCls} w-full`} value={financeStatus} onChange={(e) => setFinanceStatus(e.target.value)}>
                 {FINANCE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
           )}
         </div>
         {salesStatus === 'LOST' && (
-          <select className="border rounded-lg px-3 py-2 text-sm w-full mt-3" value={lostReason} onChange={(e) => setLostReason(e.target.value)}>
+          <select className={`${inputCls} w-full mt-3`} value={lostReason} onChange={(e) => setLostReason(e.target.value)}>
             <option value="">Select reason</option>
             {LOST_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
@@ -1010,7 +1015,7 @@ export default function LeadDetailPage() {
             await handleSalesStatusUpdate();
             if (lead.financeRequired) await handleFinanceStatusUpdate();
           }}
-          className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60 mt-3"
+          className={`${primaryBtnCls} mt-3`}
         >
           Update Status
         </button>
@@ -1023,13 +1028,13 @@ export default function LeadDetailPage() {
       <Section title="Add Follow-up">
         <form onSubmit={handleAddFollowUp} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <select className="border rounded-lg px-3 py-2 text-sm" value={followUpType} onChange={(e) => setFollowUpType(e.target.value)}>
+            <select className={inputCls} value={followUpType} onChange={(e) => setFollowUpType(e.target.value)}>
               <option value="CALL">Call</option>
               <option value="WHATSAPP">WhatsApp</option>
               <option value="VISIT">Dealer Visit</option>
               <option value="MEETING">Meeting</option>
             </select>
-            <select className="border rounded-lg px-3 py-2 text-sm" value={followUpResult} onChange={(e) => setFollowUpResult(e.target.value)}>
+            <select className={inputCls} value={followUpResult} onChange={(e) => setFollowUpResult(e.target.value)}>
               <option value="INTERESTED">Interested</option>
               <option value="VERY_INTERESTED">Very Interested</option>
               <option value="PRICE_ISSUE">Price Issue</option>
@@ -1039,17 +1044,17 @@ export default function LeadDetailPage() {
               <option value="CALL_LATER">Call Later</option>
             </select>
           </div>
-          <input className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Notes (optional)" value={followUpNotes} onChange={(e) => setFollowUpNotes(e.target.value)} />
-          <input type="datetime-local" className="w-full border rounded-lg px-3 py-2 text-sm" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} required />
-          <button disabled={saving} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">Add Follow-up</button>
+          <input className={`${inputCls} w-full`} placeholder="Notes (optional)" value={followUpNotes} onChange={(e) => setFollowUpNotes(e.target.value)} />
+          <input type="datetime-local" className={`${inputCls} w-full`} value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} required />
+          <button disabled={saving} className={primaryBtnCls}>Add Follow-up</button>
         </form>
         <div className="mt-4 space-y-2">
-          {lead.followUps?.length === 0 && <p className="text-sm text-gray-500">No follow-ups yet.</p>}
+          {lead.followUps?.length === 0 && <p className="text-sm text-slate-500">No follow-ups yet.</p>}
           {lead.followUps?.map((f: any) => (
             <div key={f.id} className="border-t pt-2 text-sm">
               <p className="font-medium">{f.type} — {f.result}</p>
-              {f.notes && <p className="text-gray-600">{f.notes}</p>}
-              <p className="text-xs text-gray-400">Next: {new Date(f.nextFollowUpAt).toLocaleString()}</p>
+              {f.notes && <p className="text-slate-600">{f.notes}</p>}
+              <p className="text-xs text-slate-400">Next: {new Date(f.nextFollowUpAt).toLocaleString()}</p>
             </div>
           ))}
         </div>
@@ -1058,19 +1063,19 @@ export default function LeadDetailPage() {
       <Section title="Team Notes / Messages">
         <form onSubmit={handleSendMessage} className="flex gap-2 mb-4">
           <input
-            className="flex-1 border rounded-lg px-3 py-2 text-sm"
+            className={`${inputCls} flex-1`}
             placeholder="Write a note about this lead..."
             value={messageBody}
             onChange={(e) => setMessageBody(e.target.value)}
           />
-          <button disabled={saving} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">Send</button>
+          <button disabled={saving} className={primaryBtnCls}>Send</button>
         </form>
-        {messages.length === 0 && <p className="text-sm text-gray-500">No messages yet.</p>}
+        {messages.length === 0 && <p className="text-sm text-slate-500">No messages yet.</p>}
         <div className="space-y-3">
           {messages.map((m) => (
             <div key={m.id} className="border-t pt-2 text-sm">
-              <p className="font-medium text-xs text-gray-500">{m.sender?.name || 'Team member'} · {new Date(m.createdAt).toLocaleString()}</p>
-              <p className="text-gray-700 mt-0.5">{m.body}</p>
+              <p className="font-medium text-xs text-slate-500">{m.sender?.name || 'Team member'} · {new Date(m.createdAt).toLocaleString()}</p>
+              <p className="text-slate-700 mt-0.5">{m.body}</p>
             </div>
           ))}
         </div>
@@ -1084,10 +1089,10 @@ export default function LeadDetailPage() {
         {canCreateQuotation && (
           <form onSubmit={handleAddQuotation} className="space-y-3 mb-4">
             <div className="grid grid-cols-2 gap-3">
-              <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Price" value={quotePrice} onChange={(e) => setQuotePrice(e.target.value)} required />
-              <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="On-road price" value={quoteOnRoad} onChange={(e) => setQuoteOnRoad(e.target.value)} required />
-              <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Exchange value (optional)" value={quoteExchange} onChange={(e) => setQuoteExchange(e.target.value)} />
-              <input type="date" className="border rounded-lg px-3 py-2 text-sm" value={quoteValidTill} onChange={(e) => setQuoteValidTill(e.target.value)} required />
+              <input type="number" className={inputCls} placeholder="Price" value={quotePrice} onChange={(e) => setQuotePrice(e.target.value)} required />
+              <input type="number" className={inputCls} placeholder="On-road price" value={quoteOnRoad} onChange={(e) => setQuoteOnRoad(e.target.value)} required />
+              <input type="number" className={inputCls} placeholder="Exchange value (optional)" value={quoteExchange} onChange={(e) => setQuoteExchange(e.target.value)} />
+              <input type="date" className={inputCls} value={quoteValidTill} onChange={(e) => setQuoteValidTill(e.target.value)} required />
             </div>
 
             <button type="button" onClick={() => setShowQuoteBreakdown((v) => !v)} className="text-blue-600 text-xs font-medium">
@@ -1095,31 +1100,31 @@ export default function LeadDetailPage() {
             </button>
 
             {showQuoteBreakdown && (
-              <div className="grid grid-cols-3 gap-2 bg-gray-50 rounded-lg p-3">
-                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Ex-showroom" value={quoteExShowroom} onChange={(e) => setQuoteExShowroom(e.target.value)} />
-                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="RTO" value={quoteRto} onChange={(e) => setQuoteRto(e.target.value)} />
-                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Insurance" value={quoteInsurance} onChange={(e) => setQuoteInsurance(e.target.value)} />
-                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Accessories" value={quoteAccessories} onChange={(e) => setQuoteAccessories(e.target.value)} />
-                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Other charges" value={quoteOtherCharges} onChange={(e) => setQuoteOtherCharges(e.target.value)} />
-                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Discount" value={quoteDiscount} onChange={(e) => setQuoteDiscount(e.target.value)} />
-                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Exchange bonus" value={quoteExchangeBonus} onChange={(e) => setQuoteExchangeBonus(e.target.value)} />
-                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Dealer offer" value={quoteDealerOffer} onChange={(e) => setQuoteDealerOffer(e.target.value)} />
-                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Manufacturer offer" value={quoteManufacturerOffer} onChange={(e) => setQuoteManufacturerOffer(e.target.value)} />
+              <div className="grid grid-cols-3 gap-2 bg-slate-50 rounded-lg p-3">
+                <input type="number" className={inputCls} placeholder="Ex-showroom" value={quoteExShowroom} onChange={(e) => setQuoteExShowroom(e.target.value)} />
+                <input type="number" className={inputCls} placeholder="RTO" value={quoteRto} onChange={(e) => setQuoteRto(e.target.value)} />
+                <input type="number" className={inputCls} placeholder="Insurance" value={quoteInsurance} onChange={(e) => setQuoteInsurance(e.target.value)} />
+                <input type="number" className={inputCls} placeholder="Accessories" value={quoteAccessories} onChange={(e) => setQuoteAccessories(e.target.value)} />
+                <input type="number" className={inputCls} placeholder="Other charges" value={quoteOtherCharges} onChange={(e) => setQuoteOtherCharges(e.target.value)} />
+                <input type="number" className={inputCls} placeholder="Discount" value={quoteDiscount} onChange={(e) => setQuoteDiscount(e.target.value)} />
+                <input type="number" className={inputCls} placeholder="Exchange bonus" value={quoteExchangeBonus} onChange={(e) => setQuoteExchangeBonus(e.target.value)} />
+                <input type="number" className={inputCls} placeholder="Dealer offer" value={quoteDealerOffer} onChange={(e) => setQuoteDealerOffer(e.target.value)} />
+                <input type="number" className={inputCls} placeholder="Manufacturer offer" value={quoteManufacturerOffer} onChange={(e) => setQuoteManufacturerOffer(e.target.value)} />
               </div>
             )}
 
-            <button disabled={saving} className="w-full bg-blue-600 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-60">Add Quotation</button>
+            <button disabled={saving} className={`${primaryBtnCls} w-full`}>Add Quotation</button>
           </form>
         )}
-        {lead.quotations?.length === 0 && <p className="text-sm text-gray-500">No quotations yet.</p>}
+        {lead.quotations?.length === 0 && <p className="text-sm text-slate-500">No quotations yet.</p>}
         <div className="space-y-2">
           {lead.quotations?.map((q: any) => (
             <div key={q.id} className="border-t pt-2 text-sm flex justify-between">
               <span>
-                <span className="text-[10.5px] bg-gray-100 rounded-full px-2 py-0.5 mr-1.5">v{q.version || 1}</span>
+                <span className="text-[10.5px] bg-slate-100 rounded-full px-2 py-0.5 mr-1.5">v{q.version || 1}</span>
                 ₹{(q.price / 100000).toFixed(2)}L (on-road ₹{(q.onRoadPrice / 100000).toFixed(2)}L)
               </span>
-              <span className="text-xs text-gray-400">Valid till {new Date(q.validTill).toLocaleDateString()}</span>
+              <span className="text-xs text-slate-400">Valid till {new Date(q.validTill).toLocaleDateString()}</span>
             </div>
           ))}
         </div>
@@ -1129,18 +1134,18 @@ export default function LeadDetailPage() {
         {canCreateQuotation && (
           <form onSubmit={handleAddNegotiation} className="space-y-3 mb-4">
             <div className="grid grid-cols-2 gap-2">
-              <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Customer expected price" value={negoExpected} onChange={(e) => setNegoExpected(e.target.value)} />
-              <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Dealer offered price" value={negoOffered} onChange={(e) => setNegoOffered(e.target.value)} />
-              <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Discount requested" value={negoDiscount} onChange={(e) => setNegoDiscount(e.target.value)} />
-              <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Exchange value offered" value={negoExchange} onChange={(e) => setNegoExchange(e.target.value)} />
+              <input type="number" className={inputCls} placeholder="Customer expected price" value={negoExpected} onChange={(e) => setNegoExpected(e.target.value)} />
+              <input type="number" className={inputCls} placeholder="Dealer offered price" value={negoOffered} onChange={(e) => setNegoOffered(e.target.value)} />
+              <input type="number" className={inputCls} placeholder="Discount requested" value={negoDiscount} onChange={(e) => setNegoDiscount(e.target.value)} />
+              <input type="number" className={inputCls} placeholder="Exchange value offered" value={negoExchange} onChange={(e) => setNegoExchange(e.target.value)} />
             </div>
-            <input className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Accessories offered" value={negoAccessories} onChange={(e) => setNegoAccessories(e.target.value)} />
-            <input className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Special offer" value={negoSpecialOffer} onChange={(e) => setNegoSpecialOffer(e.target.value)} />
-            <textarea className="w-full border rounded-lg px-3 py-2 text-sm" rows={2} placeholder="Notes" value={negoNotes} onChange={(e) => setNegoNotes(e.target.value)} />
-            <button disabled={saving} className="w-full bg-blue-600 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-60">Record Negotiation</button>
+            <input className={`${inputCls} w-full`} placeholder="Accessories offered" value={negoAccessories} onChange={(e) => setNegoAccessories(e.target.value)} />
+            <input className={`${inputCls} w-full`} placeholder="Special offer" value={negoSpecialOffer} onChange={(e) => setNegoSpecialOffer(e.target.value)} />
+            <textarea className={`${inputCls} w-full`} rows={2} placeholder="Notes" value={negoNotes} onChange={(e) => setNegoNotes(e.target.value)} />
+            <button disabled={saving} className={`${primaryBtnCls} w-full`}>Record Negotiation</button>
           </form>
         )}
-        {negotiations.length === 0 && <p className="text-sm text-gray-500">No negotiation recorded yet.</p>}
+        {negotiations.length === 0 && <p className="text-sm text-slate-500">No negotiation recorded yet.</p>}
         <div className="space-y-3">
           {negotiations.map((n: any) => (
             <div key={n.id} className="border-t pt-2 text-sm">
@@ -1157,7 +1162,7 @@ export default function LeadDetailPage() {
                   </span>
                 )}
               </div>
-              {n.notes && <p className="text-xs text-gray-500 mt-0.5">{n.notes}</p>}
+              {n.notes && <p className="text-xs text-slate-500 mt-0.5">{n.notes}</p>}
               {n.requiresApproval && n.approvalStatus === 'PENDING' && canApproveNegotiation && (
                 <div className="flex gap-2 mt-2">
                   <button disabled={saving} onClick={() => handleDecideNegotiation(n.id, true)} className="bg-emerald-600 text-white rounded-md px-3 py-1.5 text-xs font-medium">Approve</button>
@@ -1171,15 +1176,15 @@ export default function LeadDetailPage() {
 
       <Section title="Test Drives">
         <form onSubmit={handleAddTestDrive} className="flex gap-3 mb-4">
-          <input type="datetime-local" className="flex-1 border rounded-lg px-3 py-2 text-sm" value={testDriveDate} onChange={(e) => setTestDriveDate(e.target.value)} required />
-          <button disabled={saving} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">Schedule</button>
+          <input type="datetime-local" className={`${inputCls} flex-1`} value={testDriveDate} onChange={(e) => setTestDriveDate(e.target.value)} required />
+          <button disabled={saving} className={primaryBtnCls}>Schedule</button>
         </form>
-        {lead.testDrives?.length === 0 && <p className="text-sm text-gray-500">No test drives scheduled.</p>}
+        {lead.testDrives?.length === 0 && <p className="text-sm text-slate-500">No test drives scheduled.</p>}
         <div className="space-y-2">
           {lead.testDrives?.map((t: any) => (
             <div key={t.id} className="border-t pt-2 text-sm flex justify-between">
               <span>{new Date(t.scheduledAt).toLocaleString()}</span>
-              <span className="text-xs bg-gray-100 rounded-full px-2 py-1">{t.status}</span>
+              <span className="text-xs bg-slate-100 rounded-full px-2 py-1">{t.status}</span>
             </div>
           ))}
         </div>
@@ -1191,22 +1196,22 @@ export default function LeadDetailPage() {
       <>
       <Section title="Documents">
         <form onSubmit={handleAddDocument} className="grid grid-cols-2 gap-3 mb-4">
-          <select className="border rounded-lg px-3 py-2 text-sm" value={docType} onChange={(e) => setDocType(e.target.value)}>
+          <select className={inputCls} value={docType} onChange={(e) => setDocType(e.target.value)}>
             {DOC_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
-          <input className="border rounded-lg px-3 py-2 text-sm" placeholder="File URL" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} required />
-          <button disabled={saving} className="col-span-2 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-60">Add Document</button>
+          <input className={inputCls} placeholder="File URL" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} required />
+          <button disabled={saving} className={`${primaryBtnCls} col-span-2`}>Add Document</button>
         </form>
-        {lead.documents?.length === 0 && <p className="text-sm text-gray-500">No documents uploaded.</p>}
+        {lead.documents?.length === 0 && <p className="text-sm text-slate-500">No documents uploaded.</p>}
         <div className="space-y-2">
           {lead.documents?.map((d: any) => (
             <div key={d.id} className="border-t pt-2 text-sm flex items-center justify-between gap-2">
               <div>
                 <p className="font-medium">{d.type}</p>
-                <p className="text-[11px] text-gray-400">{new Date(d.createdAt).toLocaleString()}</p>
+                <p className="text-[11px] text-slate-400">{new Date(d.createdAt).toLocaleString()}</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs bg-gray-100 rounded-full px-2 py-1">{d.status}</span>
+                <span className="text-xs bg-slate-100 rounded-full px-2 py-1">{d.status}</span>
                 <a href={d.fileUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 font-medium border border-blue-200 rounded-md px-2.5 py-1 hover:bg-blue-50">
                   View / Download
                 </a>
@@ -1234,28 +1239,28 @@ export default function LeadDetailPage() {
               {editingFinanceCase ? (
                 <div className="space-y-2">
                   <div className="grid grid-cols-2 gap-2">
-                    <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Loan amount" value={editLoanAmount} onChange={(e) => setEditLoanAmount(e.target.value)} />
-                    <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Down payment" value={editDownPayment} onChange={(e) => setEditDownPayment(e.target.value)} />
-                    <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Tenure (months)" value={editTenure} onChange={(e) => setEditTenure(e.target.value)} />
-                    <input type="number" step="0.1" className="border rounded-lg px-3 py-2 text-sm" placeholder="ROI %" value={editRoi} onChange={(e) => setEditRoi(e.target.value)} />
+                    <input type="number" className={inputCls} placeholder="Loan amount" value={editLoanAmount} onChange={(e) => setEditLoanAmount(e.target.value)} />
+                    <input type="number" className={inputCls} placeholder="Down payment" value={editDownPayment} onChange={(e) => setEditDownPayment(e.target.value)} />
+                    <input type="number" className={inputCls} placeholder="Tenure (months)" value={editTenure} onChange={(e) => setEditTenure(e.target.value)} />
+                    <input type="number" step="0.1" className={inputCls} placeholder="ROI %" value={editRoi} onChange={(e) => setEditRoi(e.target.value)} />
                   </div>
-                  <input type="number" className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="EMI" value={editEmi} onChange={(e) => setEditEmi(e.target.value)} />
+                  <input type="number" className={`${inputCls} w-full`} placeholder="EMI" value={editEmi} onChange={(e) => setEditEmi(e.target.value)} />
                   <div className="flex gap-2">
-                    <button disabled={saving} onClick={handleUpdateFinanceCase} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">Save Changes</button>
-                    <button onClick={() => setEditingFinanceCase(false)} className="bg-gray-100 text-gray-700 rounded-lg px-4 py-2 text-sm font-medium">Cancel</button>
+                    <button disabled={saving} onClick={handleUpdateFinanceCase} className={primaryBtnCls}>Save Changes</button>
+                    <button onClick={() => setEditingFinanceCase(false)} className={secondaryBtnCls}>Cancel</button>
                   </div>
                 </div>
               ) : (
                 <>
-                  <p><span className="text-gray-500">Bank:</span> {banks.find((b) => b.id === lead.financeCase.bankId)?.name || lead.financeCase.bankId}</p>
-                  <p><span className="text-gray-500">Loan Amount:</span> ₹{(lead.financeCase.loanAmount / 100000).toFixed(2)}L</p>
-                  <p><span className="text-gray-500">Down Payment:</span> ₹{(lead.financeCase.downPayment / 100000).toFixed(2)}L</p>
-                  <p><span className="text-gray-500">Tenure:</span> {lead.financeCase.tenureMonths} months · <span className="text-gray-500">ROI:</span> {lead.financeCase.roi}%</p>
-                  <p><span className="text-gray-500">EMI:</span> ₹{lead.financeCase.emi}/mo</p>
-                  <p><span className="text-gray-500">Stage:</span> {lead.financeCase.stage}</p>
+                  <p><span className="text-slate-500">Bank:</span> {banks.find((b) => b.id === lead.financeCase.bankId)?.name || lead.financeCase.bankId}</p>
+                  <p><span className="text-slate-500">Loan Amount:</span> ₹{(lead.financeCase.loanAmount / 100000).toFixed(2)}L</p>
+                  <p><span className="text-slate-500">Down Payment:</span> ₹{(lead.financeCase.downPayment / 100000).toFixed(2)}L</p>
+                  <p><span className="text-slate-500">Tenure:</span> {lead.financeCase.tenureMonths} months · <span className="text-slate-500">ROI:</span> {lead.financeCase.roi}%</p>
+                  <p><span className="text-slate-500">EMI:</span> ₹{lead.financeCase.emi}/mo</p>
+                  <p><span className="text-slate-500">Stage:</span> {lead.financeCase.stage}</p>
                   {canCreateFinanceCase && (
                     lead.financeCase.stage === 'FINANCE_COMPLETED' ? (
-                      <p className="text-xs text-gray-400 mt-2">🔒 Case closed — details locked.</p>
+                      <p className="text-xs text-slate-400 mt-2">🔒 Case closed — details locked.</p>
                     ) : (
                       <button onClick={startEditingFinanceCase} className="text-blue-600 text-xs font-medium mt-2">Edit Details</button>
                     )
@@ -1277,54 +1282,54 @@ export default function LeadDetailPage() {
               {showCalculator && (
                 <div className="border border-emerald-200 rounded-lg p-4 bg-emerald-50/40 space-y-4">
                   <div>
-                    <p className="text-xs font-semibold text-gray-600 mb-2">On-Road Price Breakdown</p>
+                    <p className="text-xs font-semibold text-slate-600 mb-2">On-Road Price Breakdown</p>
                     <div className="grid grid-cols-2 gap-2">
-                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Ex-showroom price" value={calcExShowroom} onChange={(e) => setCalcExShowroom(e.target.value)} />
-                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="RTO" value={calcRto} onChange={(e) => setCalcRto(e.target.value)} />
-                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Insurance" value={calcInsurance} onChange={(e) => setCalcInsurance(e.target.value)} />
-                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="TCS" value={calcTcs} onChange={(e) => setCalcTcs(e.target.value)} />
-                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="FASTag" value={calcFastag} onChange={(e) => setCalcFastag(e.target.value)} />
-                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Extra Warranty" value={calcWarranty} onChange={(e) => setCalcWarranty(e.target.value)} />
-                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Accessories" value={calcAccessories} onChange={(e) => setCalcAccessories(e.target.value)} />
-                      <input type="number" className="border rounded-lg px-3 py-2 text-sm col-span-2" placeholder="Discount (subtracted)" value={calcDiscount} onChange={(e) => setCalcDiscount(e.target.value)} />
+                      <input type="number" className={inputCls} placeholder="Ex-showroom price" value={calcExShowroom} onChange={(e) => setCalcExShowroom(e.target.value)} />
+                      <input type="number" className={inputCls} placeholder="RTO" value={calcRto} onChange={(e) => setCalcRto(e.target.value)} />
+                      <input type="number" className={inputCls} placeholder="Insurance" value={calcInsurance} onChange={(e) => setCalcInsurance(e.target.value)} />
+                      <input type="number" className={inputCls} placeholder="TCS" value={calcTcs} onChange={(e) => setCalcTcs(e.target.value)} />
+                      <input type="number" className={inputCls} placeholder="FASTag" value={calcFastag} onChange={(e) => setCalcFastag(e.target.value)} />
+                      <input type="number" className={inputCls} placeholder="Extra Warranty" value={calcWarranty} onChange={(e) => setCalcWarranty(e.target.value)} />
+                      <input type="number" className={inputCls} placeholder="Accessories" value={calcAccessories} onChange={(e) => setCalcAccessories(e.target.value)} />
+                      <input type="number" className={`${inputCls} col-span-2`} placeholder="Discount (subtracted)" value={calcDiscount} onChange={(e) => setCalcDiscount(e.target.value)} />
                     </div>
-                    <p className="text-sm font-semibold mt-2 text-gray-700">On-Road Price: ₹{calcOnRoad.toLocaleString('en-IN')}</p>
+                    <p className="text-sm font-semibold mt-2 text-slate-700">On-Road Price: ₹{calcOnRoad.toLocaleString('en-IN')}</p>
                   </div>
 
                   <div className="border-t border-emerald-200 pt-3">
-                    <p className="text-xs font-semibold text-gray-600 mb-2">Loan Amount</p>
+                    <p className="text-xs font-semibold text-slate-600 mb-2">Loan Amount</p>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-[11px] text-gray-500">% Funding on ex-showroom</label>
-                        <input type="number" className="border rounded-lg px-3 py-2 text-sm w-full" value={calcFundingPct} onChange={(e) => setCalcFundingPct(e.target.value)} />
+                        <label className="text-[11px] text-slate-500">% Funding on ex-showroom</label>
+                        <input type="number" className={`${inputCls} w-full`} value={calcFundingPct} onChange={(e) => setCalcFundingPct(e.target.value)} />
                       </div>
                       <div>
-                        <label className="text-[11px] text-gray-500">Loan Suraksha (insurance) amount</label>
-                        <input type="number" className="border rounded-lg px-3 py-2 text-sm w-full" value={calcSuraksha} onChange={(e) => setCalcSuraksha(e.target.value)} />
+                        <label className="text-[11px] text-slate-500">Loan Suraksha (insurance) amount</label>
+                        <input type="number" className={`${inputCls} w-full`} value={calcSuraksha} onChange={(e) => setCalcSuraksha(e.target.value)} />
                       </div>
                     </div>
-                    <p className="text-sm mt-2 text-gray-700">Base Loan (funding %): ₹{calcBaseLoan.toLocaleString('en-IN')}</p>
-                    <p className="text-sm font-semibold text-gray-700">Total Loan Amount: ₹{calcTotalLoan.toLocaleString('en-IN')}</p>
-                    <p className="text-xs text-gray-500">Approx. Down Payment: ₹{Math.max(0, calcDownPayment).toLocaleString('en-IN')}</p>
+                    <p className="text-sm mt-2 text-slate-700">Base Loan (funding %): ₹{calcBaseLoan.toLocaleString('en-IN')}</p>
+                    <p className="text-sm font-semibold text-slate-700">Total Loan Amount: ₹{calcTotalLoan.toLocaleString('en-IN')}</p>
+                    <p className="text-xs text-slate-500">Approx. Down Payment: ₹{Math.max(0, calcDownPayment).toLocaleString('en-IN')}</p>
                   </div>
 
                   <div className="border-t border-emerald-200 pt-3">
-                    <p className="text-xs font-semibold text-gray-600 mb-2">EMI</p>
+                    <p className="text-xs font-semibold text-slate-600 mb-2">EMI</p>
                     <div className="grid grid-cols-2 gap-2">
-                      <input type="number" step="0.1" className="border rounded-lg px-3 py-2 text-sm" placeholder="ROI %" value={calcRoi} onChange={(e) => setCalcRoi(e.target.value)} />
-                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Tenure (months)" value={calcTenure} onChange={(e) => setCalcTenure(e.target.value)} />
+                      <input type="number" step="0.1" className={inputCls} placeholder="ROI %" value={calcRoi} onChange={(e) => setCalcRoi(e.target.value)} />
+                      <input type="number" className={inputCls} placeholder="Tenure (months)" value={calcTenure} onChange={(e) => setCalcTenure(e.target.value)} />
                     </div>
-                    <p className="text-sm font-semibold mt-2 text-gray-700">EMI: ₹{calcEmi.toLocaleString('en-IN')}/mo</p>
+                    <p className="text-sm font-semibold mt-2 text-slate-700">EMI: ₹{calcEmi.toLocaleString('en-IN')}/mo</p>
                   </div>
 
                   <div className="border-t border-emerald-200 pt-3">
-                    <p className="text-xs font-semibold text-gray-600 mb-2">Deductions (from loan amount)</p>
+                    <p className="text-xs font-semibold text-slate-600 mb-2">Deductions (from loan amount)</p>
                     <div className="grid grid-cols-3 gap-2">
-                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Service charge" value={calcServiceCharge} onChange={(e) => setCalcServiceCharge(e.target.value)} />
-                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Document charges" value={calcDocCharges} onChange={(e) => setCalcDocCharges(e.target.value)} />
-                      <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Stamping" value={calcStamping} onChange={(e) => setCalcStamping(e.target.value)} />
+                      <input type="number" className={inputCls} placeholder="Service charge" value={calcServiceCharge} onChange={(e) => setCalcServiceCharge(e.target.value)} />
+                      <input type="number" className={inputCls} placeholder="Document charges" value={calcDocCharges} onChange={(e) => setCalcDocCharges(e.target.value)} />
+                      <input type="number" className={inputCls} placeholder="Stamping" value={calcStamping} onChange={(e) => setCalcStamping(e.target.value)} />
                     </div>
-                    <p className="text-sm font-semibold mt-2 text-gray-700">Net Disbursed Amount: ₹{calcNetDisbursed.toLocaleString('en-IN')}</p>
+                    <p className="text-sm font-semibold mt-2 text-slate-700">Net Disbursed Amount: ₹{calcNetDisbursed.toLocaleString('en-IN')}</p>
                   </div>
 
                   <button type="button" onClick={applyCalculatorToForm} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-4 py-2.5 text-sm font-semibold">
@@ -1334,23 +1339,23 @@ export default function LeadDetailPage() {
               )}
 
               {dealerBanks.length > 0 && (
-                <p className="text-[12px] text-gray-500">Showing banks tied to this lead's dealer.</p>
+                <p className="text-[12px] text-slate-500">Showing banks tied to this lead's dealer.</p>
               )}
-              <select className="w-full border rounded-lg px-3 py-2 text-sm" value={financeBank} onChange={(e) => setFinanceBank(e.target.value)} required>
+              <select className={`${inputCls} w-full`} value={financeBank} onChange={(e) => setFinanceBank(e.target.value)} required>
                 <option value="">Select bank</option>
                 {(dealerBanks.length > 0 ? dealerBanks : banks).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
               <div className="grid grid-cols-2 gap-3">
-                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Loan amount" value={loanAmount} onChange={(e) => setLoanAmount(e.target.value)} />
-                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Down payment" value={downPayment} onChange={(e) => setDownPayment(e.target.value)} />
-                <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Tenure (months)" value={tenure} onChange={(e) => setTenure(e.target.value)} />
-                <input type="number" step="0.1" className="border rounded-lg px-3 py-2 text-sm" placeholder="ROI %" value={roi} onChange={(e) => setRoi(e.target.value)} />
+                <input type="number" className={inputCls} placeholder="Loan amount" value={loanAmount} onChange={(e) => setLoanAmount(e.target.value)} />
+                <input type="number" className={inputCls} placeholder="Down payment" value={downPayment} onChange={(e) => setDownPayment(e.target.value)} />
+                <input type="number" className={inputCls} placeholder="Tenure (months)" value={tenure} onChange={(e) => setTenure(e.target.value)} />
+                <input type="number" step="0.1" className={inputCls} placeholder="ROI %" value={roi} onChange={(e) => setRoi(e.target.value)} />
               </div>
-              <input type="number" className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="EMI" value={emi} onChange={(e) => setEmi(e.target.value)} />
-              <button disabled={saving} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">Create Finance Case</button>
+              <input type="number" className={`${inputCls} w-full`} placeholder="EMI" value={emi} onChange={(e) => setEmi(e.target.value)} />
+              <button disabled={saving} className={primaryBtnCls}>Create Finance Case</button>
             </form>
           ) : (
-            <p className="text-[13px] text-gray-500">⏳ Waiting for the finance team to set up the loan details. You can share documents and questions in Documents / Messages below.</p>
+            <p className="text-[13px] text-slate-500">⏳ Waiting for the finance team to set up the loan details. You can share documents and questions in Documents / Messages below.</p>
           )}
         </Section>
       )}
@@ -1359,38 +1364,38 @@ export default function LeadDetailPage() {
         <Section title="Bank Queries">
           {canCreateFinanceCase && (
             <form onSubmit={handleAddBankQuery} className="space-y-2 mb-4">
-              <textarea className="w-full border rounded-lg px-3 py-2 text-sm" rows={2} placeholder="e.g. 6 months bank statement required" value={bqText} onChange={(e) => setBqText(e.target.value)} required />
+              <textarea className={`${inputCls} w-full`} rows={2} placeholder="e.g. 6 months bank statement required" value={bqText} onChange={(e) => setBqText(e.target.value)} required />
               <div className="grid grid-cols-2 gap-2">
-                <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Requested document (optional)" value={bqDoc} onChange={(e) => setBqDoc(e.target.value)} />
-                <input type="date" className="border rounded-lg px-3 py-2 text-sm" value={bqDueDate} onChange={(e) => setBqDueDate(e.target.value)} />
+                <input className={inputCls} placeholder="Requested document (optional)" value={bqDoc} onChange={(e) => setBqDoc(e.target.value)} />
+                <input type="date" className={inputCls} value={bqDueDate} onChange={(e) => setBqDueDate(e.target.value)} />
               </div>
-              <button disabled={saving} className="w-full bg-blue-600 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-60">Raise Bank Query</button>
+              <button disabled={saving} className={`${primaryBtnCls} w-full`}>Raise Bank Query</button>
             </form>
           )}
-          {bankQueries.length === 0 && <p className="text-sm text-gray-500">No bank queries raised.</p>}
+          {bankQueries.length === 0 && <p className="text-sm text-slate-500">No bank queries raised.</p>}
           <div className="space-y-2">
             {bankQueries.map((bq: any) => (
               <div key={bq.id} className="border-t pt-2 text-sm">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p>{bq.query}</p>
-                    {bq.requestedDocument && <p className="text-xs text-gray-500">📄 {bq.requestedDocument}</p>}
-                    {bq.dueDate && <p className="text-xs text-gray-400">Due {new Date(bq.dueDate).toLocaleDateString()}</p>}
+                    {bq.requestedDocument && <p className="text-xs text-slate-500">📄 {bq.requestedDocument}</p>}
+                    {bq.dueDate && <p className="text-xs text-slate-400">Due {new Date(bq.dueDate).toLocaleDateString()}</p>}
                   </div>
                   <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${bq.status === 'RESOLVED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                     {bq.status === 'RESOLVED' ? '✓ Resolved' : '⏳ Open'}
                   </span>
                 </div>
                 {bq.status === 'RESOLVED' && bq.resolutionNotes && (
-                  <p className="text-xs text-gray-500 mt-1">Resolution: {bq.resolutionNotes}</p>
+                  <p className="text-xs text-slate-500 mt-1">Resolution: {bq.resolutionNotes}</p>
                 )}
                 {bq.status === 'OPEN' && canCreateFinanceCase && (
                   resolvingQueryId === bq.id ? (
                     <div className="mt-2 space-y-2">
-                      <input className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Resolution notes" value={bqResolutionNotes} onChange={(e) => setBqResolutionNotes(e.target.value)} />
+                      <input className={`${inputCls} w-full`} placeholder="Resolution notes" value={bqResolutionNotes} onChange={(e) => setBqResolutionNotes(e.target.value)} />
                       <div className="flex gap-2">
                         <button disabled={saving} onClick={() => handleResolveBankQuery(bq.id)} className="bg-emerald-600 text-white rounded-md px-3 py-1.5 text-xs font-medium">Mark Resolved</button>
-                        <button onClick={() => setResolvingQueryId(null)} className="bg-gray-100 text-gray-700 rounded-md px-3 py-1.5 text-xs font-medium">Cancel</button>
+                        <button onClick={() => setResolvingQueryId(null)} className={secondaryBtnCls}>Cancel</button>
                       </div>
                     </div>
                   ) : (
@@ -1412,8 +1417,8 @@ export default function LeadDetailPage() {
           <p className="text-sm">Booked for ₹{lead.booking.bookingAmount} on {new Date(lead.booking.bookedAt).toLocaleDateString()}</p>
         ) : (
           <form onSubmit={handleAddBooking} className="flex gap-3">
-            <input type="number" className="flex-1 border rounded-lg px-3 py-2 text-sm" placeholder="Booking amount" value={bookingAmount} onChange={(e) => setBookingAmount(e.target.value)} required />
-            <button disabled={saving} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">Confirm Booking</button>
+            <input type="number" className={`${inputCls} flex-1`} placeholder="Booking amount" value={bookingAmount} onChange={(e) => setBookingAmount(e.target.value)} required />
+            <button disabled={saving} className={primaryBtnCls}>Confirm Booking</button>
           </form>
         )}
       </Section>
@@ -1421,7 +1426,7 @@ export default function LeadDetailPage() {
       <Section title="Delivery">
         {lead.delivery ? (
           <div className="text-sm space-y-2">
-            <p>Scheduled: {new Date(lead.delivery.scheduledAt).toLocaleString()} — <span className="text-xs bg-gray-100 rounded-full px-2 py-1">{lead.delivery.status}</span></p>
+            <p>Scheduled: {new Date(lead.delivery.scheduledAt).toLocaleString()} — <span className="text-xs bg-slate-100 rounded-full px-2 py-1">{lead.delivery.status}</span></p>
             {lead.delivery.status !== 'DELIVERED' && (
               <button disabled={saving} onClick={handleMarkDelivered} className="bg-green-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">
                 Mark as Delivered
@@ -1430,8 +1435,8 @@ export default function LeadDetailPage() {
           </div>
         ) : (
           <form onSubmit={handleAddDelivery} className="flex gap-3">
-            <input type="datetime-local" className="flex-1 border rounded-lg px-3 py-2 text-sm" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} required />
-            <button disabled={saving} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">Schedule Delivery</button>
+            <input type="datetime-local" className={`${inputCls} flex-1`} value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} required />
+            <button disabled={saving} className={primaryBtnCls}>Schedule Delivery</button>
           </form>
         )}
       </Section>
@@ -1442,17 +1447,17 @@ export default function LeadDetailPage() {
       <Section title="Complete Activity Timeline">
         {(() => {
           const events = buildTimeline(lead, negotiations, bankQueries);
-          if (events.length === 0) return <p className="text-sm text-gray-500">No activity recorded yet.</p>;
+          if (events.length === 0) return <p className="text-sm text-slate-500">No activity recorded yet.</p>;
           return (
             <div className="space-y-0">
               {events.map((e, i) => (
                 <div key={i} className="flex gap-3 pb-4 relative">
-                  {i < events.length - 1 && <div className="absolute left-[15px] top-8 bottom-0 w-px bg-gray-200" />}
-                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm shrink-0 z-10">{e.icon}</div>
+                  {i < events.length - 1 && <div className="absolute left-[15px] top-8 bottom-0 w-px bg-slate-200" />}
+                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-sm shrink-0 z-10">{e.icon}</div>
                   <div className="pt-1">
-                    <p className="text-sm font-medium text-gray-800">{e.title}</p>
-                    {e.detail && <p className="text-[12.5px] text-gray-500">{e.detail}</p>}
-                    <p className="text-[11px] text-gray-400 mt-0.5">
+                    <p className="text-sm font-medium text-slate-800">{e.title}</p>
+                    {e.detail && <p className="text-[12.5px] text-slate-500">{e.detail}</p>}
+                    <p className="text-[11px] text-slate-400 mt-0.5">
                       {new Date(e.ts).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
                       {e.user ? ` · ${e.user}` : ''}
                     </p>
@@ -1466,24 +1471,21 @@ export default function LeadDetailPage() {
       )}
 
       {/* Back / Next footer — jumps between the tabs above; nothing here is a separate save, each tab's own button already saves that tab's data. */}
-      <div className="flex items-center justify-between mt-8 pt-5 border-t">
+      <div className="flex items-center justify-between mt-8 pt-5 border-t border-slate-200">
         <button
           disabled={stepIndex <= 0}
           onClick={() => setActiveStep(STEPS[stepIndex - 1].key)}
-          className="text-sm font-medium text-gray-600 disabled:text-gray-300 disabled:cursor-not-allowed px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:hover:bg-transparent"
+          className={`${secondaryBtnCls} disabled:opacity-40 disabled:pointer-events-none`}
         >
           ← Back
         </button>
-        <span className="text-xs text-gray-400">Step {stepIndex + 1} of {STEPS.length}</span>
+        <span className="text-[12px] text-slate-400 font-medium">Step {stepIndex + 1} of {STEPS.length}</span>
         {stepIndex < STEPS.length - 1 ? (
-          <button
-            onClick={() => setActiveStep(STEPS[stepIndex + 1].key)}
-            className="text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg"
-          >
+          <button onClick={() => setActiveStep(STEPS[stepIndex + 1].key)} className={primaryBtnCls}>
             Next →
           </button>
         ) : (
-          <span className="text-sm font-medium text-green-700 px-4 py-2">✓ Last step</span>
+          <span className="text-[13.5px] font-semibold text-emerald-700 px-4 py-2.5">✓ Last step</span>
         )}
       </div>
     </div>

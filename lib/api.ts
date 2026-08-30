@@ -79,6 +79,11 @@ export const api = {
   updateLead: (id: string, data: any) => apiFetch(`/leads/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   updateLeadNextAction: (id: string, data: any) => apiFetch(`/leads/${id}/next-action`, { method: 'PUT', body: JSON.stringify(data) }),
   updateLeadBlocker: (id: string, blocker: string | null) => apiFetch(`/leads/${id}/blocker`, { method: 'PUT', body: JSON.stringify({ blocker }) }),
+  setSameDayDeal: (id: string, sameDayDeal: boolean) => apiFetch(`/leads/${id}/same-day-deal`, { method: 'PUT', body: JSON.stringify({ sameDayDeal }) }),
+  createFinanceApplication: (data: any) => apiFetch('/finance-applications', { method: 'POST', body: JSON.stringify(data) }),
+  listFinanceApplications: (leadId: string) => apiFetch(`/finance-applications?leadId=${leadId}`),
+  updateFinanceApplicationStatus: (id: string, status: string, notes?: string) =>
+    apiFetch(`/finance-applications/${id}/status`, { method: 'PUT', body: JSON.stringify({ status, notes }) }),
   deleteLead: (id: string) => apiFetch(`/leads/${id}`, { method: 'DELETE' }),
   assignLead: (id: string, data: any) => apiFetch(`/leads/${id}/assign`, { method: 'PUT', body: JSON.stringify(data) }),
   updateSalesStatus: (id: string, data: any) => apiFetch(`/leads/${id}/sales-status`, { method: 'PUT', body: JSON.stringify(data) }),

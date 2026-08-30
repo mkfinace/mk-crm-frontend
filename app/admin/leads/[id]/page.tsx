@@ -214,6 +214,19 @@ function buildTimeline(lead: any, negotiations: any[], bankQueries: any[]) {
 
 const FIRST_CONTACT_SLA_HOURS = 24;
 
+function formatElapsed(startedAt: string) {
+  const ms = Date.now() - new Date(startedAt).getTime();
+  const hrs = Math.floor(ms / 3600000);
+  const mins = Math.floor((ms % 3600000) / 60000);
+  return `${hrs}h ${mins}m`;
+}
+
+const FA_STATUSES = ['LOGIN_PENDING', 'LOGIN_DONE', 'QUERY', 'SANCTION', 'REJECTED', 'WITHDRAWN'];
+const FA_STATUS_LABEL: Record<string, string> = {
+  LOGIN_PENDING: 'Login Pending', LOGIN_DONE: 'Login Done', QUERY: 'Query Raised',
+  SANCTION: 'Sanctioned', REJECTED: 'Rejected', WITHDRAWN: 'Withdrawn',
+};
+
 function computeSla(lead: any) {
   const followUps = lead.followUps || [];
   const firstContact = followUps.length > 0
@@ -335,6 +348,19 @@ export default function LeadDetailPage() {
     }
   }
 
+  async function handleToggleSameDayDeal(value: boolean) {
+    setSaving(true);
+    setError('');
+    try {
+      await api.setSameDayDeal(id, value);
+      await loadLead();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const [catalogue, setCatalogue] = useState<any[]>([]);
   const [editCustomerName, setEditCustomerName] = useState('');
   const [editCustomerMobile, setEditCustomerMobile] = useState('');
@@ -437,6 +463,12 @@ export default function LeadDetailPage() {
   const [bqDueDate, setBqDueDate] = useState('');
   const [resolvingQueryId, setResolvingQueryId] = useState<string | null>(null);
   const [bqResolutionNotes, setBqResolutionNotes] = useState('');
+  const [financeApplications, setFinanceApplications] = useState<any[]>([]);
+  const [faBankId, setFaBankId] = useState('');
+  const [faAppNumber, setFaAppNumber] = useState('');
+  const [faLoginDate, setFaLoginDate] = useState('');
+  const [faLoanAmount, setFaLoanAmount] = useState('');
+  const [faTenure, setFaTenure] = useState('');
   const [editingFinanceCase, setEditingFinanceCase] = useState(false);
   const [editLoanAmount, setEditLoanAmount] = useState('');
   const [editDownPayment, setEditDownPayment] = useState('');
@@ -643,6 +675,7 @@ export default function LeadDetailPage() {
     loadLead();
     loadMessages();
     loadNegotiations();
+    loadFinanceApplications();
     setHasAutoNavigated(false);
     setActiveStep('overview');
     api.listDealers().then(setDealers).catch(() => {});
@@ -981,6 +1014,40 @@ export default function LeadDetailPage() {
     }
   }
 
+  async function loadFinanceApplications() {
+    try {
+      setFinanceApplications(await api.listFinanceApplications(id));
+    } catch {
+      // non-fatal
+    }
+  }
+
+  const handleAddFinanceApplication = withSaving(async () => {
+    await api.createFinanceApplication({
+      leadId: id,
+      bankId: faBankId,
+      applicationNumber: faAppNumber || undefined,
+      loginDate: faLoginDate ? new Date(faLoginDate).toISOString() : undefined,
+      loanAmount: faLoanAmount ? Number(faLoanAmount) : undefined,
+      tenureMonths: faTenure ? Number(faTenure) : undefined,
+    });
+    setFaBankId(''); setFaAppNumber(''); setFaLoginDate(''); setFaLoanAmount(''); setFaTenure('');
+    await loadFinanceApplications();
+  });
+
+  async function handleUpdateFaStatus(appId: string, status: string) {
+    setSaving(true);
+    setError('');
+    try {
+      await api.updateFinanceApplicationStatus(appId, status);
+      await loadFinanceApplications();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const handleAddTestDrive = withSaving(async () => {
     await api.createTestDrive({ leadId: id, scheduledAt: new Date(testDriveDate).toISOString() });
     setTestDriveDate('');
@@ -1181,6 +1248,19 @@ export default function LeadDetailPage() {
         const healthStyle = health.level === 'HOT' ? 'bg-red-50 text-red-700 border-red-200' : health.level === 'AT_RISK' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-50 text-slate-600 border-slate-200';
         return (
           <div className={`${cardCls} p-4 mb-5`}>
+            {lead.sameDayDeal && (
+              <div className="flex items-center justify-between bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-lg px-3 py-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[13px] font-bold text-orange-700">🔥 SAME-DAY DEAL</span>
+                  {lead.sameDayDealStartedAt && (
+                    <span className="text-[11.5px] text-orange-600">
+                      Started {new Date(lead.sameDayDealStartedAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })} · Elapsed {formatElapsed(lead.sameDayDealStartedAt)}
+                    </span>
+                  )}
+                </div>
+                <button onClick={() => handleToggleSameDayDeal(false)} className="text-[11px] text-orange-600 hover:text-orange-800 font-medium">Unmark</button>
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-2 mb-3">
               <span className={`${pillCls} bg-slate-100 text-slate-600`}>Sales: {lead.salesStatus}</span>
               {lead.financeRequired && (
@@ -1193,6 +1273,11 @@ export default function LeadDetailPage() {
                 const sla = computeSla(lead);
                 return !sla.met ? <span className={`${pillCls} bg-red-50 text-red-600`}>⏰ {sla.label}</span> : null;
               })()}
+              {!lead.sameDayDeal && !lead.isLost && lead.salesStatus !== 'CLOSED' && (
+                <button onClick={() => handleToggleSameDayDeal(true)} className="text-[11px] text-slate-400 hover:text-orange-600 font-medium ml-auto">
+                  + Mark Same-Day Deal
+                </button>
+              )}
             </div>
 
             {/* Next Action */}
@@ -1792,6 +1877,61 @@ export default function LeadDetailPage() {
 
       {activeStep === 'finance' && (
       <>
+      {lead.financeRequired && canCreateFinanceCase && (
+        <Section title="Bank Applications (shop multiple banks)">
+          <p className="text-[12px] text-slate-500 mb-3">Track applications sent to several banks in parallel — once one is sanctioned with good terms, finalize it below in Finance Case.</p>
+          <form onSubmit={handleAddFinanceApplication} className="space-y-2 mb-4">
+            <div className="grid grid-cols-2 gap-2">
+              <select className={selectCls} value={faBankId} onChange={(e) => setFaBankId(e.target.value)} required>
+                <option value="">Select bank</option>
+                {banks.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+              <input className={inputCls} placeholder="Application number (optional)" value={faAppNumber} onChange={(e) => setFaAppNumber(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <input type="date" className={inputCls} value={faLoginDate} onChange={(e) => setFaLoginDate(e.target.value)} />
+              <input type="number" className={inputCls} placeholder="Loan amount" value={faLoanAmount} onChange={(e) => setFaLoanAmount(e.target.value)} />
+              <input type="number" className={inputCls} placeholder="Tenure (months)" value={faTenure} onChange={(e) => setFaTenure(e.target.value)} />
+            </div>
+            <button disabled={saving} className={`${primaryBtnCls} w-full`}>+ Add Bank Application</button>
+          </form>
+
+          {financeApplications.length === 0 ? (
+            <p className="text-[13px] text-slate-500">No bank applications logged yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {financeApplications.map((fa: any) => (
+                <div key={fa.id} className="border-t border-slate-100 pt-2.5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[13.5px] font-medium text-slate-800">{fa.bank?.name}{fa.applicationNumber ? ` · ${fa.applicationNumber}` : ''}</p>
+                      <p className="text-[11.5px] text-slate-400">
+                        {fa.loanAmount ? `₹${Number(fa.loanAmount).toLocaleString('en-IN')}` : ''}{fa.tenureMonths ? ` · ${fa.tenureMonths}mo` : ''}
+                        {fa.loginDate ? ` · Login ${new Date(fa.loginDate).toLocaleDateString()}` : ''}
+                      </p>
+                    </div>
+                    <span className={`${pillCls} ${
+                      fa.status === 'SANCTION' ? 'bg-emerald-100 text-emerald-700' :
+                      fa.status === 'REJECTED' || fa.status === 'WITHDRAWN' ? 'bg-red-100 text-red-700' :
+                      fa.status === 'QUERY' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {FA_STATUS_LABEL[fa.status] || fa.status}
+                    </span>
+                  </div>
+                  <select
+                    className={`${selectCls} mt-1.5 text-[12.5px]`}
+                    value={fa.status}
+                    onChange={(e) => handleUpdateFaStatus(fa.id, e.target.value)}
+                    disabled={saving}
+                  >
+                    {FA_STATUSES.map((s) => <option key={s} value={s}>{FA_STATUS_LABEL[s]}</option>)}
+                  </select>
+                </div>
+              ))}
+            </div>
+          )}
+        </Section>
+      )}
       {lead.financeRequired && (
         <Section title="Finance Progress">
           <div className="flex items-center gap-2 flex-wrap mb-3">

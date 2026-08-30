@@ -229,12 +229,13 @@ export default function LeadDetailPage() {
   const [quoteExtraWarranty, setQuoteExtraWarranty] = useState('');
   const [quoteFastag, setQuoteFastag] = useState('');
   const [quoteCrtm, setQuoteCrtm] = useState('');
+  const [quoteRsa, setQuoteRsa] = useState('');
   const [editingQuotation, setEditingQuotation] = useState(false);
   const numOr0 = (v: string) => Number(v) || 0;
   const quoteCalculatedOnRoad = Math.max(
     0,
     numOr0(quoteExShowroom) + numOr0(quoteRto) + numOr0(quoteInsurance) + numOr0(quoteTcs) + numOr0(quoteAccessories) +
-      numOr0(quoteExtraWarranty) + numOr0(quoteFastag) + numOr0(quoteCrtm) + numOr0(quoteOtherCharges) -
+      numOr0(quoteExtraWarranty) + numOr0(quoteFastag) + numOr0(quoteCrtm) + numOr0(quoteRsa) + numOr0(quoteOtherCharges) -
       numOr0(quoteDiscount) - numOr0(quoteExchangeBonus) - numOr0(quoteDealerOffer) - numOr0(quoteManufacturerOffer),
   );
 
@@ -288,6 +289,7 @@ export default function LeadDetailPage() {
   const [calcFastag, setCalcFastag] = useState('');
   const [calcWarranty, setCalcWarranty] = useState('');
   const [calcAccessories, setCalcAccessories] = useState('');
+  const [calcRsa, setCalcRsa] = useState('');
   const [calcDiscount, setCalcDiscount] = useState('');
   const [calcFundingPct, setCalcFundingPct] = useState('90');
   const [calcSuraksha, setCalcSuraksha] = useState('');
@@ -298,7 +300,7 @@ export default function LeadDetailPage() {
   const [calcStamping, setCalcStamping] = useState('');
 
   const n = (v: string) => Number(v) || 0;
-  const calcOnRoad = n(calcExShowroom) + n(calcRto) + n(calcInsurance) + n(calcTcs) + n(calcFastag) + n(calcWarranty) + n(calcAccessories) - n(calcDiscount);
+  const calcOnRoad = n(calcExShowroom) + n(calcRto) + n(calcInsurance) + n(calcTcs) + n(calcFastag) + n(calcWarranty) + n(calcAccessories) + n(calcRsa) - n(calcDiscount);
   const calcBaseLoan = Math.round(n(calcExShowroom) * n(calcFundingPct) / 100);
   const calcTotalLoan = calcBaseLoan + n(calcSuraksha);
   const calcMonthlyRate = n(calcRoi) / 12 / 100;
@@ -319,7 +321,7 @@ export default function LeadDetailPage() {
     setEmi(String(calcEmi));
     setOtherCharges({
       exShowroomPrice: n(calcExShowroom), rto: n(calcRto), insurance: n(calcInsurance), tcs: n(calcTcs),
-      fastag: n(calcFastag), extraWarranty: n(calcWarranty), accessories: n(calcAccessories), discount: n(calcDiscount), onRoadPrice: calcOnRoad,
+      fastag: n(calcFastag), extraWarranty: n(calcWarranty), accessories: n(calcAccessories), rsa: n(calcRsa), discount: n(calcDiscount), onRoadPrice: calcOnRoad,
       fundingPercent: n(calcFundingPct), loanSurakshaAmount: n(calcSuraksha),
       serviceCharge: n(calcServiceCharge), documentCharges: n(calcDocCharges), stampingCharges: n(calcStamping),
       totalDeductions: calcTotalDeductions, netDisbursedAmount: calcNetDisbursed,
@@ -536,6 +538,7 @@ export default function LeadDetailPage() {
     setQuoteExtraWarranty(q.extraWarranty ? String(q.extraWarranty) : '');
     setQuoteFastag(q.fastag ? String(q.fastag) : '');
     setQuoteCrtm(q.crtmCharges ? String(q.crtmCharges) : '');
+    setQuoteRsa(q.rsa ? String(q.rsa) : '');
     setQuoteOtherCharges(q.otherCharges ? String(q.otherCharges) : '');
     setQuoteDiscount(q.discount ? String(q.discount) : '');
     setQuoteExchangeBonus(q.exchangeBonus ? String(q.exchangeBonus) : '');
@@ -565,6 +568,7 @@ export default function LeadDetailPage() {
       extraWarranty: quoteExtraWarranty ? Number(quoteExtraWarranty) : undefined,
       fastag: quoteFastag ? Number(quoteFastag) : undefined,
       crtmCharges: quoteCrtm ? Number(quoteCrtm) : undefined,
+      rsa: quoteRsa ? Number(quoteRsa) : undefined,
     });
     setQuotePrice('');
     setQuoteOnRoad('');
@@ -573,7 +577,7 @@ export default function LeadDetailPage() {
     setQuoteExShowroom(''); setQuoteRto(''); setQuoteInsurance(''); setQuoteAccessories('');
     setQuoteOtherCharges(''); setQuoteDiscount(''); setQuoteExchangeBonus('');
     setQuoteDealerOffer(''); setQuoteManufacturerOffer('');
-    setQuoteTcs(''); setQuoteExtraWarranty(''); setQuoteFastag(''); setQuoteCrtm('');
+    setQuoteTcs(''); setQuoteExtraWarranty(''); setQuoteFastag(''); setQuoteCrtm(''); setQuoteRsa('');
     setEditingQuotation(false);
     setShowQuoteBreakdown(false);
   });
@@ -1183,6 +1187,7 @@ export default function LeadDetailPage() {
                   <input type="number" className={inputCls} placeholder="TCS" value={quoteTcs} onChange={(e) => setQuoteTcs(e.target.value)} />
                   <input type="number" className={inputCls} placeholder="Accessories" value={quoteAccessories} onChange={(e) => setQuoteAccessories(e.target.value)} />
                   <input type="number" className={inputCls} placeholder="Extra Warranty" value={quoteExtraWarranty} onChange={(e) => setQuoteExtraWarranty(e.target.value)} />
+                  <input type="number" className={inputCls} placeholder="RSA" value={quoteRsa} onChange={(e) => setQuoteRsa(e.target.value)} />
                   <input type="number" className={inputCls} placeholder="FASTag" value={quoteFastag} onChange={(e) => setQuoteFastag(e.target.value)} />
                   <input type="number" className={inputCls} placeholder="CRTM charges" value={quoteCrtm} onChange={(e) => setQuoteCrtm(e.target.value)} />
                   <input type="number" className={inputCls} placeholder="Other charges" value={quoteOtherCharges} onChange={(e) => setQuoteOtherCharges(e.target.value)} />
@@ -1219,7 +1224,7 @@ export default function LeadDetailPage() {
               {[
                 ['Ex-showroom', latestQuotation.exShowroomPrice], ['RTO', latestQuotation.rto], ['Insurance', latestQuotation.insurance],
                 ['TCS', latestQuotation.tcs], ['Accessories', latestQuotation.accessories], ['Extra Warranty', latestQuotation.extraWarranty],
-                ['FASTag', latestQuotation.fastag], ['CRTM', latestQuotation.crtmCharges], ['Other charges', latestQuotation.otherCharges],
+                ['FASTag', latestQuotation.fastag], ['CRTM', latestQuotation.crtmCharges], ['RSA', latestQuotation.rsa], ['Other charges', latestQuotation.otherCharges],
                 ['Discount', latestQuotation.discount], ['Exchange bonus', latestQuotation.exchangeBonus], ['Dealer offer', latestQuotation.dealerOffer],
                 ['Manufacturer offer', latestQuotation.manufacturerOffer], ['Exchange value', latestQuotation.exchangeValue],
               ].filter(([, v]) => v).map(([label, v]) => (
@@ -1440,6 +1445,7 @@ export default function LeadDetailPage() {
                     setCalcFastag(latestQuotation.fastag ? String(latestQuotation.fastag) : '');
                     setCalcWarranty(latestQuotation.extraWarranty ? String(latestQuotation.extraWarranty) : '');
                     setCalcAccessories(latestQuotation.accessories ? String(latestQuotation.accessories) : '');
+                    setCalcRsa(latestQuotation.rsa ? String(latestQuotation.rsa) : '');
                     setCalcDiscount(latestQuotation.discount ? String(latestQuotation.discount) : '');
                   }
                   setShowCalculator((v) => !v);
@@ -1454,19 +1460,32 @@ export default function LeadDetailPage() {
                 <div className="border border-emerald-200 rounded-lg p-4 bg-emerald-50/40 space-y-4">
                   <div>
                     <p className="text-xs font-semibold text-slate-600 mb-1">On-Road Price Breakdown</p>
-                    {latestQuotation && (
-                      <p className="text-[11px] text-emerald-700 mb-2">Synced from Sales Quotation v{latestQuotation.version || 1} — read-only here.</p>
+                    {latestQuotation ? (
+                      <>
+                        <p className="text-[11px] text-emerald-700 mb-2">Synced from Sales Quotation v{latestQuotation.version || 1} — read-only here.</p>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[13px] bg-white/60 rounded-lg p-3">
+                          {[
+                            ['Ex-showroom', calcExShowroom], ['RTO', calcRto], ['Insurance', calcInsurance], ['TCS', calcTcs],
+                            ['FASTag', calcFastag], ['Extra Warranty', calcWarranty], ['Accessories', calcAccessories],
+                            ['RSA', calcRsa], ['Discount', calcDiscount],
+                          ].filter(([, v]) => v).map(([label, v]) => (
+                            <p key={label as string}><span className="text-slate-400">{label}:</span> <span className="font-medium text-slate-700">₹{Number(v).toLocaleString('en-IN')}</span></p>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        <input type="number" className={inputCls} placeholder="Ex-showroom price" value={calcExShowroom} onChange={(e) => setCalcExShowroom(e.target.value)} />
+                        <input type="number" className={inputCls} placeholder="RTO" value={calcRto} onChange={(e) => setCalcRto(e.target.value)} />
+                        <input type="number" className={inputCls} placeholder="Insurance" value={calcInsurance} onChange={(e) => setCalcInsurance(e.target.value)} />
+                        <input type="number" className={inputCls} placeholder="TCS" value={calcTcs} onChange={(e) => setCalcTcs(e.target.value)} />
+                        <input type="number" className={inputCls} placeholder="FASTag" value={calcFastag} onChange={(e) => setCalcFastag(e.target.value)} />
+                        <input type="number" className={inputCls} placeholder="Extra Warranty" value={calcWarranty} onChange={(e) => setCalcWarranty(e.target.value)} />
+                        <input type="number" className={inputCls} placeholder="Accessories" value={calcAccessories} onChange={(e) => setCalcAccessories(e.target.value)} />
+                        <input type="number" className={inputCls} placeholder="RSA" value={calcRsa} onChange={(e) => setCalcRsa(e.target.value)} />
+                        <input type="number" className={`${inputCls} col-span-2`} placeholder="Discount (subtracted)" value={calcDiscount} onChange={(e) => setCalcDiscount(e.target.value)} />
+                      </div>
                     )}
-                    <div className="grid grid-cols-2 gap-2">
-                      <input type="number" disabled={!!latestQuotation} className={`${inputCls} disabled:bg-slate-100 disabled:text-slate-500`} placeholder="Ex-showroom price" value={calcExShowroom} onChange={(e) => setCalcExShowroom(e.target.value)} />
-                      <input type="number" disabled={!!latestQuotation} className={`${inputCls} disabled:bg-slate-100 disabled:text-slate-500`} placeholder="RTO" value={calcRto} onChange={(e) => setCalcRto(e.target.value)} />
-                      <input type="number" disabled={!!latestQuotation} className={`${inputCls} disabled:bg-slate-100 disabled:text-slate-500`} placeholder="Insurance" value={calcInsurance} onChange={(e) => setCalcInsurance(e.target.value)} />
-                      <input type="number" disabled={!!latestQuotation} className={`${inputCls} disabled:bg-slate-100 disabled:text-slate-500`} placeholder="TCS" value={calcTcs} onChange={(e) => setCalcTcs(e.target.value)} />
-                      <input type="number" disabled={!!latestQuotation} className={`${inputCls} disabled:bg-slate-100 disabled:text-slate-500`} placeholder="FASTag" value={calcFastag} onChange={(e) => setCalcFastag(e.target.value)} />
-                      <input type="number" disabled={!!latestQuotation} className={`${inputCls} disabled:bg-slate-100 disabled:text-slate-500`} placeholder="Extra Warranty" value={calcWarranty} onChange={(e) => setCalcWarranty(e.target.value)} />
-                      <input type="number" disabled={!!latestQuotation} className={`${inputCls} disabled:bg-slate-100 disabled:text-slate-500`} placeholder="Accessories" value={calcAccessories} onChange={(e) => setCalcAccessories(e.target.value)} />
-                      <input type="number" disabled={!!latestQuotation} className={`${inputCls} col-span-2 disabled:bg-slate-100 disabled:text-slate-500`} placeholder="Discount (subtracted)" value={calcDiscount} onChange={(e) => setCalcDiscount(e.target.value)} />
-                    </div>
                     <p className="text-sm font-semibold mt-2 text-slate-700">On-Road Price: ₹{calcOnRoad.toLocaleString('en-IN')}</p>
                   </div>
 

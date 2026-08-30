@@ -21,6 +21,50 @@ const STEPS = [
   { key: 'timeline', label: '7. Timeline' },
 ];
 
+const SALES_FOLLOWUP_TYPES = [
+  { value: 'CALL', label: 'Call' },
+  { value: 'WHATSAPP', label: 'WhatsApp' },
+  { value: 'VISIT', label: 'Dealer Visit' },
+  { value: 'TEST_DRIVE_FOLLOWUP', label: 'Test Drive Follow-up' },
+  { value: 'QUOTATION_DISCUSSION', label: 'Quotation Discussion' },
+  { value: 'NEGOTIATION', label: 'Negotiation Call' },
+  { value: 'MEETING', label: 'Meeting' },
+];
+const SALES_FOLLOWUP_RESULTS = [
+  { value: 'INTERESTED', label: 'Interested' },
+  { value: 'VERY_INTERESTED', label: 'Very Interested' },
+  { value: 'TEST_DRIVE_SCHEDULED', label: 'Test Drive Scheduled' },
+  { value: 'NEGOTIATING', label: 'Negotiating Price' },
+  { value: 'READY_TO_BOOK', label: 'Ready to Book' },
+  { value: 'PRICE_ISSUE', label: 'Price Issue' },
+  { value: 'WAITING', label: 'Waiting' },
+  { value: 'NOT_INTERESTED', label: 'Not Interested' },
+  { value: 'CALL_LATER', label: 'Call Later' },
+];
+const FINANCE_FOLLOWUP_TYPES = [
+  { value: 'CALL', label: 'Call' },
+  { value: 'WHATSAPP', label: 'WhatsApp' },
+  { value: 'DOCUMENT_FOLLOWUP', label: 'Document Follow-up' },
+  { value: 'BANK_FOLLOWUP', label: 'Bank Follow-up' },
+  { value: 'SANCTION_FOLLOWUP', label: 'Sanction Follow-up' },
+];
+const FINANCE_FOLLOWUP_RESULTS = [
+  { value: 'DOCUMENTS_PENDING', label: 'Documents Pending' },
+  { value: 'DOCUMENTS_RECEIVED', label: 'Documents Received' },
+  { value: 'LOGIN_DONE', label: 'Login Done' },
+  { value: 'BANK_QUERY_RAISED', label: 'Bank Query Raised' },
+  { value: 'AWAITING_SANCTION', label: 'Awaiting Sanction' },
+  { value: 'SANCTIONED', label: 'Sanctioned' },
+  { value: 'FINANCE_REJECTED', label: 'Finance Rejected' },
+  { value: 'WAITING', label: 'Waiting' },
+  { value: 'CALL_LATER', label: 'Call Later' },
+];
+
+const FOLLOWUP_LABEL_LOOKUP: Record<string, string> = Object.fromEntries(
+  [...SALES_FOLLOWUP_TYPES, ...SALES_FOLLOWUP_RESULTS, ...FINANCE_FOLLOWUP_TYPES, ...FINANCE_FOLLOWUP_RESULTS].map((o) => [o.value, o.label]),
+);
+const followUpLabel = (v: string) => FOLLOWUP_LABEL_LOOKUP[v] || v;
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className={`${cardCls} p-5 mb-5`}>
@@ -94,7 +138,7 @@ function buildTimeline(lead: any, negotiations: any[], bankQueries: any[]) {
   });
 
   lead.followUps?.forEach((f: any) => {
-    events.push({ ts: f.createdAt, icon: '📞', title: `Follow-up: ${f.type}`, detail: `${f.result}${f.notes ? ' — ' + f.notes : ''}`, user: f.user?.name });
+    events.push({ ts: f.createdAt, icon: '📞', title: `Follow-up: ${followUpLabel(f.type)}`, detail: `${followUpLabel(f.result)}${f.notes ? ' — ' + f.notes : ''}`, user: f.user?.name });
   });
 
   lead.quotations?.forEach((q: any) => {
@@ -1336,19 +1380,14 @@ export default function LeadDetailPage() {
         <form onSubmit={handleAddFollowUp} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <select className={inputCls} value={followUpType} onChange={(e) => setFollowUpType(e.target.value)}>
-              <option value="CALL">Call</option>
-              <option value="WHATSAPP">WhatsApp</option>
-              <option value="VISIT">Dealer Visit</option>
-              <option value="MEETING">Meeting</option>
+              {(staff?.role === 'FINANCE_EXECUTIVE' || staff?.role === 'FINANCE_ADMIN' ? FINANCE_FOLLOWUP_TYPES : SALES_FOLLOWUP_TYPES).map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
             </select>
             <select className={inputCls} value={followUpResult} onChange={(e) => setFollowUpResult(e.target.value)}>
-              <option value="INTERESTED">Interested</option>
-              <option value="VERY_INTERESTED">Very Interested</option>
-              <option value="PRICE_ISSUE">Price Issue</option>
-              <option value="FINANCE_ISSUE">Finance Issue</option>
-              <option value="WAITING">Waiting</option>
-              <option value="NOT_INTERESTED">Not Interested</option>
-              <option value="CALL_LATER">Call Later</option>
+              {(staff?.role === 'FINANCE_EXECUTIVE' || staff?.role === 'FINANCE_ADMIN' ? FINANCE_FOLLOWUP_RESULTS : SALES_FOLLOWUP_RESULTS).map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
             </select>
           </div>
           <input className={`${inputCls} w-full`} placeholder="Notes (optional)" value={followUpNotes} onChange={(e) => setFollowUpNotes(e.target.value)} />
@@ -1359,7 +1398,7 @@ export default function LeadDetailPage() {
           {lead.followUps?.length === 0 && <p className="text-sm text-slate-500">No follow-ups yet.</p>}
           {lead.followUps?.map((f: any) => (
             <div key={f.id} className="border-t pt-2 text-sm">
-              <p className="font-medium">{f.type} — {f.result}</p>
+              <p className="font-medium">{followUpLabel(f.type)} — {followUpLabel(f.result)}</p>
               {f.notes && <p className="text-slate-600">{f.notes}</p>}
               <p className="text-xs text-slate-400">Next: {new Date(f.nextFollowUpAt).toLocaleString()}</p>
             </div>

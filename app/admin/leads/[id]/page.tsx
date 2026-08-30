@@ -1453,6 +1453,59 @@ export default function LeadDetailPage() {
                   <p><span className="text-slate-500">Tenure:</span> {lead.financeCase.tenureMonths} months · <span className="text-slate-500">ROI:</span> {lead.financeCase.roi}%</p>
                   <p><span className="text-slate-500">EMI:</span> ₹{lead.financeCase.emi}/mo</p>
                   <p><span className="text-slate-500">Stage:</span> {lead.financeCase.stage}</p>
+
+                  {(() => {
+                    let breakdown: any = null;
+                    try {
+                      breakdown = lead.financeCase.otherChargesJson ? JSON.parse(lead.financeCase.otherChargesJson) : null;
+                    } catch {
+                      breakdown = null;
+                    }
+                    const onRoad = breakdown?.onRoadPrice || (lead.financeCase.loanAmount + lead.financeCase.downPayment);
+                    const itemFields: [string, any][] = (breakdown
+                      ? [
+                          ['Ex-showroom', breakdown.exShowroomPrice], ['RTO', breakdown.rto], ['Insurance', breakdown.insurance],
+                          ['TCS', breakdown.tcs], ['FASTag', breakdown.fastag], ['Extra Warranty', breakdown.extraWarranty],
+                          ['Accessories', breakdown.accessories], ['RSA', breakdown.rsa], ['Discount', breakdown.discount],
+                        ] as [string, any][]
+                      : []
+                    ).filter(([, v]) => v);
+
+                    return (
+                      <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mt-3 space-y-3">
+                        <div>
+                          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">On-Road Price Breakdown</p>
+                          {itemFields.length > 0 ? (
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[12.5px]">
+                              {itemFields.map(([label, v]) => (
+                                <p key={label}><span className="text-slate-400">{label}:</span> <span className="font-medium text-slate-700">₹{Number(v).toLocaleString('en-IN')}</span></p>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-[12px] text-slate-400">No itemized breakdown recorded for this case.</p>
+                          )}
+                        </div>
+                        <div className="border-t border-slate-200 pt-2.5">
+                          <p className="text-[13px] text-slate-700">
+                            Down Payment (₹{lead.financeCase.downPayment.toLocaleString('en-IN')}) + Loan Amount (₹{lead.financeCase.loanAmount.toLocaleString('en-IN')})
+                          </p>
+                          <p className="text-[15px] font-bold text-slate-900 mt-0.5">= On-Road Price: ₹{Number(onRoad).toLocaleString('en-IN')}</p>
+                        </div>
+                        {breakdown?.deductions?.length > 0 && (
+                          <div className="border-t border-slate-200 pt-2.5">
+                            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Deductions</p>
+                            {breakdown.deductions.map((d: any, i: number) => (
+                              <p key={i} className="text-[12.5px] text-slate-600 flex justify-between">
+                                <span>{d.label}</span><span>₹{d.amount.toLocaleString('en-IN')}</span>
+                              </p>
+                            ))}
+                            <p className="text-[13.5px] font-bold text-emerald-700 mt-1.5">Net Disbursed to Customer: ₹{Number(breakdown.netDisbursedAmount || 0).toLocaleString('en-IN')}</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   {canCreateFinanceCase && (
                     lead.financeCase.stage === 'FINANCE_COMPLETED' ? (
                       <p className="text-xs text-slate-400 mt-2">🔒 Case closed — details locked.</p>

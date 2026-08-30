@@ -77,6 +77,8 @@ export const api = {
   getExportUrl: (from?: string, to?: string) => `${API_URL}/reports/export?from=${from || ''}&to=${to || ''}`,
   getLead: (id: string) => apiFetch(`/leads/${id}`),
   updateLead: (id: string, data: any) => apiFetch(`/leads/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  updateLeadNextAction: (id: string, data: any) => apiFetch(`/leads/${id}/next-action`, { method: 'PUT', body: JSON.stringify(data) }),
+  updateLeadBlocker: (id: string, blocker: string | null) => apiFetch(`/leads/${id}/blocker`, { method: 'PUT', body: JSON.stringify({ blocker }) }),
   deleteLead: (id: string) => apiFetch(`/leads/${id}`, { method: 'DELETE' }),
   assignLead: (id: string, data: any) => apiFetch(`/leads/${id}/assign`, { method: 'PUT', body: JSON.stringify(data) }),
   updateSalesStatus: (id: string, data: any) => apiFetch(`/leads/${id}/sales-status`, { method: 'PUT', body: JSON.stringify(data) }),

@@ -279,11 +279,62 @@ export default function LeadDetailPage() {
   const [editingLead, setEditingLead] = useState(false);
   const [activeStep, setActiveStep] = useState('overview');
   const [hasAutoNavigated, setHasAutoNavigated] = useState(false);
+  const [editingNextAction, setEditingNextAction] = useState(false);
+  const [nextActionText, setNextActionText] = useState('');
+  const [nextActionOwner, setNextActionOwner] = useState('Sales Executive');
+  const [nextActionDue, setNextActionDue] = useState('');
+  const [editingBlocker, setEditingBlocker] = useState(false);
+  const [blockerText, setBlockerText] = useState('');
   const stepIndex = STEPS.findIndex((s) => s.key === activeStep);
   function goToNextStep() {
     const idx = STEPS.findIndex((s) => s.key === activeStep);
     if (idx >= 0 && idx < STEPS.length - 1) setActiveStep(STEPS[idx + 1].key);
   }
+
+  function startEditingNextAction() {
+    setNextActionText(lead?.nextAction || '');
+    setNextActionOwner(lead?.nextActionOwner || 'Sales Executive');
+    setNextActionDue(lead?.nextActionDueAt ? new Date(lead.nextActionDueAt).toISOString().slice(0, 16) : '');
+    setEditingNextAction(true);
+  }
+
+  async function saveNextAction() {
+    setSaving(true);
+    setError('');
+    try {
+      await api.updateLeadNextAction(id, {
+        nextAction: nextActionText || undefined,
+        nextActionOwner: nextActionOwner || undefined,
+        nextActionDueAt: nextActionDue ? new Date(nextActionDue).toISOString() : undefined,
+      });
+      setEditingNextAction(false);
+      await loadLead();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function startEditingBlocker() {
+    setBlockerText(lead?.blocker || '');
+    setEditingBlocker(true);
+  }
+
+  async function saveBlocker(clear?: boolean) {
+    setSaving(true);
+    setError('');
+    try {
+      await api.updateLeadBlocker(id, clear ? null : blockerText || null);
+      setEditingBlocker(false);
+      await loadLead();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const [catalogue, setCatalogue] = useState<any[]>([]);
   const [editCustomerName, setEditCustomerName] = useState('');
   const [editCustomerMobile, setEditCustomerMobile] = useState('');
@@ -1122,6 +1173,80 @@ export default function LeadDetailPage() {
       {error && (
         <div className="mb-5 bg-red-50 border border-red-200 text-red-700 text-[13px] rounded-lg px-4 py-3">{error}</div>
       )}
+
+      {/* Deal Command Bar — always visible regardless of which step is open,
+          so both Sales and Finance always see where the deal stands. */}
+      {(() => {
+        const health = computeDealHealth(lead, negotiations, bankQueries);
+        const healthStyle = health.level === 'HOT' ? 'bg-red-50 text-red-700 border-red-200' : health.level === 'AT_RISK' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-50 text-slate-600 border-slate-200';
+        return (
+          <div className={`${cardCls} p-4 mb-5`}>
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className={`${pillCls} bg-slate-100 text-slate-600`}>Sales: {lead.salesStatus}</span>
+              {lead.financeRequired && (
+                <span className={`${pillCls} bg-sky-50 text-sky-700`}>Finance: {FINANCE_STATUS_LABEL[lead.financeStatus] || lead.financeStatus}</span>
+              )}
+              <span className={`${pillCls} border ${healthStyle}`}>
+                {health.level === 'HOT' ? '🔥 Hot Deal' : health.level === 'AT_RISK' ? '⚠️ At Risk' : '🌤️ Warm'}
+              </span>
+              {!lead.isLost && lead.salesStatus !== 'CLOSED' && (() => {
+                const sla = computeSla(lead);
+                return !sla.met ? <span className={`${pillCls} bg-red-50 text-red-600`}>⏰ {sla.label}</span> : null;
+              })()}
+            </div>
+
+            {/* Next Action */}
+            {editingNextAction ? (
+              <div className="bg-slate-50 rounded-lg p-3 mb-2 space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <select className={selectCls} value={nextActionOwner} onChange={(e) => setNextActionOwner(e.target.value)}>
+                    <option value="Sales Executive">Sales Executive</option>
+                    <option value="Finance Executive">Finance Executive</option>
+                    <option value="Dealer Manager">Dealer Manager</option>
+                    <option value="Customer">Customer</option>
+                    <option value="Admin">Admin</option>
+                  </select>
+                  <input type="datetime-local" className={inputCls} value={nextActionDue} onChange={(e) => setNextActionDue(e.target.value)} />
+                </div>
+                <input className={`${inputCls} w-full`} placeholder="What needs to happen next?" value={nextActionText} onChange={(e) => setNextActionText(e.target.value)} />
+                <div className="flex gap-2">
+                  <button disabled={saving} onClick={saveNextAction} className={primaryBtnCls}>Save</button>
+                  <button onClick={() => setEditingNextAction(false)} className={secondaryBtnCls}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={startEditingNextAction} className="w-full text-left bg-slate-50 hover:bg-slate-100 rounded-lg px-3 py-2.5 mb-2 transition-colors">
+                {lead.nextAction ? (
+                  <p className="text-[13px] text-slate-700">
+                    <span className="font-semibold">Next: {lead.nextActionOwner}</span> — {lead.nextAction}
+                    {lead.nextActionDueAt && <span className="text-slate-400"> · due {new Date(lead.nextActionDueAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</span>}
+                  </p>
+                ) : (
+                  <p className="text-[13px] text-slate-400">+ Set next action…</p>
+                )}
+              </button>
+            )}
+
+            {/* Blocker */}
+            {editingBlocker ? (
+              <div className="bg-red-50 rounded-lg p-3 space-y-2">
+                <input className={`${inputCls} w-full`} placeholder="What's blocking this deal?" value={blockerText} onChange={(e) => setBlockerText(e.target.value)} />
+                <div className="flex gap-2">
+                  <button disabled={saving} onClick={() => saveBlocker(false)} className="bg-red-600 text-white rounded-lg px-4 py-2 text-sm font-medium">Save Blocker</button>
+                  {lead.blocker && <button disabled={saving} onClick={() => saveBlocker(true)} className={secondaryBtnCls}>Clear Blocker</button>}
+                  <button onClick={() => setEditingBlocker(false)} className={secondaryBtnCls}>Cancel</button>
+                </div>
+              </div>
+            ) : lead.blocker ? (
+              <button onClick={startEditingBlocker} className="w-full text-left bg-red-50 border border-red-200 hover:bg-red-100 rounded-lg px-3 py-2.5 transition-colors">
+                <p className="text-[13px] text-red-700"><span className="font-semibold">⛔ Blocker:</span> {lead.blocker}</p>
+              </button>
+            ) : (
+              <button onClick={startEditingBlocker} className="text-[12px] text-slate-400 hover:text-red-600">+ Flag a blocker</button>
+            )}
+          </div>
+        );
+      })()}
 
       <div className={`${cardCls} px-4 py-4 mb-6 overflow-x-auto`}>
         <div className="flex items-center min-w-max">

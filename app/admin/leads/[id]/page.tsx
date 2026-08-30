@@ -212,7 +212,17 @@ function buildTimeline(lead: any, negotiations: any[], bankQueries: any[]) {
     .sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime());
 }
 
-const FIRST_CONTACT_SLA_HOURS = 24;
+const FIRST_CONTACT_SLA_HOURS_DEFAULT = 24;
+const SAME_DAY_DEAL_TARGET_HOURS_DEFAULT = 6;
+
+const BLOCKER_CATEGORIES: { value: string; label: string }[] = [
+  { value: 'PRICE_APPROVAL', label: 'Price Approval Pending' },
+  { value: 'DOCUMENT_PENDING', label: 'Document Pending' },
+  { value: 'BANK_QUERY', label: 'Bank Query' },
+  { value: 'CUSTOMER_NOT_RESPONDING', label: 'Customer Not Responding' },
+  { value: 'OTHER', label: 'Other' },
+];
+const BLOCKER_CATEGORY_LABEL: Record<string, string> = Object.fromEntries(BLOCKER_CATEGORIES.map((c) => [c.value, c.label]));
 
 function formatElapsed(startedAt: string) {
   const ms = Date.now() - new Date(startedAt).getTime();
@@ -227,13 +237,13 @@ const FA_STATUS_LABEL: Record<string, string> = {
   SANCTION: 'Sanctioned', REJECTED: 'Rejected', WITHDRAWN: 'Withdrawn',
 };
 
-function computeSla(lead: any) {
+function computeSla(lead: any, firstContactSlaHours: number = FIRST_CONTACT_SLA_HOURS_DEFAULT) {
   const followUps = lead.followUps || [];
   const firstContact = followUps.length > 0
     ? [...followUps].sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0]
     : null;
   const createdAt = new Date(lead.createdAt).getTime();
-  const slaMs = FIRST_CONTACT_SLA_HOURS * 60 * 60 * 1000;
+  const slaMs = firstContactSlaHours * 60 * 60 * 1000;
 
   if (firstContact) {
     const elapsedMs = new Date(firstContact.createdAt).getTime() - createdAt;
@@ -249,7 +259,19 @@ function computeSla(lead: any) {
   return { met: true, label: `${remaining}h left for first contact`, contacted: false };
 }
 
-function computeDealHealth(lead: any, negotiations: any[], bankQueries: any[]) {
+function computeNextActionOverdue(lead: any) {
+  if (!lead.nextActionDueAt || !lead.nextAction) return null;
+  const dueMs = new Date(lead.nextActionDueAt).getTime();
+  const remainingMs = dueMs - Date.now();
+  if (remainingMs <= 0) {
+    const overdueHrs = Math.round(-remainingMs / 3600000 * 10) / 10;
+    return { overdue: true, label: `Overdue by ${overdueHrs}h` };
+  }
+  const hrs = Math.round(remainingMs / 3600000 * 10) / 10;
+  return { overdue: false, label: hrs < 1 ? 'Due soon' : `${hrs}h left` };
+}
+
+function computeDealHealth(lead: any, negotiations: any[], bankQueries: any[], firstContactSlaHours?: number) {
   const positives: string[] = [];
   const risks: string[] = [];
 
@@ -264,8 +286,10 @@ function computeDealHealth(lead: any, negotiations: any[], bankQueries: any[]) {
   if (lastFollowUp?.nextFollowUpAt && new Date(lastFollowUp.nextFollowUpAt).getTime() < Date.now()) risks.push('Follow-up Overdue');
   if ((bankQueries || []).some((bq: any) => bq.status === 'OPEN')) risks.push('Open Bank Query');
   if ((negotiations || []).some((n: any) => n.requiresApproval && n.approvalStatus === 'PENDING')) risks.push('Discount Awaiting Approval');
-  const sla = computeSla(lead);
+  const sla = computeSla(lead, firstContactSlaHours);
   if (!sla.met) risks.push('SLA Breach');
+  const nextActionStatus = computeNextActionOverdue(lead);
+  if (nextActionStatus?.overdue) risks.push('Next Action Overdue');
 
   let level: 'HOT' | 'WARM' | 'AT_RISK' = 'WARM';
   if (risks.length > positives.length && risks.length > 0) level = 'AT_RISK';
@@ -298,6 +322,10 @@ export default function LeadDetailPage() {
   const [nextActionDue, setNextActionDue] = useState('');
   const [editingBlocker, setEditingBlocker] = useState(false);
   const [blockerText, setBlockerText] = useState('');
+  const [blockerCategory, setBlockerCategory] = useState('OTHER');
+  const [slaConfig, setSlaConfig] = useState<{ key: string; label: string; hours: number }[]>([]);
+  const firstContactSlaHours = slaConfig.find((s) => s.key === 'FIRST_CONTACT')?.hours ?? FIRST_CONTACT_SLA_HOURS_DEFAULT;
+  const sameDayDealTargetHours = slaConfig.find((s) => s.key === 'SAME_DAY_DEAL_TARGET')?.hours ?? SAME_DAY_DEAL_TARGET_HOURS_DEFAULT;
   const stepIndex = STEPS.findIndex((s) => s.key === activeStep);
   function goToNextStep() {
     const idx = STEPS.findIndex((s) => s.key === activeStep);
@@ -331,6 +359,7 @@ export default function LeadDetailPage() {
 
   function startEditingBlocker() {
     setBlockerText(lead?.blocker || '');
+    setBlockerCategory(lead?.blockerCategory || 'OTHER');
     setEditingBlocker(true);
   }
 
@@ -338,7 +367,7 @@ export default function LeadDetailPage() {
     setSaving(true);
     setError('');
     try {
-      await api.updateLeadBlocker(id, clear ? null : blockerText || null);
+      await api.updateLeadBlocker(id, clear ? null : blockerText || null, clear ? null : blockerCategory);
       setEditingBlocker(false);
       await loadLead();
     } catch (e: any) {
@@ -681,6 +710,7 @@ export default function LeadDetailPage() {
     api.listDealers().then(setDealers).catch(() => {});
     api.listBanks().then(setBanks).catch(() => {});
     api.getFullCatalogue().then(setCatalogue).catch(() => {});
+    api.getSlaConfig().then(setSlaConfig).catch(() => {});
   }, [id]);
 
   // Jump straight to whichever step still has this role's work pending,
@@ -1244,8 +1274,11 @@ export default function LeadDetailPage() {
       {/* Deal Command Bar — always visible regardless of which step is open,
           so both Sales and Finance always see where the deal stands. */}
       {(() => {
-        const health = computeDealHealth(lead, negotiations, bankQueries);
+        const health = computeDealHealth(lead, negotiations, bankQueries, firstContactSlaHours);
         const healthStyle = health.level === 'HOT' ? 'bg-red-50 text-red-700 border-red-200' : health.level === 'AT_RISK' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-50 text-slate-600 border-slate-200';
+        const nextActionStatus = computeNextActionOverdue(lead);
+        const sameDayElapsedHrs = lead.sameDayDeal && lead.sameDayDealStartedAt ? (Date.now() - new Date(lead.sameDayDealStartedAt).getTime()) / 3600000 : 0;
+        const sameDayOverTarget = lead.sameDayDeal && lead.salesStatus !== 'CLOSED' && sameDayElapsedHrs > sameDayDealTargetHours;
         return (
           <div className={`${cardCls} p-4 mb-5`}>
             {lead.sameDayDeal && (
@@ -1256,6 +1289,9 @@ export default function LeadDetailPage() {
                     <span className="text-[11.5px] text-orange-600">
                       Started {new Date(lead.sameDayDealStartedAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })} · Elapsed {formatElapsed(lead.sameDayDealStartedAt)}
                     </span>
+                  )}
+                  {sameDayOverTarget && (
+                    <span className="text-[11px] font-semibold text-red-600">⚠️ Past {sameDayDealTargetHours}h target</span>
                   )}
                 </div>
                 <button onClick={() => handleToggleSameDayDeal(false)} className="text-[11px] text-orange-600 hover:text-orange-800 font-medium">Unmark</button>
@@ -1270,9 +1306,12 @@ export default function LeadDetailPage() {
                 {health.level === 'HOT' ? '🔥 Hot Deal' : health.level === 'AT_RISK' ? '⚠️ At Risk' : '🌤️ Warm'}
               </span>
               {!lead.isLost && lead.salesStatus !== 'CLOSED' && (() => {
-                const sla = computeSla(lead);
+                const sla = computeSla(lead, firstContactSlaHours);
                 return !sla.met ? <span className={`${pillCls} bg-red-50 text-red-600`}>⏰ {sla.label}</span> : null;
               })()}
+              {nextActionStatus?.overdue && (
+                <span className={`${pillCls} bg-red-50 text-red-600`}>⏰ Next Action {nextActionStatus.label}</span>
+              )}
               {!lead.sameDayDeal && !lead.isLost && lead.salesStatus !== 'CLOSED' && (
                 <button onClick={() => handleToggleSameDayDeal(true)} className="text-[11px] text-slate-400 hover:text-orange-600 font-medium ml-auto">
                   + Mark Same-Day Deal
@@ -1300,11 +1339,16 @@ export default function LeadDetailPage() {
                 </div>
               </div>
             ) : (
-              <button onClick={startEditingNextAction} className="w-full text-left bg-slate-50 hover:bg-slate-100 rounded-lg px-3 py-2.5 mb-2 transition-colors">
+              <button onClick={startEditingNextAction} className={`w-full text-left rounded-lg px-3 py-2.5 mb-2 transition-colors ${nextActionStatus?.overdue ? 'bg-red-50 hover:bg-red-100' : 'bg-slate-50 hover:bg-slate-100'}`}>
                 {lead.nextAction ? (
                   <p className="text-[13px] text-slate-700">
                     <span className="font-semibold">Next: {lead.nextActionOwner}</span> — {lead.nextAction}
-                    {lead.nextActionDueAt && <span className="text-slate-400"> · due {new Date(lead.nextActionDueAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</span>}
+                    {lead.nextActionDueAt && (
+                      <span className={nextActionStatus?.overdue ? 'text-red-600 font-medium' : 'text-slate-400'}>
+                        {' '}· due {new Date(lead.nextActionDueAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}
+                        {nextActionStatus && ` (${nextActionStatus.label})`}
+                      </span>
+                    )}
                   </p>
                 ) : (
                   <p className="text-[13px] text-slate-400">+ Set next action…</p>
@@ -1315,7 +1359,10 @@ export default function LeadDetailPage() {
             {/* Blocker */}
             {editingBlocker ? (
               <div className="bg-red-50 rounded-lg p-3 space-y-2">
-                <input className={`${inputCls} w-full`} placeholder="What's blocking this deal?" value={blockerText} onChange={(e) => setBlockerText(e.target.value)} />
+                <select className={selectCls} value={blockerCategory} onChange={(e) => setBlockerCategory(e.target.value)}>
+                  {BLOCKER_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
+                <input className={`${inputCls} w-full`} placeholder="Any additional note (optional)" value={blockerText} onChange={(e) => setBlockerText(e.target.value)} />
                 <div className="flex gap-2">
                   <button disabled={saving} onClick={() => saveBlocker(false)} className="bg-red-600 text-white rounded-lg px-4 py-2 text-sm font-medium">Save Blocker</button>
                   {lead.blocker && <button disabled={saving} onClick={() => saveBlocker(true)} className={secondaryBtnCls}>Clear Blocker</button>}
@@ -1324,7 +1371,9 @@ export default function LeadDetailPage() {
               </div>
             ) : lead.blocker ? (
               <button onClick={startEditingBlocker} className="w-full text-left bg-red-50 border border-red-200 hover:bg-red-100 rounded-lg px-3 py-2.5 transition-colors">
-                <p className="text-[13px] text-red-700"><span className="font-semibold">⛔ Blocker:</span> {lead.blocker}</p>
+                <p className="text-[13px] text-red-700">
+                  <span className="font-semibold">⛔ {BLOCKER_CATEGORY_LABEL[lead.blockerCategory] || 'Blocker'}:</span> {lead.blocker}
+                </p>
               </button>
             ) : (
               <button onClick={startEditingBlocker} className="text-[12px] text-slate-400 hover:text-red-600">+ Flag a blocker</button>

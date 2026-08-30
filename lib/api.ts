@@ -78,7 +78,10 @@ export const api = {
   getLead: (id: string) => apiFetch(`/leads/${id}`),
   updateLead: (id: string, data: any) => apiFetch(`/leads/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   updateLeadNextAction: (id: string, data: any) => apiFetch(`/leads/${id}/next-action`, { method: 'PUT', body: JSON.stringify(data) }),
-  updateLeadBlocker: (id: string, blocker: string | null) => apiFetch(`/leads/${id}/blocker`, { method: 'PUT', body: JSON.stringify({ blocker }) }),
+  updateLeadBlocker: (id: string, blocker: string | null, blockerCategory?: string | null) =>
+    apiFetch(`/leads/${id}/blocker`, { method: 'PUT', body: JSON.stringify({ blocker, blockerCategory }) }),
+  getSlaConfig: () => apiFetch('/leads/sla-config'),
+  updateSlaConfig: (key: string, hours: number) => apiFetch(`/leads/sla-config/${key}`, { method: 'PUT', body: JSON.stringify({ hours }) }),
   setSameDayDeal: (id: string, sameDayDeal: boolean) => apiFetch(`/leads/${id}/same-day-deal`, { method: 'PUT', body: JSON.stringify({ sameDayDeal }) }),
   createFinanceApplication: (data: any) => apiFetch('/finance-applications', { method: 'POST', body: JSON.stringify(data) }),
   listFinanceApplications: (leadId: string) => apiFetch(`/finance-applications?leadId=${leadId}`),

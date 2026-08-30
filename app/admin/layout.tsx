@@ -59,6 +59,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/dealers', label: 'Dealers', icon: IconBuilding, roles: ['SUPER_ADMIN', 'SALES_ADMIN', 'DEALER_MANAGER'] },
     { href: '/admin/banks', label: 'Banks', icon: IconBank, roles: ['SUPER_ADMIN', 'FINANCE_ADMIN'] },
     { href: '/admin/users', label: 'Users', icon: IconUser, roles: ['SUPER_ADMIN'] },
+    { href: '/admin/sla-settings', label: 'SLA Settings', icon: IconClock, roles: ['SUPER_ADMIN', 'SALES_ADMIN', 'FINANCE_ADMIN'] },
     { href: '/admin/notifications', label: 'Notifications', icon: IconBell, roles: null },
   ].filter((item) => !item.roles || item.roles.includes(user?.role || ''));
 

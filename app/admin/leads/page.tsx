@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { getStaffUser } from '@/lib/auth';
 
@@ -33,6 +34,7 @@ function initialsFor(name?: string) {
 
 export default function LeadsListPage() {
   const staff = getStaffUser();
+  const searchParams = useSearchParams();
   const isDealerExec = staff?.role === 'DEALER_EXECUTIVE';
   const isFinanceExec = staff?.role === 'FINANCE_EXECUTIVE';
   const canDelete = staff?.role === 'SUPER_ADMIN' || staff?.role === 'SALES_ADMIN';
@@ -40,7 +42,7 @@ export default function LeadsListPage() {
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
   const [search, setSearch] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);

@@ -71,12 +71,54 @@ function initialsFor(name?: string) {
   return name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
 }
 
+const FINANCE_PIPELINE = [
+  'PENDING', 'DOCUMENTS', 'CIBIL_CHECK', 'LOGIN', 'VERIFICATION', 'BANK_QUERY',
+  'QUERY_RESOLVED', 'SCHEME_FINALIZED', 'SANCTION', 'AGREEMENT', 'DISBURSEMENT', 'FINANCE_COMPLETED',
+];
+const FINANCE_STAGE_LABEL: Record<string, string> = {
+  PENDING: 'Pending', DOCUMENTS: 'Documents', CIBIL_CHECK: 'CIBIL Check', LOGIN: 'Login',
+  VERIFICATION: 'Verification', BANK_QUERY: 'Bank Query', QUERY_RESOLVED: 'Query Resolved',
+  SCHEME_FINALIZED: 'Scheme Finalized', SANCTION: 'Sanction', AGREEMENT: 'Agreement',
+  DISBURSEMENT: 'Disbursement', FINANCE_COMPLETED: 'Completed',
+};
+
+function StageCountStrip({ title, stages, labels, counts, total, accentColor }: {
+  title: string; stages: string[]; labels: Record<string, string>; counts: Record<string, number>; total: number; accentColor: string;
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200/70 p-5 mb-6">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-[14px] font-semibold text-slate-800">{title}</p>
+        <p className="text-[12px] text-slate-400">{total} lead{total === 1 ? '' : 's'}</p>
+      </div>
+      {total === 0 ? (
+        <p className="text-sm text-slate-400">No leads here yet.</p>
+      ) : (
+        <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+          {stages.map((s) => (
+            <div key={s} className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 text-center">
+              <p className="text-[18px] font-semibold tabular-nums" style={{ color: accentColor, fontFamily: 'var(--font-display)' }}>
+                {counts[s] || 0}
+              </p>
+              <p className="text-[10.5px] text-slate-500 mt-0.5 leading-tight">{labels[s] || s}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const staff = getStaffUser();
   const isDealerExec = staff?.role === 'DEALER_EXECUTIVE';
   const isFinanceExec = staff?.role === 'FINANCE_EXECUTIVE';
+  const showSalesDashboard = ['DEALER_EXECUTIVE', 'DEALER_MANAGER', 'SALES_ADMIN', 'SUPER_ADMIN'].includes(staff?.role || '');
+  const showFinanceDashboard = ['FINANCE_EXECUTIVE', 'FINANCE_ADMIN', 'SUPER_ADMIN'].includes(staff?.role || '');
 
   const [leads, setLeads] = useState<any[]>([]);
+  const [followUpLeads, setFollowUpLeads] = useState<any[]>([]);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -88,6 +130,8 @@ export default function DashboardPage() {
       .then(setLeads)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
+    api.getFollowUpDashboard(parts.join('&')).then(setFollowUpLeads).catch(() => {});
+    if (staff?.id) api.listNotifications(staff.id, true).then((n: any[]) => setUnreadNotifCount(n.length)).catch(() => {});
   }, []);
 
   const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -105,7 +149,6 @@ export default function DashboardPage() {
   if (error) return <p className="text-red-600 text-sm">{error}</p>;
 
   const total = leads.length;
-  const activeLeads = leads.filter((l) => !['CLOSED', 'LOST'].includes(l.salesStatus));
   const financeRequired = leads.filter((l) => l.financeRequired);
   const financePending = financeRequired.filter((l) => !['NOT_REQUIRED', 'FINANCE_COMPLETED'].includes(l.financeStatus));
   const won = leads.filter((l) => l.salesStatus === 'CLOSED').length;
@@ -116,34 +159,63 @@ export default function DashboardPage() {
 
   const orderedStages = [...PIPELINE_ORDER, 'HOLD', 'LOST'].filter((s) => statusCounts[s] > 0);
 
+  const financeCounts: Record<string, number> = {};
+  const financeLeadsForDashboard = leads.filter((l) => l.financeRequired);
+  for (const l of financeLeadsForDashboard) {
+    if (l.financeStatus && l.financeStatus !== 'NOT_REQUIRED') financeCounts[l.financeStatus] = (financeCounts[l.financeStatus] || 0) + 1;
+  }
+  const financeStagesWithData = FINANCE_PIPELINE.filter((s) => financeCounts[s] > 0);
+  const financeTotalActive = financeStagesWithData.reduce((sum, s) => sum + financeCounts[s], 0);
+
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const overdueFollowUps = followUpLeads.filter((l) => l.nextFollowUpAt && new Date(l.nextFollowUpAt) < todayStart).length;
+  const dueTodayFollowUps = followUpLeads.filter((l) => l.nextFollowUpAt && new Date(l.nextFollowUpAt) >= todayStart && new Date(l.nextFollowUpAt) < todayEnd).length;
+  const newLeadsCount = statusCounts['NEW'] || 0;
+
   const recentLeads = [...leads]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 6);
 
   return (
     <div>
-      <div className="mb-7">
-        <h1 className="text-[22px] font-semibold text-slate-900 tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
-          {isDealerExec || isFinanceExec ? 'My Dashboard' : 'Dashboard'}
-        </h1>
-        <p className="text-[13px] text-slate-500 mt-0.5">{today}</p>
+      <div className="mb-7 flex items-center justify-between">
+        <div>
+          <h1 className="text-[22px] font-semibold text-slate-900 tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
+            {isDealerExec || isFinanceExec ? 'My Dashboard' : 'Dashboard'}
+          </h1>
+          <p className="text-[13px] text-slate-500 mt-0.5">{today}</p>
+        </div>
+        {unreadNotifCount > 0 && (
+          <Link
+            href="/admin/notifications"
+            className="flex items-center gap-1.5 text-[12.5px] font-medium text-red-600 bg-red-50 border border-red-200 rounded-full px-3 py-1.5 hover:bg-red-100 transition-colors"
+          >
+            🔔 {unreadNotifCount} unread notification{unreadNotifCount === 1 ? '' : 's'}
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-4 gap-4 mb-6">
-        <StatCard
-          label="Total Leads"
-          value={String(total)}
-          sub="All time"
-          icon={<IconUsers className="w-5 h-5 text-slate-600" />}
-          tint="bg-slate-100"
-        />
-        <StatCard
-          label="Active Leads"
-          value={String(activeLeads.length)}
-          sub="In the sales pipeline"
-          icon={<IconTarget className="w-5 h-5 text-[#B4872E]" />}
-          tint="bg-[#FBF3E1]"
-        />
+        <Link href="/admin/leads?status=NEW">
+          <StatCard
+            label="New Leads"
+            value={String(newLeadsCount)}
+            sub="Not yet contacted"
+            icon={<IconUsers className="w-5 h-5 text-slate-600" />}
+            tint="bg-slate-100"
+          />
+        </Link>
+        <Link href="/admin/follow-ups">
+          <StatCard
+            label="Follow-ups"
+            value={String(dueTodayFollowUps)}
+            sub={overdueFollowUps > 0 ? `${overdueFollowUps} overdue` : 'Due today'}
+            icon={<IconTarget className="w-5 h-5 text-[#B4872E]" />}
+            tint="bg-[#FBF3E1]"
+          />
+        </Link>
         <StatCard
           label="Finance Pending"
           value={String(financePending.length)}
@@ -159,6 +231,28 @@ export default function DashboardPage() {
           tint="bg-emerald-50"
         />
       </div>
+
+      {showSalesDashboard && (
+        <StageCountStrip
+          title="Sales Pipeline — Stage Counts"
+          stages={[...PIPELINE_ORDER]}
+          labels={STAGE_LABEL}
+          counts={statusCounts}
+          total={total}
+          accentColor="#B4872E"
+        />
+      )}
+
+      {showFinanceDashboard && (
+        <StageCountStrip
+          title="Finance Pipeline — Stage Counts"
+          stages={financeStagesWithData.length > 0 ? financeStagesWithData : FINANCE_PIPELINE}
+          labels={FINANCE_STAGE_LABEL}
+          counts={financeCounts}
+          total={financeTotalActive}
+          accentColor="#0369A1"
+        />
+      )}
 
       <div className="bg-white rounded-2xl border border-slate-200/70 p-5 mb-6">
         <div className="flex items-center justify-between mb-4">

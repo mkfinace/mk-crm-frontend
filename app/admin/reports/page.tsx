@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { getToken } from '@/lib/auth';
+import { getToken, getStaffUser } from '@/lib/auth';
 import { cardCls, inputCls, primaryBtnCls, secondaryBtnCls } from '@/components/adminStyles';
 
 const STAGE_LABEL: Record<string, string> = {
@@ -110,7 +110,10 @@ export default function ReportsPage() {
           <h1 className="text-[22px] font-semibold text-slate-900 tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
             Reports
           </h1>
-          <p className="text-[13px] text-slate-500 mt-0.5">Sales pipeline, finance pipeline, and dealer performance.</p>
+          <p className="text-[13px] text-slate-500 mt-0.5">
+            Sales pipeline, finance pipeline, and dealer performance.
+            {getStaffUser()?.role === 'DEALER_MANAGER' && <span className="text-amber-600"> Showing your dealership only.</span>}
+          </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <input type="date" className={inputCls} value={from} onChange={(e) => setFrom(e.target.value)} />
@@ -210,7 +213,8 @@ export default function ReportsPage() {
           )}
 
           {tab === 'dealer' && dealer && (
-            <div className="grid md:grid-cols-2 gap-5">
+            <>
+            <div className="grid md:grid-cols-2 gap-5 mb-5">
               <div className={`${cardCls} p-5`}>
                 <h3 className="text-[13px] font-semibold text-slate-700 mb-4">By Dealer</h3>
                 {dealer.byDealer.length === 0 && <p className="text-[12.5px] text-slate-400">No dealer-assigned leads yet.</p>}
@@ -224,20 +228,49 @@ export default function ReportsPage() {
                   </div>
                 ))}
               </div>
-              <div className={`${cardCls} p-5`}>
-                <h3 className="text-[13px] font-semibold text-slate-700 mb-4">By Executive</h3>
-                {dealer.byExecutive.length === 0 && <p className="text-[12.5px] text-slate-400">No executive-assigned leads yet.</p>}
-                {dealer.byExecutive.map((e: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between py-2.5 border-b border-slate-100 last:border-0 text-[13px]">
-                    <div>
-                      <p className="font-medium text-slate-800">{e.execName}</p>
-                      <p className="text-[11.5px] text-slate-400">{e.dealerName} · {e.total} leads · {e.closed} closed</p>
-                    </div>
-                    <span className="font-semibold text-slate-700">{e.conversionRate}%</span>
-                  </div>
-                ))}
-              </div>
             </div>
+
+            <div className={`${cardCls} p-5 overflow-x-auto`}>
+              <h3 className="text-[13px] font-semibold text-slate-700 mb-4">Executive Performance</h3>
+              {dealer.byExecutive.length === 0 ? (
+                <p className="text-[12.5px] text-slate-400">No executive-assigned leads yet.</p>
+              ) : (
+                <table className="w-full text-[12.5px] min-w-[720px]">
+                  <thead>
+                    <tr className="text-left text-slate-400 border-b border-slate-100">
+                      <th className="py-2 pr-3 font-medium">Executive</th>
+                      <th className="py-2 px-3 font-medium">Leads</th>
+                      <th className="py-2 px-3 font-medium">First Contact %</th>
+                      <th className="py-2 px-3 font-medium">Quotations</th>
+                      <th className="py-2 px-3 font-medium">Test Drives</th>
+                      <th className="py-2 px-3 font-medium">Bookings</th>
+                      <th className="py-2 px-3 font-medium">Conversion</th>
+                      <th className="py-2 px-3 font-medium">Avg Closure</th>
+                      <th className="py-2 pl-3 font-medium">Finance Conv.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dealer.byExecutive.map((e: any, i: number) => (
+                      <tr key={i} className="border-b border-slate-50 last:border-0">
+                        <td className="py-2.5 pr-3">
+                          <p className="font-medium text-slate-800">{e.execName}</p>
+                          <p className="text-[11px] text-slate-400">{e.dealerName}</p>
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-700">{e.total}</td>
+                        <td className="py-2.5 px-3 text-slate-700">{e.firstContactPct}%</td>
+                        <td className="py-2.5 px-3 text-slate-700">{e.quotations}</td>
+                        <td className="py-2.5 px-3 text-slate-700">{e.testDrives}</td>
+                        <td className="py-2.5 px-3 text-slate-700">{e.bookings}</td>
+                        <td className="py-2.5 px-3 font-semibold text-slate-800">{e.conversionRate}%</td>
+                        <td className="py-2.5 px-3 text-slate-700">{e.avgClosureDays !== null ? `${e.avgClosureDays}d` : '—'}</td>
+                        <td className="py-2.5 pl-3 text-slate-700">{e.financeConversion !== null ? `${e.financeConversion}%` : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </>
           )}
         </>
       )}

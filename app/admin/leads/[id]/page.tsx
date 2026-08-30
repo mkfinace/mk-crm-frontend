@@ -225,6 +225,10 @@ export default function LeadDetailPage() {
   const [quoteExchangeBonus, setQuoteExchangeBonus] = useState('');
   const [quoteDealerOffer, setQuoteDealerOffer] = useState('');
   const [quoteManufacturerOffer, setQuoteManufacturerOffer] = useState('');
+  const [quoteTcs, setQuoteTcs] = useState('');
+  const [quoteExtraWarranty, setQuoteExtraWarranty] = useState('');
+  const [quoteFastag, setQuoteFastag] = useState('');
+  const [quoteCrtm, setQuoteCrtm] = useState('');
 
   const [testDriveDate, setTestDriveDate] = useState('');
 
@@ -517,6 +521,10 @@ export default function LeadDetailPage() {
       exchangeBonus: quoteExchangeBonus ? Number(quoteExchangeBonus) : undefined,
       dealerOffer: quoteDealerOffer ? Number(quoteDealerOffer) : undefined,
       manufacturerOffer: quoteManufacturerOffer ? Number(quoteManufacturerOffer) : undefined,
+      tcs: quoteTcs ? Number(quoteTcs) : undefined,
+      extraWarranty: quoteExtraWarranty ? Number(quoteExtraWarranty) : undefined,
+      fastag: quoteFastag ? Number(quoteFastag) : undefined,
+      crtmCharges: quoteCrtm ? Number(quoteCrtm) : undefined,
     });
     setQuotePrice('');
     setQuoteOnRoad('');
@@ -525,6 +533,7 @@ export default function LeadDetailPage() {
     setQuoteExShowroom(''); setQuoteRto(''); setQuoteInsurance(''); setQuoteAccessories('');
     setQuoteOtherCharges(''); setQuoteDiscount(''); setQuoteExchangeBonus('');
     setQuoteDealerOffer(''); setQuoteManufacturerOffer('');
+    setQuoteTcs(''); setQuoteExtraWarranty(''); setQuoteFastag(''); setQuoteCrtm('');
     setShowQuoteBreakdown(false);
   });
 
@@ -1110,6 +1119,10 @@ export default function LeadDetailPage() {
                 <input type="number" className={inputCls} placeholder="Exchange bonus" value={quoteExchangeBonus} onChange={(e) => setQuoteExchangeBonus(e.target.value)} />
                 <input type="number" className={inputCls} placeholder="Dealer offer" value={quoteDealerOffer} onChange={(e) => setQuoteDealerOffer(e.target.value)} />
                 <input type="number" className={inputCls} placeholder="Manufacturer offer" value={quoteManufacturerOffer} onChange={(e) => setQuoteManufacturerOffer(e.target.value)} />
+                <input type="number" className={inputCls} placeholder="TCS" value={quoteTcs} onChange={(e) => setQuoteTcs(e.target.value)} />
+                <input type="number" className={inputCls} placeholder="Extra Warranty" value={quoteExtraWarranty} onChange={(e) => setQuoteExtraWarranty(e.target.value)} />
+                <input type="number" className={inputCls} placeholder="FASTag" value={quoteFastag} onChange={(e) => setQuoteFastag(e.target.value)} />
+                <input type="number" className={inputCls} placeholder="CRTM charges" value={quoteCrtm} onChange={(e) => setQuoteCrtm(e.target.value)} />
               </div>
             )}
 

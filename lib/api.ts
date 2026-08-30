@@ -108,6 +108,20 @@ export const api = {
   getWarrantyByVariant: (variantId: string) => apiFetch(`/variants/${variantId}/warranty`),
   upsertWarranty: (variantId: string, data: any) => apiFetch(`/variants/${variantId}/warranty`, { method: 'PUT', body: JSON.stringify(data) }),
 
+  // Car Data Submissions (Draft -> Approve -> Publish)
+  createCarDataSubmission: (data: any) => apiFetch('/car-data-submissions', { method: 'POST', body: JSON.stringify(data) }),
+  listMySubmissions: (status?: string) => apiFetch(`/car-data-submissions/mine${status ? `?status=${status}` : ''}`),
+  listAllSubmissions: (status?: string, variantId?: string) => {
+    const q = new URLSearchParams();
+    if (status) q.set('status', status);
+    if (variantId) q.set('variantId', variantId);
+    const qs = q.toString();
+    return apiFetch(`/car-data-submissions${qs ? `?${qs}` : ''}`);
+  },
+  getSubmission: (id: string) => apiFetch(`/car-data-submissions/${id}`),
+  approveSubmission: (id: string, reviewNotes?: string) => apiFetch(`/car-data-submissions/${id}/approve`, { method: 'PUT', body: JSON.stringify({ reviewNotes }) }),
+  rejectSubmission: (id: string, reviewNotes?: string) => apiFetch(`/car-data-submissions/${id}/reject`, { method: 'PUT', body: JSON.stringify({ reviewNotes }) }),
+
   // Auth (customer OTP)
   requestOtp: (mobile: string) => apiFetch('/auth/otp/request', { method: 'POST', body: JSON.stringify({ mobile }) }),
   verifyOtp: (mobile: string, code: string) => apiFetch('/auth/otp/verify', { method: 'POST', body: JSON.stringify({ mobile, code }) }),

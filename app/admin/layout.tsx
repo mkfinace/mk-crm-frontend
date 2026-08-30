@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Manrope } from 'next/font/google';
 import { getStaffUser, clearStaffUser, StaffUser } from '@/lib/auth';
 import {
-  IconGrid, IconUsers, IconCar, IconBuilding, IconBank, IconUser, IconBell, IconLogout, IconLayers, IconEdit, IconChart, IconClock, IconFlag, IconHistory, IconShieldLock,
+  IconGrid, IconUsers, IconCar, IconBuilding, IconBank, IconUser, IconBell, IconLogout, IconLayers, IconEdit, IconChart, IconClock, IconFlag, IconHistory, IconShieldLock, IconRupee,
 } from '@/components/AdminIcons';
 
 const manrope = Manrope({ subsets: ['latin'], weight: ['500', '600', '700', '800'], variable: '--font-display' });
@@ -57,6 +57,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/field-builder', label: 'Field Builder', icon: IconLayers, roles: ['SUPER_ADMIN', 'SALES_ADMIN'] },
     { href: '/admin/feature-library', label: 'Feature Library', icon: IconLayers, roles: ['SUPER_ADMIN', 'SALES_ADMIN'] },
     { href: '/admin/colour-library', label: 'Colour Library', icon: IconLayers, roles: ['SUPER_ADMIN', 'SALES_ADMIN'] },
+    { href: '/admin/pricing', label: 'Pricing', icon: IconRupee, roles: ['SUPER_ADMIN', 'SALES_ADMIN'] },
     { href: '/admin/site-content', label: 'Site Content', icon: IconEdit, roles: ['SUPER_ADMIN', 'SALES_ADMIN'] },
     { href: '/admin/dealers', label: 'Dealers', icon: IconBuilding, roles: ['SUPER_ADMIN', 'SALES_ADMIN', 'DEALER_MANAGER'] },
     { href: '/admin/banks', label: 'Banks', icon: IconBank, roles: ['SUPER_ADMIN', 'FINANCE_ADMIN'] },

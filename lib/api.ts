@@ -82,6 +82,22 @@ export const api = {
   setVehicleColoursByVariant: (variantId: string, items: { colourId: string; imageUrl?: string; isDefault?: boolean }[]) =>
     apiFetch(`/variants/${variantId}/colours`, { method: 'PUT', body: JSON.stringify({ items }) }),
 
+  // Pricing
+  createPrice: (data: any) => apiFetch('/pricing', { method: 'POST', body: JSON.stringify(data) }),
+  getCurrentPrice: (variantId: string, dealerId?: string, city?: string) => {
+    const q = new URLSearchParams({ variantId });
+    if (dealerId) q.set('dealerId', dealerId);
+    if (city) q.set('city', city);
+    return apiFetch(`/pricing/current?${q.toString()}`);
+  },
+  getPriceHistory: (variantId: string, dealerId?: string, city?: string) => {
+    const q = new URLSearchParams({ variantId });
+    if (dealerId) q.set('dealerId', dealerId);
+    if (city) q.set('city', city);
+    return apiFetch(`/pricing/history?${q.toString()}`);
+  },
+  listCitiesWithPricing: () => apiFetch('/pricing/cities'),
+
   // Auth (customer OTP)
   requestOtp: (mobile: string) => apiFetch('/auth/otp/request', { method: 'POST', body: JSON.stringify({ mobile }) }),
   verifyOtp: (mobile: string, code: string) => apiFetch('/auth/otp/verify', { method: 'POST', body: JSON.stringify({ mobile, code }) }),

@@ -7,7 +7,13 @@ import { getStaffUser } from '@/lib/auth';
 import { inputCls, selectCls, primaryBtnCls, secondaryBtnCls, cardCls, pillCls, dangerTextBtnCls, linkBtnCls } from '@/components/adminStyles';
 
 const SALES_STATUSES = ['NEW', 'CONTACTED', 'QUALIFIED', 'INTERESTED', 'TEST_DRIVE', 'QUOTATION', 'NEGOTIATION', 'BOOKING', 'DELIVERY', 'CLOSED', 'HOLD', 'LOST'];
-const FINANCE_STATUSES = ['NOT_REQUIRED', 'PENDING', 'DOCUMENTS', 'LOGIN', 'VERIFICATION', 'BANK_QUERY', 'QUERY_RESOLVED', 'SANCTION', 'AGREEMENT', 'DISBURSEMENT', 'FINANCE_COMPLETED'];
+const FINANCE_STATUSES = ['NOT_REQUIRED', 'PENDING', 'DOCUMENTS', 'CIBIL_CHECK', 'LOGIN', 'VERIFICATION', 'BANK_QUERY', 'QUERY_RESOLVED', 'SCHEME_FINALIZED', 'SANCTION', 'AGREEMENT', 'DISBURSEMENT', 'FINANCE_COMPLETED'];
+const FINANCE_STATUS_LABEL: Record<string, string> = {
+  NOT_REQUIRED: 'Not Required', PENDING: 'Pending', DOCUMENTS: 'Documents Collection', CIBIL_CHECK: 'CIBIL Check',
+  LOGIN: 'File Login', VERIFICATION: 'Verification', BANK_QUERY: 'Bank Query', QUERY_RESOLVED: 'Query Resolved',
+  SCHEME_FINALIZED: 'Scheme Finalized', SANCTION: 'Sanctioned', AGREEMENT: 'Agreement Signed',
+  DISBURSEMENT: 'Disbursement', FINANCE_COMPLETED: 'Finance Completed',
+};
 const LOST_REASONS = ['Price High', 'Other Brand', 'Other Dealer', 'Finance Rejected', 'Loan Amount Issue', 'Purchase Postponed', 'No Response', 'Not Interested', 'Other'];
 const DOC_TYPES = ['Aadhaar', 'PAN', 'Address Proof', 'Income Proof', 'Bank Statement', 'ITR', 'GST'];
 
@@ -1416,10 +1422,10 @@ export default function LeadDetailPage() {
               <p className="text-xs font-semibold text-slate-600 mb-1.5">Finance Status</p>
               {canEditFinanceStatus ? (
                 <select className={`${inputCls} w-full`} value={financeStatus} onChange={(e) => setFinanceStatus(e.target.value)}>
-                  {FINANCE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  {FINANCE_STATUSES.map((s) => <option key={s} value={s}>{FINANCE_STATUS_LABEL[s] || s}</option>)}
                 </select>
               ) : (
-                <p className={`${pillCls} bg-slate-100 text-slate-600 inline-block`}>{lead.financeStatus}</p>
+                <p className={`${pillCls} bg-slate-100 text-slate-600 inline-block`}>{FINANCE_STATUS_LABEL[lead.financeStatus] || lead.financeStatus}</p>
               )}
             </div>
           )}
@@ -1661,6 +1667,44 @@ export default function LeadDetailPage() {
 
       {activeStep === 'finance' && (
       <>
+      {lead.financeRequired && (
+        <Section title="Finance Progress">
+          <div className="flex items-center gap-2 flex-wrap mb-3">
+            {['DOCUMENTS', 'CIBIL_CHECK', 'LOGIN', 'VERIFICATION', 'SCHEME_FINALIZED', 'SANCTION', 'AGREEMENT', 'DISBURSEMENT', 'FINANCE_COMPLETED'].map((s, i, arr) => {
+              const currentIdx = arr.indexOf(lead.financeStatus);
+              const done = currentIdx >= 0 && i < currentIdx;
+              const active = lead.financeStatus === s;
+              return (
+                <div key={s} className="flex items-center">
+                  {i > 0 && <div className={`w-4 h-[2px] ${done ? 'bg-emerald-400' : 'bg-slate-200'}`} />}
+                  <span
+                    className={`text-[11px] font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${
+                      active ? 'bg-gradient-to-br from-[#D8B155] to-[#B4872E] text-[#0B1220]' : done ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'
+                    }`}
+                  >
+                    {FINANCE_STATUS_LABEL[s]}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          {canEditFinanceStatus ? (
+            <div className="flex items-end gap-3">
+              <div className="flex-1">
+                <label className="text-[11px] text-slate-500 block mb-1">Update Finance Stage</label>
+                <select className={`${inputCls} w-full`} value={financeStatus} onChange={(e) => setFinanceStatus(e.target.value)}>
+                  {FINANCE_STATUSES.filter((s) => s !== 'NOT_REQUIRED').map((s) => (
+                    <option key={s} value={s}>{FINANCE_STATUS_LABEL[s] || s}</option>
+                  ))}
+                </select>
+              </div>
+              <button disabled={saving} onClick={handleFinanceStatusUpdate} className={primaryBtnCls}>Update</button>
+            </div>
+          ) : (
+            <p className="text-[12px] text-slate-400">Current stage: {FINANCE_STATUS_LABEL[lead.financeStatus] || lead.financeStatus}</p>
+          )}
+        </Section>
+      )}
       <Section title="Documents">
         <form onSubmit={handleAddDocument} className="space-y-3 mb-5">
           <div className="grid grid-cols-2 gap-3">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import { api } from '@/lib/api';
 import { getStaffUser } from '@/lib/auth';
 import { getSocket } from '@/lib/socket';
@@ -2436,6 +2437,11 @@ export default function LeadDetailPage() {
 
       {activeStep === 'timeline' && (
       <Section title="Complete Activity Timeline">
+        <div className="flex justify-end mb-3 -mt-1">
+          <Link href={`/admin/audit-logs?entity=Lead&entityId=${id}`} className={linkBtnCls}>
+            View full field-level audit log →
+          </Link>
+        </div>
         {(() => {
           const events = buildTimeline(lead, negotiations, bankQueries);
           if (events.length === 0) return <p className="text-sm text-slate-500">No activity recorded yet.</p>;

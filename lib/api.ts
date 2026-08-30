@@ -82,6 +82,14 @@ export const api = {
     apiFetch(`/leads/${id}/blocker`, { method: 'PUT', body: JSON.stringify({ blocker, blockerCategory }) }),
   getSlaConfig: () => apiFetch('/leads/sla-config'),
   updateSlaConfig: (key: string, hours: number) => apiFetch(`/leads/sla-config/${key}`, { method: 'PUT', body: JSON.stringify({ hours }) }),
+  getAuditLogs: (params?: { entity?: string; entityId?: string; userId?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.entity) q.set('entity', params.entity);
+    if (params?.entityId) q.set('entityId', params.entityId);
+    if (params?.userId) q.set('userId', params.userId);
+    const qs = q.toString();
+    return apiFetch(`/audit-logs${qs ? `?${qs}` : ''}`);
+  },
   setSameDayDeal: (id: string, sameDayDeal: boolean) => apiFetch(`/leads/${id}/same-day-deal`, { method: 'PUT', body: JSON.stringify({ sameDayDeal }) }),
   createFinanceApplication: (data: any) => apiFetch('/finance-applications', { method: 'POST', body: JSON.stringify(data) }),
   listFinanceApplications: (leadId: string) => apiFetch(`/finance-applications?leadId=${leadId}`),

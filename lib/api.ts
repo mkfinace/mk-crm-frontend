@@ -58,6 +58,30 @@ export const api = {
   updateVariant: (id: string, data: any) => apiFetch(`/catalogue/variants/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteVariant: (id: string) => apiFetch(`/catalogue/variants/${id}`, { method: 'DELETE' }),
 
+  // Feature Library
+  listFeatures: (includeArchived?: boolean) => apiFetch(`/features${includeArchived ? '?includeArchived=true' : ''}`),
+  createFeature: (data: any) => apiFetch('/features', { method: 'POST', body: JSON.stringify(data) }),
+  updateFeature: (id: string, data: any) => apiFetch(`/features/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteFeature: (id: string) => apiFetch(`/features/${id}`, { method: 'DELETE' }),
+  getVariantFeatures: (variantId: string) => apiFetch(`/variants/${variantId}/features`),
+  setVariantFeatures: (variantId: string, items: { featureId: string; applicability: string }[]) =>
+    apiFetch(`/variants/${variantId}/features`, { method: 'PUT', body: JSON.stringify({ items }) }),
+
+  // Colour Library
+  listColours: (includeArchived?: boolean, type?: string) => {
+    const q = new URLSearchParams();
+    if (includeArchived) q.set('includeArchived', 'true');
+    if (type) q.set('type', type);
+    const qs = q.toString();
+    return apiFetch(`/colours${qs ? `?${qs}` : ''}`);
+  },
+  createColour: (data: any) => apiFetch('/colours', { method: 'POST', body: JSON.stringify(data) }),
+  updateColour: (id: string, data: any) => apiFetch(`/colours/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteColour: (id: string) => apiFetch(`/colours/${id}`, { method: 'DELETE' }),
+  getVehicleColoursByVariant: (variantId: string) => apiFetch(`/variants/${variantId}/colours`),
+  setVehicleColoursByVariant: (variantId: string, items: { colourId: string; imageUrl?: string; isDefault?: boolean }[]) =>
+    apiFetch(`/variants/${variantId}/colours`, { method: 'PUT', body: JSON.stringify({ items }) }),
+
   // Auth (customer OTP)
   requestOtp: (mobile: string) => apiFetch('/auth/otp/request', { method: 'POST', body: JSON.stringify({ mobile }) }),
   verifyOtp: (mobile: string, code: string) => apiFetch('/auth/otp/verify', { method: 'POST', body: JSON.stringify({ mobile, code }) }),

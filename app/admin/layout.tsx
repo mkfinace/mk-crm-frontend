@@ -55,6 +55,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/catalogue', label: 'Catalogue', icon: IconCar, roles: ['SUPER_ADMIN', 'SALES_ADMIN'] },
     { href: '/admin/car-data', label: 'Car Data', icon: IconCar, roles: ['SUPER_ADMIN', 'SALES_ADMIN'] },
     { href: '/admin/field-builder', label: 'Field Builder', icon: IconLayers, roles: ['SUPER_ADMIN', 'SALES_ADMIN'] },
+    { href: '/admin/feature-library', label: 'Feature Library', icon: IconLayers, roles: ['SUPER_ADMIN', 'SALES_ADMIN'] },
+    { href: '/admin/colour-library', label: 'Colour Library', icon: IconLayers, roles: ['SUPER_ADMIN', 'SALES_ADMIN'] },
     { href: '/admin/site-content', label: 'Site Content', icon: IconEdit, roles: ['SUPER_ADMIN', 'SALES_ADMIN'] },
     { href: '/admin/dealers', label: 'Dealers', icon: IconBuilding, roles: ['SUPER_ADMIN', 'SALES_ADMIN', 'DEALER_MANAGER'] },
     { href: '/admin/banks', label: 'Banks', icon: IconBank, roles: ['SUPER_ADMIN', 'FINANCE_ADMIN'] },

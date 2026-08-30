@@ -97,11 +97,16 @@ export default function CarDataPage() {
   const [variantId, setVariantId] = useState('');
 
   const [values, setValues] = useState<Record<string, FieldVal>>({});
-  const [colours, setColours] = useState<{ name: string; hex: string }[]>([]);
   const [images, setImages] = useState<string[]>([]);
-  const [colourName, setColourName] = useState('');
-  const [colourHex, setColourHex] = useState('#1E3A5F');
   const [imageUrl, setImageUrl] = useState('');
+
+  // Feature Library — assignment for the current variant.
+  const [libraryFeatures, setLibraryFeatures] = useState<any[]>([]);
+  const [variantFeatures, setVariantFeatures] = useState<Record<string, string>>({}); // featureId -> applicability
+
+  // Colour Library — assignment for the current variant's vehicle.
+  const [libraryColours, setLibraryColours] = useState<any[]>([]);
+  const [vehicleColours, setVehicleColours] = useState<Record<string, { imageUrl?: string; isDefault?: boolean }>>({}); // colourId -> {}
 
   const [loading, setLoading] = useState(true);
   const [loadingVariant, setLoadingVariant] = useState(false);
@@ -120,10 +125,12 @@ export default function CarDataPage() {
   const [bulkProgress, setBulkProgress] = useState('');
 
   useEffect(() => {
-    Promise.all([api.getFullCatalogue(), api.listFieldCategories()])
-      .then(([cat, cats]) => {
+    Promise.all([api.getFullCatalogue(), api.listFieldCategories(), api.listFeatures(), api.listColours()])
+      .then(([cat, cats, feats, cols]) => {
         setCatalogue(cat);
         setFieldCategories(cats);
+        setLibraryFeatures(feats);
+        setLibraryColours(cols);
         const brandParam = searchParams.get('brand');
         const modelParam = searchParams.get('model');
         const variantParam = searchParams.get('variant');
@@ -147,9 +154,11 @@ export default function CarDataPage() {
     setEditingFieldIds(new Set());
     setShowAddMore(false);
     try {
-      const [fieldValues, vehicle] = await Promise.all([
+      const [fieldValues, vehicle, vFeatures, vColours] = await Promise.all([
         api.listFieldValuesForVariant(vId),
         api.getVehicleByVariant(vId),
+        api.getVariantFeatures(vId),
+        api.getVehicleColoursByVariant(vId),
       ]);
       const v: Record<string, FieldVal> = {};
       for (const fv of fieldValues) {
@@ -161,8 +170,15 @@ export default function CarDataPage() {
         };
       }
       setValues(v);
-      setColours(vehicle.colours || []);
       setImages(vehicle.images || []);
+
+      const feats: Record<string, string> = {};
+      for (const vf of vFeatures) feats[vf.featureId] = vf.applicability;
+      setVariantFeatures(feats);
+
+      const cols: Record<string, { imageUrl?: string; isDefault?: boolean }> = {};
+      for (const vc of vColours) cols[vc.colourId] = { imageUrl: vc.imageUrl || undefined, isDefault: vc.isDefault };
+      setVehicleColours(cols);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -207,7 +223,9 @@ export default function CarDataPage() {
       for (const [fieldId, v] of entries) {
         await api.setFieldValue({ fieldId, variantId, ...v, applicability: v.applicability || 'STANDARD' });
       }
-      await api.upsertVehicle(variantId, { colours, images });
+      await api.upsertVehicle(variantId, { images });
+      await api.setVariantFeatures(variantId, Object.entries(variantFeatures).map(([featureId, applicability]) => ({ featureId, applicability })));
+      await api.setVehicleColoursByVariant(variantId, Object.entries(vehicleColours).map(([colourId, opts]) => ({ colourId, ...opts })));
       setSavedMsg('Saved.');
       setEditingFieldIds(new Set());
       setTimeout(() => setSavedMsg(''), 2500);
@@ -218,13 +236,35 @@ export default function CarDataPage() {
     }
   }
 
-  function addColour() {
-    if (!colourName.trim()) return;
-    setColours((prev) => [...prev, { name: colourName.trim(), hex: colourHex }]);
-    setColourName('');
+  function toggleFeature(featureId: string, applicability: string | null) {
+    setVariantFeatures((prev) => {
+      const next = { ...prev };
+      if (applicability === null) delete next[featureId];
+      else next[featureId] = applicability;
+      return next;
+    });
   }
-  function removeColour(idx: number) {
-    setColours((prev) => prev.filter((_, i) => i !== idx));
+
+  function toggleColour(colourId: string, checked: boolean) {
+    setVehicleColours((prev) => {
+      const next = { ...prev };
+      if (!checked) {
+        delete next[colourId];
+      } else {
+        next[colourId] = { isDefault: Object.keys(next).length === 0 };
+      }
+      return next;
+    });
+  }
+  function setDefaultColour(colourId: string) {
+    setVehicleColours((prev) => {
+      const next: typeof prev = {};
+      for (const [id, v] of Object.entries(prev)) next[id] = { ...v, isDefault: id === colourId };
+      return next;
+    });
+  }
+  function setColourImage(colourId: string, imageUrl: string) {
+    setVehicleColours((prev) => ({ ...prev, [colourId]: { ...prev[colourId], imageUrl: imageUrl || undefined } }));
   }
   function addImage() {
     if (!imageUrl.trim()) return;
@@ -429,22 +469,72 @@ export default function CarDataPage() {
       {variantId && !loadingVariant && (
         <>
           <div className={`${cardCls} p-5 mb-4`}>
-            <p className="text-[13px] font-semibold text-slate-700 mb-3.5">Colours</p>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {colours.map((c, i) => (
-                <span key={i} className="flex items-center gap-2 text-[12.5px] bg-slate-50 border border-slate-100 rounded-full pl-1.5 pr-3 py-1">
-                  <span className="w-4 h-4 rounded-full border border-slate-200 shrink-0" style={{ backgroundColor: c.hex }} />
-                  {c.name}
-                  <button onClick={() => removeColour(i)} className="text-slate-400 hover:text-red-600 transition-colors">×</button>
-                </span>
-              ))}
-              {colours.length === 0 && <p className="text-[13px] text-slate-400">No colours added yet.</p>}
-            </div>
-            <div className="flex gap-2">
-              <input type="color" value={colourHex} onChange={(e) => setColourHex(e.target.value)} className="w-10 h-[38px] rounded-lg border border-slate-200 cursor-pointer shrink-0" />
-              <input className={`${inputCls} flex-1`} placeholder="Colour name (e.g. Pearl White)" value={colourName} onChange={(e) => setColourName(e.target.value)} />
-              <button onClick={addColour} type="button" className={secondaryBtnCls}>Add</button>
-            </div>
+            <p className="text-[13px] font-semibold text-slate-700 mb-1">Features</p>
+            <p className="text-[12px] text-slate-400 mb-3.5">Pick from the <a href="/admin/feature-library" className="underline hover:text-slate-600">Feature Library</a> and set how each applies to this variant.</p>
+            {libraryFeatures.length === 0 ? (
+              <p className="text-[13px] text-slate-400">No features in the library yet — add some in Feature Library first.</p>
+            ) : (
+              <div className="space-y-3">
+                {Object.entries(
+                  libraryFeatures.reduce((acc: Record<string, any[]>, f) => {
+                    (acc[f.category || 'Uncategorised'] ||= []).push(f);
+                    return acc;
+                  }, {})
+                ).map(([cat, feats]) => (
+                  <div key={cat}>
+                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">{cat}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {feats.map((f: any) => {
+                        const applicability = variantFeatures[f.id];
+                        return (
+                          <div key={f.id} className={`flex items-center gap-1.5 rounded-full border pl-2.5 pr-1 py-1 text-[12px] ${applicability ? 'bg-[#FBF3E1] border-[#D8B155]/50 text-[#96701F]' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
+                            {f.icon && <span>{f.icon}</span>}
+                            <span>{f.name}</span>
+                            <select
+                              className="bg-transparent text-[11px] border-0 outline-none cursor-pointer"
+                              value={applicability || ''}
+                              onChange={(e) => toggleFeature(f.id, e.target.value || null)}
+                            >
+                              <option value="">Not set</option>
+                              <option value="STANDARD">Standard</option>
+                              <option value="OPTIONAL">Optional</option>
+                              <option value="NOT_AVAILABLE">N/A</option>
+                            </select>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className={`${cardCls} p-5 mb-4`}>
+            <p className="text-[13px] font-semibold text-slate-700 mb-1">Colours</p>
+            <p className="text-[12px] text-slate-400 mb-3.5">Pick from the <a href="/admin/colour-library" className="underline hover:text-slate-600">Colour Library</a>. Tick a colour to assign it, star one as default.</p>
+            {libraryColours.length === 0 ? (
+              <p className="text-[13px] text-slate-400">No colours in the library yet — add some in Colour Library first.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {libraryColours.map((c) => {
+                  const assigned = vehicleColours[c.id];
+                  return (
+                    <div key={c.id} className={`flex items-center gap-1.5 rounded-full border pl-1.5 pr-2.5 py-1 text-[12.5px] ${assigned ? 'bg-slate-50 border-slate-300' : 'bg-white border-slate-100 opacity-60'}`}>
+                      <button onClick={() => toggleColour(c.id, !assigned)} className="flex items-center gap-1.5">
+                        <span className="w-4 h-4 rounded-full border border-slate-200 shrink-0" style={{ backgroundColor: c.hexCode }} />
+                        <span className="text-slate-700">{c.name}</span>
+                      </button>
+                      {assigned && (
+                        <button onClick={() => setDefaultColour(c.id)} title="Set as default" className={assigned.isDefault ? 'text-amber-500' : 'text-slate-300 hover:text-amber-400'}>
+                          {assigned.isDefault ? '★' : '☆'}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className={`${cardCls} p-5 mb-4`}>

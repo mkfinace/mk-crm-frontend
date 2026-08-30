@@ -909,25 +909,47 @@ export default function LeadDetailPage() {
     setEditTenure(String(lead.financeCase.tenureMonths ?? ''));
     setEditRoi(String(lead.financeCase.roi ?? ''));
     setEditEmi(String(lead.financeCase.emi ?? ''));
-    // Pre-fill the calculator with whatever breakdown was saved before, so
-    // "Recalculate" starts from the real numbers instead of blank fields.
-    try {
-      const existing = lead.financeCase.otherChargesJson ? JSON.parse(lead.financeCase.otherChargesJson) : null;
-      if (existing) {
-        setCalcExShowroom(existing.exShowroomPrice ? String(existing.exShowroomPrice) : '');
-        setCalcRto(existing.rto ? String(existing.rto) : '');
-        setCalcInsurance(existing.insurance ? String(existing.insurance) : '');
-        setCalcTcs(existing.tcs ? String(existing.tcs) : '');
-        setCalcFastag(existing.fastag ? String(existing.fastag) : '');
-        setCalcWarranty(existing.extraWarranty ? String(existing.extraWarranty) : '');
-        setCalcAccessories(existing.accessories ? String(existing.accessories) : '');
-        setCalcRsa(existing.rsa ? String(existing.rsa) : '');
-        setCalcDiscount(existing.discount ? String(existing.discount) : '');
-        setCalcDeductions(existing.deductions || []);
+    // Prefer the LIVE Sales Quotation as the source of truth for the
+    // breakdown (so discount etc. always stays in sync with Sales) —
+    // fall back to whatever was saved on the Finance Case only if there's
+    // no quotation at all.
+    if (latestQuotation) {
+      setCalcExShowroom(latestQuotation.exShowroomPrice ? String(latestQuotation.exShowroomPrice) : '');
+      setCalcRto(latestQuotation.rto ? String(latestQuotation.rto) : '');
+      setCalcInsurance(latestQuotation.insurance ? String(latestQuotation.insurance) : '');
+      setCalcTcs(latestQuotation.tcs ? String(latestQuotation.tcs) : '');
+      setCalcFastag(latestQuotation.fastag ? String(latestQuotation.fastag) : '');
+      setCalcWarranty(latestQuotation.extraWarranty ? String(latestQuotation.extraWarranty) : '');
+      setCalcAccessories(latestQuotation.accessories ? String(latestQuotation.accessories) : '');
+      setCalcRsa(latestQuotation.rsa ? String(latestQuotation.rsa) : '');
+      setCalcDiscount(latestQuotation.discount ? String(latestQuotation.discount) : '');
+      try {
+        const existing = lead.financeCase.otherChargesJson ? JSON.parse(lead.financeCase.otherChargesJson) : null;
+        setCalcDeductions(existing?.deductions || []);
+        setEditOtherCharges(existing);
+      } catch {
+        setCalcDeductions([]);
+        setEditOtherCharges(null);
       }
-      setEditOtherCharges(existing);
-    } catch {
-      setEditOtherCharges(null);
+    } else {
+      try {
+        const existing = lead.financeCase.otherChargesJson ? JSON.parse(lead.financeCase.otherChargesJson) : null;
+        if (existing) {
+          setCalcExShowroom(existing.exShowroomPrice ? String(existing.exShowroomPrice) : '');
+          setCalcRto(existing.rto ? String(existing.rto) : '');
+          setCalcInsurance(existing.insurance ? String(existing.insurance) : '');
+          setCalcTcs(existing.tcs ? String(existing.tcs) : '');
+          setCalcFastag(existing.fastag ? String(existing.fastag) : '');
+          setCalcWarranty(existing.extraWarranty ? String(existing.extraWarranty) : '');
+          setCalcAccessories(existing.accessories ? String(existing.accessories) : '');
+          setCalcRsa(existing.rsa ? String(existing.rsa) : '');
+          setCalcDiscount(existing.discount ? String(existing.discount) : '');
+          setCalcDeductions(existing.deductions || []);
+        }
+        setEditOtherCharges(existing);
+      } catch {
+        setEditOtherCharges(null);
+      }
     }
     setCalcRoi(String(lead.financeCase.roi ?? ''));
     setCalcTenure(String(lead.financeCase.tenureMonths ?? ''));

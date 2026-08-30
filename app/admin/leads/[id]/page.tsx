@@ -312,7 +312,9 @@ export default function LeadDetailPage() {
       : 0;
   const calcTotalDeductions = calcDeductions.reduce((sum, d) => sum + d.amount, 0);
   const calcNetDisbursed = calcTotalLoan - calcTotalDeductions;
-  const calcDownPayment = calcOnRoad - calcTotalLoan;
+  // Down payment must cover whatever the loan does NOT actually put in hand —
+  // that includes the bank's own deduction charges, not just the gross loan.
+  const calcDownPayment = calcOnRoad - calcNetDisbursed;
 
   const DEDUCTION_TYPES = ['Service Charge', 'Document Charges', 'Stamping', 'Processing Fee', 'Hypothecation Charges', 'Other'];
 
@@ -1500,6 +1502,19 @@ export default function LeadDetailPage() {
                               </p>
                             ))}
                             <p className="text-[13.5px] font-bold text-emerald-700 mt-1.5">Net Disbursed to Customer: ₹{Number(breakdown.netDisbursedAmount || 0).toLocaleString('en-IN')}</p>
+                            {(() => {
+                              const gap = Number(onRoad) - (lead.financeCase.downPayment + Number(breakdown.netDisbursedAmount || 0));
+                              if (gap <= 0) return null;
+                              return (
+                                <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
+                                  <p className="text-[12px] text-amber-800">
+                                    ⚠ Down Payment + Net Disbursed = ₹{(lead.financeCase.downPayment + Number(breakdown.netDisbursedAmount || 0)).toLocaleString('en-IN')} —
+                                    this is <b>₹{gap.toLocaleString('en-IN')} short</b> of the On-Road Price (this Down Payment was set before deductions, so it doesn't cover the bank's charges yet).
+                                    <b> Collect this extra ₹{gap.toLocaleString('en-IN')}</b> from the customer, or edit the Down Payment above to include it.
+                                  </p>
+                                </div>
+                              );
+                            })()}
                           </div>
                         )}
                       </div>
@@ -1587,7 +1602,7 @@ export default function LeadDetailPage() {
                     </div>
                     <p className="text-sm mt-2 text-slate-700">Base Loan (funding %): ₹{calcBaseLoan.toLocaleString('en-IN')}</p>
                     <p className="text-sm font-semibold text-slate-700">Total Loan Amount: ₹{calcTotalLoan.toLocaleString('en-IN')}</p>
-                    <p className="text-xs text-slate-500">Approx. Down Payment: ₹{Math.max(0, calcDownPayment).toLocaleString('en-IN')}</p>
+                    <p className="text-xs text-slate-500">Down Payment needed (covers bank deductions too): ₹{Math.max(0, calcDownPayment).toLocaleString('en-IN')}</p>
                   </div>
 
                   <div className="border-t border-emerald-200 pt-3">

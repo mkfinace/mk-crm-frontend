@@ -30,6 +30,46 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+// Clean receipt-style price breakdown: itemized charges, subtotal, then
+// discount/offers subtracted, then final total — used consistently for
+// Quotation, Finance Case, and the Loan Calculator's synced view.
+function PriceBreakdownReceipt({
+  charges, deductions, finalTotal,
+}: {
+  charges: [string, number | undefined | null][];
+  deductions: [string, number | undefined | null][];
+  finalTotal: number;
+}) {
+  const filledCharges = charges.filter(([, v]) => v) as [string, number][];
+  const filledDeductions = deductions.filter(([, v]) => v) as [string, number][];
+  const subtotal = filledCharges.reduce((s, [, v]) => s + v, 0);
+
+  return (
+    <div className="text-[13px]">
+      {filledCharges.map(([label, v]) => (
+        <div key={label} className="flex justify-between py-1 border-b border-slate-100 last:border-0">
+          <span className="text-slate-500">{label}</span>
+          <span className="font-medium text-slate-800">₹{v.toLocaleString('en-IN')}</span>
+        </div>
+      ))}
+      <div className="flex justify-between py-1.5 mt-1.5 border-t border-slate-300 font-semibold text-slate-700">
+        <span>On-Road Price</span>
+        <span>₹{subtotal.toLocaleString('en-IN')}</span>
+      </div>
+      {filledDeductions.map(([label, v]) => (
+        <div key={label} className="flex justify-between py-1 text-red-600">
+          <span>{label}</span>
+          <span>−₹{v.toLocaleString('en-IN')}</span>
+        </div>
+      ))}
+      <div className="flex justify-between py-1.5 mt-1 border-t-2 border-slate-400 font-bold text-slate-900 text-[14.5px]">
+        <span>{filledDeductions.length > 0 ? 'After Discount' : 'Total'}</span>
+        <span>₹{finalTotal.toLocaleString('en-IN')}</span>
+      </div>
+    </div>
+  );
+}
+
 const ACTION_LABEL: Record<string, string> = {
   FINANCE_CASE_SUBMITTED_FOR_APPROVAL: 'Finance case submitted for approval',
   FINANCE_CASE_CREATED: 'Finance case created',
@@ -1236,19 +1276,22 @@ export default function LeadDetailPage() {
                 <button onClick={startEditingQuotation} className={linkBtnCls}>Edit</button>
               )}
             </div>
-            <p className="text-[15px] font-semibold text-slate-800">₹{(latestQuotation.price / 100000).toFixed(2)}L <span className="text-slate-400 font-normal text-[13px]">on-road ₹{(latestQuotation.onRoadPrice / 100000).toFixed(2)}L</span></p>
             <p className="text-[12px] text-slate-500 mb-2.5">Valid till {new Date(latestQuotation.validTill).toLocaleDateString()}</p>
-            <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-[12.5px]">
-              {[
+            <PriceBreakdownReceipt
+              charges={[
                 ['Ex-showroom', latestQuotation.exShowroomPrice], ['RTO', latestQuotation.rto], ['Insurance', latestQuotation.insurance],
                 ['TCS', latestQuotation.tcs], ['Accessories', latestQuotation.accessories], ['Extra Warranty', latestQuotation.extraWarranty],
                 ['FASTag', latestQuotation.fastag], ['CRTM', latestQuotation.crtmCharges], ['RSA', latestQuotation.rsa], ['Other charges', latestQuotation.otherCharges],
-                ['Discount', latestQuotation.discount], ['Exchange bonus', latestQuotation.exchangeBonus], ['Dealer offer', latestQuotation.dealerOffer],
-                ['Manufacturer offer', latestQuotation.manufacturerOffer], ['Exchange value', latestQuotation.exchangeValue],
-              ].filter(([, v]) => v).map(([label, v]) => (
-                <p key={label as string}><span className="text-slate-400">{label}:</span> ₹{Number(v).toLocaleString('en-IN')}</p>
-              ))}
-            </div>
+              ]}
+              deductions={[
+                ['Discount', latestQuotation.discount], ['Exchange bonus', latestQuotation.exchangeBonus],
+                ['Dealer offer', latestQuotation.dealerOffer], ['Manufacturer offer', latestQuotation.manufacturerOffer],
+              ]}
+              finalTotal={latestQuotation.onRoadPrice}
+            />
+            {latestQuotation.exchangeValue ? (
+              <p className="text-[12px] text-slate-500 mt-2">Exchange value: ₹{Number(latestQuotation.exchangeValue).toLocaleString('en-IN')}</p>
+            ) : null}
           </div>
         )}
 
@@ -1464,25 +1507,19 @@ export default function LeadDetailPage() {
                       breakdown = null;
                     }
                     const onRoad = breakdown?.onRoadPrice || (lead.financeCase.loanAmount + lead.financeCase.downPayment);
-                    const itemFields: [string, any][] = (breakdown
-                      ? [
-                          ['Ex-showroom', breakdown.exShowroomPrice], ['RTO', breakdown.rto], ['Insurance', breakdown.insurance],
-                          ['TCS', breakdown.tcs], ['FASTag', breakdown.fastag], ['Extra Warranty', breakdown.extraWarranty],
-                          ['Accessories', breakdown.accessories], ['RSA', breakdown.rsa], ['Discount', breakdown.discount],
-                        ] as [string, any][]
-                      : []
-                    ).filter(([, v]) => v);
+                    const chargeFields: [string, any][] = [
+                      ['Ex-showroom', breakdown?.exShowroomPrice], ['RTO', breakdown?.rto], ['Insurance', breakdown?.insurance],
+                      ['TCS', breakdown?.tcs], ['FASTag', breakdown?.fastag], ['Extra Warranty', breakdown?.extraWarranty],
+                      ['Accessories', breakdown?.accessories], ['RSA', breakdown?.rsa],
+                    ];
+                    const hasBreakdown = chargeFields.some(([, v]) => v);
 
                     return (
                       <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mt-3 space-y-3">
                         <div>
                           <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">On-Road Price Breakdown</p>
-                          {itemFields.length > 0 ? (
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[12.5px]">
-                              {itemFields.map(([label, v]) => (
-                                <p key={label}><span className="text-slate-400">{label}:</span> <span className="font-medium text-slate-700">₹{Number(v).toLocaleString('en-IN')}</span></p>
-                              ))}
-                            </div>
+                          {hasBreakdown ? (
+                            <PriceBreakdownReceipt charges={chargeFields} deductions={[['Discount', breakdown?.discount]]} finalTotal={Number(onRoad)} />
                           ) : (
                             <p className="text-[12px] text-slate-400">No itemized breakdown recorded for this case.</p>
                           )}
@@ -1562,14 +1599,16 @@ export default function LeadDetailPage() {
                     {latestQuotation ? (
                       <>
                         <p className="text-[11px] text-emerald-700 mb-2">Synced from Sales Quotation v{latestQuotation.version || 1} — read-only here.</p>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[13px] bg-white/60 rounded-lg p-3">
-                          {[
-                            ['Ex-showroom', calcExShowroom], ['RTO', calcRto], ['Insurance', calcInsurance], ['TCS', calcTcs],
-                            ['FASTag', calcFastag], ['Extra Warranty', calcWarranty], ['Accessories', calcAccessories],
-                            ['RSA', calcRsa], ['Discount', calcDiscount],
-                          ].filter(([, v]) => v).map(([label, v]) => (
-                            <p key={label as string}><span className="text-slate-400">{label}:</span> <span className="font-medium text-slate-700">₹{Number(v).toLocaleString('en-IN')}</span></p>
-                          ))}
+                        <div className="bg-white/60 rounded-lg p-3">
+                          <PriceBreakdownReceipt
+                            charges={[
+                              ['Ex-showroom', Number(calcExShowroom) || null], ['RTO', Number(calcRto) || null], ['Insurance', Number(calcInsurance) || null],
+                              ['TCS', Number(calcTcs) || null], ['FASTag', Number(calcFastag) || null], ['Extra Warranty', Number(calcWarranty) || null],
+                              ['Accessories', Number(calcAccessories) || null], ['RSA', Number(calcRsa) || null],
+                            ]}
+                            deductions={[['Discount', Number(calcDiscount) || null]]}
+                            finalTotal={calcOnRoad}
+                          />
                         </div>
                       </>
                     ) : (
@@ -1585,7 +1624,9 @@ export default function LeadDetailPage() {
                         <input type="number" className={`${inputCls} col-span-2`} placeholder="Discount (subtracted)" value={calcDiscount} onChange={(e) => setCalcDiscount(e.target.value)} />
                       </div>
                     )}
-                    <p className="text-sm font-semibold mt-2 text-slate-700">On-Road Price: ₹{calcOnRoad.toLocaleString('en-IN')}</p>
+                    {!latestQuotation && (
+                      <p className="text-sm font-semibold mt-2 text-slate-700">On-Road Price: ₹{calcOnRoad.toLocaleString('en-IN')}</p>
+                    )}
                   </div>
 
                   <div className="border-t border-emerald-200 pt-3">

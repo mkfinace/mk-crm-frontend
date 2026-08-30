@@ -12,14 +12,29 @@ const LOST_REASONS = ['Price High', 'Other Brand', 'Other Dealer', 'Finance Reje
 const DOC_TYPES = ['Aadhaar', 'PAN', 'Address Proof', 'Income Proof', 'Bank Statement', 'ITR', 'GST'];
 
 const STEPS = [
-  { key: 'overview', label: '1. Overview' },
-  { key: 'assignment', label: '2. Assignment & Status' },
-  { key: 'followup', label: '3. Follow-ups & Notes' },
-  { key: 'sales', label: '4. Sales Process' },
-  { key: 'finance', label: '5. Documents & Finance' },
-  { key: 'closing', label: '6. Booking & Delivery' },
-  { key: 'timeline', label: '7. Timeline' },
+  { key: 'overview', label: 'Overview' },
+  { key: 'assignment', label: 'Assignment & Status' },
+  { key: 'followup', label: 'Follow-ups & Notes' },
+  { key: 'sales', label: 'Sales Process' },
+  { key: 'finance', label: 'Documents & Finance' },
+  { key: 'closing', label: 'Booking & Delivery' },
+  { key: 'timeline', label: 'Timeline' },
 ];
+
+// Whether each step's work looks done — drives the green checkmarks on the
+// stepper, visible to both Sales and Finance so each side can see the
+// other's progress at a glance without switching tabs.
+function computeStepCompletion(lead: any): Record<string, boolean> {
+  return {
+    overview: true,
+    assignment: !!lead.dealerExecutiveId && (!lead.financeRequired || !!lead.financeExecutiveId),
+    followup: (lead.followUps?.length || 0) > 0,
+    sales: (lead.quotations?.length || 0) > 0,
+    finance: !lead.financeRequired || lead.financeCase?.stage === 'FINANCE_COMPLETED',
+    closing: lead.delivery?.status === 'DELIVERED',
+    timeline: false,
+  };
+}
 
 const SALES_FOLLOWUP_TYPES = [
   { value: 'CALL', label: 'Call' },
@@ -259,6 +274,10 @@ export default function LeadDetailPage() {
   const [activeStep, setActiveStep] = useState('overview');
   const [hasAutoNavigated, setHasAutoNavigated] = useState(false);
   const stepIndex = STEPS.findIndex((s) => s.key === activeStep);
+  function goToNextStep() {
+    const idx = STEPS.findIndex((s) => s.key === activeStep);
+    if (idx >= 0 && idx < STEPS.length - 1) setActiveStep(STEPS[idx + 1].key);
+  }
   const [catalogue, setCatalogue] = useState<any[]>([]);
   const [editCustomerName, setEditCustomerName] = useState('');
   const [editCustomerMobile, setEditCustomerMobile] = useState('');
@@ -1077,6 +1096,7 @@ export default function LeadDetailPage() {
 
   const selectedBrandModels = catalogue.find((b) => b.id === editBrandId)?.models || [];
   const selectedModelVariants = selectedBrandModels.find((m: any) => m.id === editModelId)?.variants || [];
+  const stepCompletion = computeStepCompletion(lead);
 
   return (
     <div className="max-w-4xl">
@@ -1097,20 +1117,36 @@ export default function LeadDetailPage() {
         <div className="mb-5 bg-red-50 border border-red-200 text-red-700 text-[13px] rounded-lg px-4 py-3">{error}</div>
       )}
 
-      <div className="flex gap-1.5 mb-6 overflow-x-auto pb-1 -mx-1 px-1">
-        {STEPS.map((s) => (
-          <button
-            key={s.key}
-            onClick={() => setActiveStep(s.key)}
-            className={`text-[12.5px] font-medium px-3.5 py-2 rounded-full whitespace-nowrap border transition-colors ${
-              activeStep === s.key
-                ? 'bg-gradient-to-br from-[#D8B155] to-[#B4872E] text-[#0B1220] border-transparent shadow-sm'
-                : 'bg-white text-slate-600 border-slate-200 hover:border-[#D8B155]/50 hover:text-[#96701F]'
-            }`}
-          >
-            {s.label}
-          </button>
-        ))}
+      <div className={`${cardCls} px-4 py-4 mb-6 overflow-x-auto`}>
+        <div className="flex items-center min-w-max">
+          {STEPS.map((s, i) => {
+            const done = stepCompletion[s.key];
+            const active = activeStep === s.key;
+            return (
+              <div key={s.key} className="flex items-center">
+                {i > 0 && (
+                  <div className={`w-8 h-[2px] ${stepCompletion[STEPS[i - 1].key] ? 'bg-emerald-400' : 'bg-slate-200'}`} />
+                )}
+                <button onClick={() => setActiveStep(s.key)} className="flex flex-col items-center gap-1.5 px-2 group">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-semibold border-2 transition-colors ${
+                      active
+                        ? 'bg-gradient-to-br from-[#D8B155] to-[#B4872E] text-[#0B1220] border-transparent shadow-sm'
+                        : done
+                        ? 'bg-emerald-500 text-white border-emerald-500'
+                        : 'bg-white text-slate-400 border-slate-200 group-hover:border-[#D8B155]/50'
+                    }`}
+                  >
+                    {done && !active ? '✓' : i + 1}
+                  </div>
+                  <span className={`text-[10.5px] font-medium whitespace-nowrap ${active ? 'text-[#96701F]' : done ? 'text-emerald-700' : 'text-slate-400'}`}>
+                    {s.label}
+                  </span>
+                </button>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {activeStep === 'overview' && (
@@ -1400,10 +1436,11 @@ export default function LeadDetailPage() {
             onClick={async () => {
               if (canEditSalesStatus) await handleSalesStatusUpdate();
               if (canEditFinanceStatus && lead.financeRequired) await handleFinanceStatusUpdate();
+              goToNextStep();
             }}
             className={`${primaryBtnCls} mt-3`}
           >
-            Update Status
+            Update Status & Next →
           </button>
         )}
         {!canEditSalesStatus && !canEditFinanceStatus && (

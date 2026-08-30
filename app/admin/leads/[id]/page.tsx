@@ -229,6 +229,7 @@ export default function LeadDetailPage() {
   const [quoteExtraWarranty, setQuoteExtraWarranty] = useState('');
   const [quoteFastag, setQuoteFastag] = useState('');
   const [quoteCrtm, setQuoteCrtm] = useState('');
+  const [editingQuotation, setEditingQuotation] = useState(false);
 
   const [testDriveDate, setTestDriveDate] = useState('');
 
@@ -509,6 +510,34 @@ export default function LeadDetailPage() {
     setFollowUpDate('');
   });
 
+  const latestQuotation = lead.quotations?.length > 0
+    ? [...lead.quotations].sort((a: any, b: any) => (b.version || 1) - (a.version || 1))[0]
+    : null;
+
+  function startEditingQuotation() {
+    if (!latestQuotation) return;
+    const q = latestQuotation;
+    setQuotePrice(String(q.price ?? ''));
+    setQuoteOnRoad(String(q.onRoadPrice ?? ''));
+    setQuoteExchange(q.exchangeValue ? String(q.exchangeValue) : '');
+    setQuoteValidTill(q.validTill ? new Date(q.validTill).toISOString().slice(0, 10) : '');
+    setQuoteExShowroom(q.exShowroomPrice ? String(q.exShowroomPrice) : '');
+    setQuoteRto(q.rto ? String(q.rto) : '');
+    setQuoteInsurance(q.insurance ? String(q.insurance) : '');
+    setQuoteTcs(q.tcs ? String(q.tcs) : '');
+    setQuoteAccessories(q.accessories ? String(q.accessories) : '');
+    setQuoteExtraWarranty(q.extraWarranty ? String(q.extraWarranty) : '');
+    setQuoteFastag(q.fastag ? String(q.fastag) : '');
+    setQuoteCrtm(q.crtmCharges ? String(q.crtmCharges) : '');
+    setQuoteOtherCharges(q.otherCharges ? String(q.otherCharges) : '');
+    setQuoteDiscount(q.discount ? String(q.discount) : '');
+    setQuoteExchangeBonus(q.exchangeBonus ? String(q.exchangeBonus) : '');
+    setQuoteDealerOffer(q.dealerOffer ? String(q.dealerOffer) : '');
+    setQuoteManufacturerOffer(q.manufacturerOffer ? String(q.manufacturerOffer) : '');
+    setShowQuoteBreakdown(true);
+    setEditingQuotation(true);
+  }
+
   const handleAddQuotation = withSaving(async () => {
     await api.createQuotation({
       leadId: id,
@@ -538,6 +567,7 @@ export default function LeadDetailPage() {
     setQuoteOtherCharges(''); setQuoteDiscount(''); setQuoteExchangeBonus('');
     setQuoteDealerOffer(''); setQuoteManufacturerOffer('');
     setQuoteTcs(''); setQuoteExtraWarranty(''); setQuoteFastag(''); setQuoteCrtm('');
+    setEditingQuotation(false);
     setShowQuoteBreakdown(false);
   });
 
@@ -1155,21 +1185,53 @@ export default function LeadDetailPage() {
               </div>
             )}
 
-            <button disabled={saving} className={`${primaryBtnCls} w-full`}>Add Quotation</button>
+            <button disabled={saving} className={`${primaryBtnCls} w-full`}>{editingQuotation ? 'Save New Version' : 'Add Quotation'}</button>
           </form>
         )}
-        {lead.quotations?.length === 0 && <p className="text-sm text-slate-500">No quotations yet.</p>}
-        <div className="space-y-2">
-          {lead.quotations?.map((q: any) => (
-            <div key={q.id} className="border-t pt-2 text-sm flex justify-between">
-              <span>
-                <span className="text-[10.5px] bg-slate-100 rounded-full px-2 py-0.5 mr-1.5">v{q.version || 1}</span>
-                ₹{(q.price / 100000).toFixed(2)}L (on-road ₹{(q.onRoadPrice / 100000).toFixed(2)}L)
-              </span>
-              <span className="text-xs text-slate-400">Valid till {new Date(q.validTill).toLocaleDateString()}</span>
+        {lead.quotations?.length === 0 && <p className="text-[13.5px] text-slate-500">No quotations yet.</p>}
+
+        {latestQuotation && (
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                Latest — <span className={`${pillCls} bg-[#FBF3E1] text-[#96701F]`}>v{latestQuotation.version || 1}</span>
+              </p>
+              {canCreateQuotation && (
+                <button onClick={startEditingQuotation} className={linkBtnCls}>Edit</button>
+              )}
             </div>
-          ))}
-        </div>
+            <p className="text-[15px] font-semibold text-slate-800">₹{(latestQuotation.price / 100000).toFixed(2)}L <span className="text-slate-400 font-normal text-[13px]">on-road ₹{(latestQuotation.onRoadPrice / 100000).toFixed(2)}L</span></p>
+            <p className="text-[12px] text-slate-500 mb-2.5">Valid till {new Date(latestQuotation.validTill).toLocaleDateString()}</p>
+            <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-[12.5px]">
+              {[
+                ['Ex-showroom', latestQuotation.exShowroomPrice], ['RTO', latestQuotation.rto], ['Insurance', latestQuotation.insurance],
+                ['TCS', latestQuotation.tcs], ['Accessories', latestQuotation.accessories], ['Extra Warranty', latestQuotation.extraWarranty],
+                ['FASTag', latestQuotation.fastag], ['CRTM', latestQuotation.crtmCharges], ['Other charges', latestQuotation.otherCharges],
+                ['Discount', latestQuotation.discount], ['Exchange bonus', latestQuotation.exchangeBonus], ['Dealer offer', latestQuotation.dealerOffer],
+                ['Manufacturer offer', latestQuotation.manufacturerOffer], ['Exchange value', latestQuotation.exchangeValue],
+              ].filter(([, v]) => v).map(([label, v]) => (
+                <p key={label as string}><span className="text-slate-400">{label}:</span> ₹{Number(v).toLocaleString('en-IN')}</p>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {lead.quotations?.length > 1 && (
+          <div>
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Version History</p>
+            <div className="space-y-2">
+              {[...lead.quotations].sort((a: any, b: any) => (b.version || 1) - (a.version || 1)).slice(1).map((q: any) => (
+                <div key={q.id} className="border-t border-slate-100 pt-2 text-[13px] flex justify-between">
+                  <span>
+                    <span className={`${pillCls} bg-slate-100 text-slate-600 mr-1.5`}>v{q.version || 1}</span>
+                    ₹{(q.price / 100000).toFixed(2)}L (on-road ₹{(q.onRoadPrice / 100000).toFixed(2)}L)
+                  </span>
+                  <span className="text-[11px] text-slate-400">Valid till {new Date(q.validTill).toLocaleDateString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </Section>
 
       <Section title="Negotiation">
@@ -1356,7 +1418,19 @@ export default function LeadDetailPage() {
             <form onSubmit={handleCreateFinanceCase} className="space-y-3">
               <button
                 type="button"
-                onClick={() => setShowCalculator((v) => !v)}
+                onClick={() => {
+                  if (!showCalculator && latestQuotation) {
+                    setCalcExShowroom(latestQuotation.exShowroomPrice ? String(latestQuotation.exShowroomPrice) : '');
+                    setCalcRto(latestQuotation.rto ? String(latestQuotation.rto) : '');
+                    setCalcInsurance(latestQuotation.insurance ? String(latestQuotation.insurance) : '');
+                    setCalcTcs(latestQuotation.tcs ? String(latestQuotation.tcs) : '');
+                    setCalcFastag(latestQuotation.fastag ? String(latestQuotation.fastag) : '');
+                    setCalcWarranty(latestQuotation.extraWarranty ? String(latestQuotation.extraWarranty) : '');
+                    setCalcAccessories(latestQuotation.accessories ? String(latestQuotation.accessories) : '');
+                    setCalcDiscount(latestQuotation.discount ? String(latestQuotation.discount) : '');
+                  }
+                  setShowCalculator((v) => !v);
+                }}
                 className="w-full text-left bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg px-4 py-2.5 text-sm font-medium flex items-center justify-between"
               >
                 <span>🧮 Loan Calculator {otherCharges ? '(applied ✓)' : '(optional — auto-fills loan/EMI below)'}</span>
@@ -1366,16 +1440,19 @@ export default function LeadDetailPage() {
               {showCalculator && (
                 <div className="border border-emerald-200 rounded-lg p-4 bg-emerald-50/40 space-y-4">
                   <div>
-                    <p className="text-xs font-semibold text-slate-600 mb-2">On-Road Price Breakdown</p>
+                    <p className="text-xs font-semibold text-slate-600 mb-1">On-Road Price Breakdown</p>
+                    {latestQuotation && (
+                      <p className="text-[11px] text-emerald-700 mb-2">Synced from Sales Quotation v{latestQuotation.version || 1} — read-only here.</p>
+                    )}
                     <div className="grid grid-cols-2 gap-2">
-                      <input type="number" className={inputCls} placeholder="Ex-showroom price" value={calcExShowroom} onChange={(e) => setCalcExShowroom(e.target.value)} />
-                      <input type="number" className={inputCls} placeholder="RTO" value={calcRto} onChange={(e) => setCalcRto(e.target.value)} />
-                      <input type="number" className={inputCls} placeholder="Insurance" value={calcInsurance} onChange={(e) => setCalcInsurance(e.target.value)} />
-                      <input type="number" className={inputCls} placeholder="TCS" value={calcTcs} onChange={(e) => setCalcTcs(e.target.value)} />
-                      <input type="number" className={inputCls} placeholder="FASTag" value={calcFastag} onChange={(e) => setCalcFastag(e.target.value)} />
-                      <input type="number" className={inputCls} placeholder="Extra Warranty" value={calcWarranty} onChange={(e) => setCalcWarranty(e.target.value)} />
-                      <input type="number" className={inputCls} placeholder="Accessories" value={calcAccessories} onChange={(e) => setCalcAccessories(e.target.value)} />
-                      <input type="number" className={`${inputCls} col-span-2`} placeholder="Discount (subtracted)" value={calcDiscount} onChange={(e) => setCalcDiscount(e.target.value)} />
+                      <input type="number" disabled={!!latestQuotation} className={`${inputCls} disabled:bg-slate-100 disabled:text-slate-500`} placeholder="Ex-showroom price" value={calcExShowroom} onChange={(e) => setCalcExShowroom(e.target.value)} />
+                      <input type="number" disabled={!!latestQuotation} className={`${inputCls} disabled:bg-slate-100 disabled:text-slate-500`} placeholder="RTO" value={calcRto} onChange={(e) => setCalcRto(e.target.value)} />
+                      <input type="number" disabled={!!latestQuotation} className={`${inputCls} disabled:bg-slate-100 disabled:text-slate-500`} placeholder="Insurance" value={calcInsurance} onChange={(e) => setCalcInsurance(e.target.value)} />
+                      <input type="number" disabled={!!latestQuotation} className={`${inputCls} disabled:bg-slate-100 disabled:text-slate-500`} placeholder="TCS" value={calcTcs} onChange={(e) => setCalcTcs(e.target.value)} />
+                      <input type="number" disabled={!!latestQuotation} className={`${inputCls} disabled:bg-slate-100 disabled:text-slate-500`} placeholder="FASTag" value={calcFastag} onChange={(e) => setCalcFastag(e.target.value)} />
+                      <input type="number" disabled={!!latestQuotation} className={`${inputCls} disabled:bg-slate-100 disabled:text-slate-500`} placeholder="Extra Warranty" value={calcWarranty} onChange={(e) => setCalcWarranty(e.target.value)} />
+                      <input type="number" disabled={!!latestQuotation} className={`${inputCls} disabled:bg-slate-100 disabled:text-slate-500`} placeholder="Accessories" value={calcAccessories} onChange={(e) => setCalcAccessories(e.target.value)} />
+                      <input type="number" disabled={!!latestQuotation} className={`${inputCls} col-span-2 disabled:bg-slate-100 disabled:text-slate-500`} placeholder="Discount (subtracted)" value={calcDiscount} onChange={(e) => setCalcDiscount(e.target.value)} />
                     </div>
                     <p className="text-sm font-semibold mt-2 text-slate-700">On-Road Price: ₹{calcOnRoad.toLocaleString('en-IN')}</p>
                   </div>

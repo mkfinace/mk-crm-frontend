@@ -1719,15 +1719,25 @@ export default function LeadDetailPage() {
                             ))}
                             <p className="text-[13.5px] font-bold text-emerald-700 mt-1.5">Net Disbursed to Customer: ₹{Number(breakdown.netDisbursedAmount || 0).toLocaleString('en-IN')}</p>
                             {(() => {
-                              const gap = Number(onRoad) - (lead.financeCase.downPayment + Number(breakdown.netDisbursedAmount || 0));
-                              if (gap <= 0) return null;
+                              const netDisbursed = Number(breakdown.netDisbursedAmount || 0);
+                              const combined = lead.financeCase.downPayment + netDisbursed;
+                              const gap = Number(onRoad) - combined;
+                              const matches = gap === 0;
                               return (
-                                <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
-                                  <p className="text-[12px] text-amber-800">
-                                    ⚠ Down Payment + Net Disbursed = ₹{(lead.financeCase.downPayment + Number(breakdown.netDisbursedAmount || 0)).toLocaleString('en-IN')} —
-                                    this is <b>₹{gap.toLocaleString('en-IN')} short</b> of the On-Road Price (this Down Payment was set before deductions, so it doesn't cover the bank's charges yet).
-                                    <b> Collect this extra ₹{gap.toLocaleString('en-IN')}</b> from the customer, or edit the Down Payment above to include it.
+                                <div className={`rounded-lg px-3 py-2 mt-2 border ${matches ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                                  <p className={`text-[12.5px] font-medium ${matches ? 'text-emerald-800' : 'text-red-800'}`}>
+                                    {matches ? '✓' : '✕'} Net Disbursed (₹{netDisbursed.toLocaleString('en-IN')}) + Down Payment (₹{lead.financeCase.downPayment.toLocaleString('en-IN')}) = ₹{combined.toLocaleString('en-IN')}
+                                    {matches
+                                      ? ' — matches the On-Road Price exactly.'
+                                      : ` — this is ${gap > 0 ? `₹${gap.toLocaleString('en-IN')} short of` : `₹${Math.abs(gap).toLocaleString('en-IN')} more than`} the On-Road Price (₹${Number(onRoad).toLocaleString('en-IN')}).`}
                                   </p>
+                                  {!matches && (
+                                    <p className="text-[11.5px] text-red-700 mt-1">
+                                      {gap > 0
+                                        ? `Collect this extra ₹${gap.toLocaleString('en-IN')} from the customer, or edit the Down Payment to include it.`
+                                        : `Down Payment looks higher than needed — double-check it, or the On-Road Price / deductions.`}
+                                    </p>
+                                  )}
                                 </div>
                               );
                             })()}

@@ -1419,12 +1419,27 @@ export default function LeadDetailPage() {
               {editingFinanceCase ? (
                 <div className="space-y-2">
                   <div className="grid grid-cols-2 gap-2">
-                    <input type="number" className={inputCls} placeholder="Loan amount" value={editLoanAmount} onChange={(e) => setEditLoanAmount(e.target.value)} />
-                    <input type="number" className={inputCls} placeholder="Down payment" value={editDownPayment} onChange={(e) => setEditDownPayment(e.target.value)} />
-                    <input type="number" className={inputCls} placeholder="Tenure (months)" value={editTenure} onChange={(e) => setEditTenure(e.target.value)} />
-                    <input type="number" step="0.1" className={inputCls} placeholder="ROI %" value={editRoi} onChange={(e) => setEditRoi(e.target.value)} />
+                    <div>
+                      <label className="text-[11px] text-slate-500 block mb-1">Loan Amount</label>
+                      <input type="number" className={`${inputCls} w-full`} value={editLoanAmount} onChange={(e) => setEditLoanAmount(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-slate-500 block mb-1">Down Payment</label>
+                      <input type="number" className={`${inputCls} w-full`} value={editDownPayment} onChange={(e) => setEditDownPayment(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-slate-500 block mb-1">Tenure (months)</label>
+                      <input type="number" className={`${inputCls} w-full`} value={editTenure} onChange={(e) => setEditTenure(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-slate-500 block mb-1">ROI %</label>
+                      <input type="number" step="0.1" className={`${inputCls} w-full`} value={editRoi} onChange={(e) => setEditRoi(e.target.value)} />
+                    </div>
                   </div>
-                  <input type="number" className={`${inputCls} w-full`} placeholder="EMI" value={editEmi} onChange={(e) => setEditEmi(e.target.value)} />
+                  <div>
+                    <label className="text-[11px] text-slate-500 block mb-1">EMI</label>
+                    <input type="number" className={`${inputCls} w-full`} value={editEmi} onChange={(e) => setEditEmi(e.target.value)} />
+                  </div>
                   <div className="flex gap-2">
                     <button disabled={saving} onClick={handleUpdateFinanceCase} className={primaryBtnCls}>Save Changes</button>
                     <button onClick={() => setEditingFinanceCase(false)} className={secondaryBtnCls}>Cancel</button>
@@ -1525,8 +1540,14 @@ export default function LeadDetailPage() {
                   <div className="border-t border-emerald-200 pt-3">
                     <p className="text-xs font-semibold text-slate-600 mb-2">EMI</p>
                     <div className="grid grid-cols-2 gap-2">
-                      <input type="number" step="0.1" className={inputCls} placeholder="ROI %" value={calcRoi} onChange={(e) => setCalcRoi(e.target.value)} />
-                      <input type="number" className={inputCls} placeholder="Tenure (months)" value={calcTenure} onChange={(e) => setCalcTenure(e.target.value)} />
+                      <div>
+                        <label className="text-[11px] text-slate-500">ROI %</label>
+                        <input type="number" step="0.1" className={`${inputCls} w-full`} value={calcRoi} onChange={(e) => setCalcRoi(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-slate-500">Tenure (months)</label>
+                        <input type="number" className={`${inputCls} w-full`} value={calcTenure} onChange={(e) => setCalcTenure(e.target.value)} />
+                      </div>
                     </div>
                     <p className="text-sm font-semibold mt-2 text-slate-700">EMI: ₹{calcEmi.toLocaleString('en-IN')}/mo</p>
                   </div>
@@ -1578,12 +1599,27 @@ export default function LeadDetailPage() {
                 {(dealerBanks.length > 0 ? dealerBanks : banks).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
               <div className="grid grid-cols-2 gap-3">
-                <input type="number" className={inputCls} placeholder="Loan amount" value={loanAmount} onChange={(e) => setLoanAmount(e.target.value)} />
-                <input type="number" className={inputCls} placeholder="Down payment" value={downPayment} onChange={(e) => setDownPayment(e.target.value)} />
-                <input type="number" className={inputCls} placeholder="Tenure (months)" value={tenure} onChange={(e) => setTenure(e.target.value)} />
-                <input type="number" step="0.1" className={inputCls} placeholder="ROI %" value={roi} onChange={(e) => setRoi(e.target.value)} />
+                <div>
+                  <label className="text-[11px] text-slate-500 block mb-1">Loan Amount</label>
+                  <input type="number" className={`${inputCls} w-full`} value={loanAmount} onChange={(e) => setLoanAmount(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-500 block mb-1">Down Payment</label>
+                  <input type="number" className={`${inputCls} w-full`} value={downPayment} onChange={(e) => setDownPayment(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-500 block mb-1">Tenure (months)</label>
+                  <input type="number" className={`${inputCls} w-full`} value={tenure} onChange={(e) => setTenure(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-500 block mb-1">ROI %</label>
+                  <input type="number" step="0.1" className={`${inputCls} w-full`} value={roi} onChange={(e) => setRoi(e.target.value)} />
+                </div>
               </div>
-              <input type="number" className={`${inputCls} w-full`} placeholder="EMI" value={emi} onChange={(e) => setEmi(e.target.value)} />
+              <div>
+                <label className="text-[11px] text-slate-500 block mb-1">EMI</label>
+                <input type="number" className={`${inputCls} w-full`} value={emi} onChange={(e) => setEmi(e.target.value)} />
+              </div>
               <button disabled={saving} className={primaryBtnCls}>Create Finance Case</button>
             </form>
           ) : (

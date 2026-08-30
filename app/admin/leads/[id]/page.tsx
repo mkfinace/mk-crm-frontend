@@ -295,9 +295,10 @@ export default function LeadDetailPage() {
   const [calcSuraksha, setCalcSuraksha] = useState('');
   const [calcRoi, setCalcRoi] = useState('');
   const [calcTenure, setCalcTenure] = useState('');
-  const [calcServiceCharge, setCalcServiceCharge] = useState('');
-  const [calcDocCharges, setCalcDocCharges] = useState('');
-  const [calcStamping, setCalcStamping] = useState('');
+  const [calcDeductions, setCalcDeductions] = useState<{ label: string; amount: number }[]>([]);
+  const [deductionType, setDeductionType] = useState('Service Charge');
+  const [deductionCustomLabel, setDeductionCustomLabel] = useState('');
+  const [deductionAmount, setDeductionAmount] = useState('');
 
   const n = (v: string) => Number(v) || 0;
   const calcOnRoad = n(calcExShowroom) + n(calcRto) + n(calcInsurance) + n(calcTcs) + n(calcFastag) + n(calcWarranty) + n(calcAccessories) + n(calcRsa) - n(calcDiscount);
@@ -309,9 +310,24 @@ export default function LeadDetailPage() {
     calcTotalLoan > 0 && calcMonthlyRate > 0 && calcTenureN > 0
       ? Math.round((calcTotalLoan * calcMonthlyRate * Math.pow(1 + calcMonthlyRate, calcTenureN)) / (Math.pow(1 + calcMonthlyRate, calcTenureN) - 1))
       : 0;
-  const calcTotalDeductions = n(calcServiceCharge) + n(calcDocCharges) + n(calcStamping);
+  const calcTotalDeductions = calcDeductions.reduce((sum, d) => sum + d.amount, 0);
   const calcNetDisbursed = calcTotalLoan - calcTotalDeductions;
   const calcDownPayment = calcOnRoad - calcTotalLoan;
+
+  const DEDUCTION_TYPES = ['Service Charge', 'Document Charges', 'Stamping', 'Processing Fee', 'Hypothecation Charges', 'Other'];
+
+  function addDeduction() {
+    const label = deductionType === 'Other' ? (deductionCustomLabel || 'Other') : deductionType;
+    const amount = Number(deductionAmount) || 0;
+    if (!amount) return;
+    setCalcDeductions((prev) => [...prev, { label, amount }]);
+    setDeductionAmount('');
+    setDeductionCustomLabel('');
+  }
+
+  function removeDeduction(index: number) {
+    setCalcDeductions((prev) => prev.filter((_, i) => i !== index));
+  }
 
   function applyCalculatorToForm() {
     setLoanAmount(String(calcTotalLoan));
@@ -323,7 +339,7 @@ export default function LeadDetailPage() {
       exShowroomPrice: n(calcExShowroom), rto: n(calcRto), insurance: n(calcInsurance), tcs: n(calcTcs),
       fastag: n(calcFastag), extraWarranty: n(calcWarranty), accessories: n(calcAccessories), rsa: n(calcRsa), discount: n(calcDiscount), onRoadPrice: calcOnRoad,
       fundingPercent: n(calcFundingPct), loanSurakshaAmount: n(calcSuraksha),
-      serviceCharge: n(calcServiceCharge), documentCharges: n(calcDocCharges), stampingCharges: n(calcStamping),
+      deductions: calcDeductions,
       totalDeductions: calcTotalDeductions, netDisbursedAmount: calcNetDisbursed,
     });
     setShowCalculator(false);
@@ -699,7 +715,7 @@ export default function LeadDetailPage() {
       tenureMonths: Number(tenure),
       roi: Number(roi),
       emi: Number(emi),
-      processingFee: otherCharges?.serviceCharge || undefined,
+      processingFee: otherCharges?.totalDeductions || undefined,
       otherChargesJson: otherCharges ? JSON.stringify(otherCharges) : undefined,
     });
     setLoanAmount('');
@@ -1517,12 +1533,35 @@ export default function LeadDetailPage() {
 
                   <div className="border-t border-emerald-200 pt-3">
                     <p className="text-xs font-semibold text-slate-600 mb-2">Deductions (from loan amount)</p>
+
+                    {calcDeductions.length > 0 && (
+                      <div className="space-y-1.5 mb-3">
+                        {calcDeductions.map((d, i) => (
+                          <div key={i} className="flex items-center justify-between bg-white/70 rounded-lg px-3 py-2 text-[13px]">
+                            <span className="text-slate-700">{d.label}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-slate-800">₹{d.amount.toLocaleString('en-IN')}</span>
+                              <button type="button" onClick={() => removeDeduction(i)} className="text-red-500 hover:text-red-700 text-[12px]">✕</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-3 gap-2">
-                      <input type="number" className={inputCls} placeholder="Service charge" value={calcServiceCharge} onChange={(e) => setCalcServiceCharge(e.target.value)} />
-                      <input type="number" className={inputCls} placeholder="Document charges" value={calcDocCharges} onChange={(e) => setCalcDocCharges(e.target.value)} />
-                      <input type="number" className={inputCls} placeholder="Stamping" value={calcStamping} onChange={(e) => setCalcStamping(e.target.value)} />
+                      <select className={selectCls} value={deductionType} onChange={(e) => setDeductionType(e.target.value)}>
+                        {DEDUCTION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                      {deductionType === 'Other' && (
+                        <input className={inputCls} placeholder="Charge name" value={deductionCustomLabel} onChange={(e) => setDeductionCustomLabel(e.target.value)} />
+                      )}
+                      <input type="number" className={inputCls} placeholder="Amount" value={deductionAmount} onChange={(e) => setDeductionAmount(e.target.value)} />
+                      <button type="button" onClick={addDeduction} className={secondaryBtnCls}>+ Add</button>
                     </div>
-                    <p className="text-sm font-semibold mt-2 text-slate-700">Net Disbursed Amount: ₹{calcNetDisbursed.toLocaleString('en-IN')}</p>
+
+                    <p className="text-sm mt-3 text-slate-600">Total Deductions: ₹{calcTotalDeductions.toLocaleString('en-IN')}</p>
+                    <p className="text-[15px] font-bold mt-1 text-emerald-800">Net Disbursed Amount: ₹{calcNetDisbursed.toLocaleString('en-IN')}</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">This is what the customer actually receives after the bank's deductions — share this figure with the customer, not the loan amount.</p>
                   </div>
 
                   <button type="button" onClick={applyCalculatorToForm} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-4 py-2.5 text-sm font-semibold">

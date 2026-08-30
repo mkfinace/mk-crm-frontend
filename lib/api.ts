@@ -98,6 +98,16 @@ export const api = {
   },
   listCitiesWithPricing: () => apiFetch('/pricing/cities'),
 
+  // Offers
+  listOffersAdmin: () => apiFetch('/offers/admin/all'),
+  createOffer: (data: any) => apiFetch('/offers', { method: 'POST', body: JSON.stringify(data) }),
+  updateOffer: (id: string, data: any) => apiFetch(`/offers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteOffer: (id: string) => apiFetch(`/offers/${id}`, { method: 'DELETE' }),
+
+  // Warranty
+  getWarrantyByVariant: (variantId: string) => apiFetch(`/variants/${variantId}/warranty`),
+  upsertWarranty: (variantId: string, data: any) => apiFetch(`/variants/${variantId}/warranty`, { method: 'PUT', body: JSON.stringify(data) }),
+
   // Auth (customer OTP)
   requestOtp: (mobile: string) => apiFetch('/auth/otp/request', { method: 'POST', body: JSON.stringify({ mobile }) }),
   verifyOtp: (mobile: string, code: string) => apiFetch('/auth/otp/verify', { method: 'POST', body: JSON.stringify({ mobile, code }) }),

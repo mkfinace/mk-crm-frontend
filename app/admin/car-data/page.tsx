@@ -108,6 +108,13 @@ export default function CarDataPage() {
   const [libraryColours, setLibraryColours] = useState<any[]>([]);
   const [vehicleColours, setVehicleColours] = useState<Record<string, { imageUrl?: string; isDefault?: boolean }>>({}); // colourId -> {}
 
+  // Warranty — one spec per variant.
+  const [warrantyYears, setWarrantyYears] = useState('');
+  const [warrantyKm, setWarrantyKm] = useState('');
+  const [extendedOptions, setExtendedOptions] = useState<{ label: string; price: number }[]>([]);
+  const [extLabel, setExtLabel] = useState('');
+  const [extPrice, setExtPrice] = useState('');
+
   const [loading, setLoading] = useState(true);
   const [loadingVariant, setLoadingVariant] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -154,11 +161,12 @@ export default function CarDataPage() {
     setEditingFieldIds(new Set());
     setShowAddMore(false);
     try {
-      const [fieldValues, vehicle, vFeatures, vColours] = await Promise.all([
+      const [fieldValues, vehicle, vFeatures, vColours, warranty] = await Promise.all([
         api.listFieldValuesForVariant(vId),
         api.getVehicleByVariant(vId),
         api.getVariantFeatures(vId),
         api.getVehicleColoursByVariant(vId),
+        api.getWarrantyByVariant(vId),
       ]);
       const v: Record<string, FieldVal> = {};
       for (const fv of fieldValues) {
@@ -179,6 +187,16 @@ export default function CarDataPage() {
       const cols: Record<string, { imageUrl?: string; isDefault?: boolean }> = {};
       for (const vc of vColours) cols[vc.colourId] = { imageUrl: vc.imageUrl || undefined, isDefault: vc.isDefault };
       setVehicleColours(cols);
+
+      if (warranty) {
+        setWarrantyYears(String(warranty.standardYears));
+        setWarrantyKm(String(warranty.standardKm));
+        setExtendedOptions(warranty.extendedOptions || []);
+      } else {
+        setWarrantyYears('');
+        setWarrantyKm('');
+        setExtendedOptions([]);
+      }
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -226,6 +244,9 @@ export default function CarDataPage() {
       await api.upsertVehicle(variantId, { images });
       await api.setVariantFeatures(variantId, Object.entries(variantFeatures).map(([featureId, applicability]) => ({ featureId, applicability })));
       await api.setVehicleColoursByVariant(variantId, Object.entries(vehicleColours).map(([colourId, opts]) => ({ colourId, ...opts })));
+      if (warrantyYears && warrantyKm) {
+        await api.upsertWarranty(variantId, { standardYears: Number(warrantyYears), standardKm: Number(warrantyKm), extendedOptions });
+      }
       setSavedMsg('Saved.');
       setEditingFieldIds(new Set());
       setTimeout(() => setSavedMsg(''), 2500);
@@ -265,6 +286,15 @@ export default function CarDataPage() {
   }
   function setColourImage(colourId: string, imageUrl: string) {
     setVehicleColours((prev) => ({ ...prev, [colourId]: { ...prev[colourId], imageUrl: imageUrl || undefined } }));
+  }
+  function addExtendedOption() {
+    if (!extLabel.trim() || !extPrice) return;
+    setExtendedOptions((prev) => [...prev, { label: extLabel.trim(), price: Number(extPrice) }]);
+    setExtLabel('');
+    setExtPrice('');
+  }
+  function removeExtendedOption(idx: number) {
+    setExtendedOptions((prev) => prev.filter((_, i) => i !== idx));
   }
   function addImage() {
     if (!imageUrl.trim()) return;
@@ -535,6 +565,29 @@ export default function CarDataPage() {
                 })}
               </div>
             )}
+          </div>
+
+          <div className={`${cardCls} p-5 mb-4`}>
+            <p className="text-[13px] font-semibold text-slate-700 mb-3.5">Warranty</p>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <input className={inputCls} type="number" placeholder="Standard years (e.g. 3)" value={warrantyYears} onChange={(e) => setWarrantyYears(e.target.value)} />
+              <input className={inputCls} type="number" placeholder="Standard km (e.g. 100000)" value={warrantyKm} onChange={(e) => setWarrantyKm(e.target.value)} />
+            </div>
+            <p className="text-[12px] text-slate-500 mb-2">Extended warranty options (optional)</p>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {extendedOptions.map((opt, i) => (
+                <span key={i} className="flex items-center gap-2 text-[12.5px] bg-slate-50 border border-slate-100 rounded-full pl-3 pr-2 py-1">
+                  {opt.label} — ₹{opt.price.toLocaleString('en-IN')}
+                  <button onClick={() => removeExtendedOption(i)} className="text-slate-400 hover:text-red-600 transition-colors">×</button>
+                </span>
+              ))}
+              {extendedOptions.length === 0 && <p className="text-[13px] text-slate-400">No extended options added.</p>}
+            </div>
+            <div className="flex gap-2">
+              <input className={`${inputCls} flex-1`} placeholder="e.g. 5yr / 100,000km" value={extLabel} onChange={(e) => setExtLabel(e.target.value)} />
+              <input className={inputCls} type="number" placeholder="Price" value={extPrice} onChange={(e) => setExtPrice(e.target.value)} />
+              <button onClick={addExtendedOption} type="button" className={secondaryBtnCls}>Add</button>
+            </div>
           </div>
 
           <div className={`${cardCls} p-5 mb-4`}>

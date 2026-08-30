@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Papa from 'papaparse';
 import { api } from '@/lib/api';
 import { inputCls, selectCls, primaryBtnCls, secondaryBtnCls, dangerTextBtnCls, linkBtnCls, cardCls } from '@/components/adminStyles';
 
@@ -135,6 +136,10 @@ export default function CatalogueAdminPage() {
   const [modelCategory, setModelCategory] = useState('CAR');
 
   const [variantModelId, setVariantModelId] = useState('');
+  const [bulkModelId, setBulkModelId] = useState('');
+  const [bulkFile, setBulkFile] = useState<File | null>(null);
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const [bulkResult, setBulkResult] = useState<{ created: number; updated: number; skipped: { row: number; reason: string }[] } | null>(null);
   const [variantName, setVariantName] = useState('');
   const [variantFuel, setVariantFuel] = useState('Petrol');
   const [variantTransmission, setVariantTransmission] = useState('Manual');
@@ -258,6 +263,35 @@ export default function CatalogueAdminPage() {
       setError(e.message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleBulkImportVariants() {
+    if (!bulkModelId || !bulkFile) { setError('Pick a model and a CSV file first.'); return; }
+    setBulkRunning(true);
+    setBulkResult(null);
+    setError('');
+    try {
+      const text = await bulkFile.text();
+      const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+      if (parsed.errors.length > 0) {
+        setError(`Could not parse CSV: ${parsed.errors[0].message}`);
+        return;
+      }
+      const rows = (parsed.data as any[]).map((r) => ({
+        name: r.name || r.Name || r.variant || r.Variant || '',
+        fuelType: r.fuelType || r.FuelType || r['Fuel Type'] || '',
+        transmission: r.transmission || r.Transmission || '',
+        exShowroomPrice: Number(r.exShowroomPrice || r.ExShowroomPrice || r['Ex-Showroom Price'] || r.price || r.Price || 0),
+      }));
+      const result = await api.bulkImportVariants(bulkModelId, rows);
+      setBulkResult(result);
+      setBulkFile(null);
+      await loadCatalogue();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setBulkRunning(false);
     }
   }
 
@@ -471,6 +505,37 @@ export default function CatalogueAdminPage() {
             <button disabled={saving} className={`${primaryBtnCls} w-full`}>Add Variant</button>
           </form>
         </div>
+      </div>
+
+      <div className={`${cardCls} p-5 mb-7`}>
+        <p className="text-[13px] font-semibold text-slate-700 mb-1">Bulk Import Variants</p>
+        <p className="text-[11.5px] text-slate-400 mb-3">CSV with columns: name, fuelType, transmission, exShowroomPrice. Existing variant names (in the chosen model) get updated; new names get created.</p>
+        <div className="flex gap-2">
+          <select className={`${selectCls} flex-1`} value={bulkModelId} onChange={(e) => setBulkModelId(e.target.value)}>
+            <option value="">Select model</option>
+            {allModels.map((m) => <option key={m.id} value={m.id}>{CATEGORY_ICON[m.category] || ''} {m.brandName} {m.name}</option>)}
+          </select>
+          <input
+            type="file"
+            accept=".csv"
+            onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
+            className="flex-1 text-[12px] text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 file:text-[12px] file:text-slate-600"
+          />
+          <button disabled={bulkRunning || !bulkModelId || !bulkFile} onClick={handleBulkImportVariants} className={primaryBtnCls}>
+            {bulkRunning ? 'Importing…' : 'Import CSV'}
+          </button>
+        </div>
+        {bulkResult && (
+          <div className="bg-slate-50 rounded-lg p-3 text-[12px] mt-3">
+            <p className="text-slate-700">{bulkResult.created} created, {bulkResult.updated} updated{bulkResult.skipped.length > 0 ? `, ${bulkResult.skipped.length} skipped` : ''}.</p>
+            {bulkResult.skipped.length > 0 && (
+              <ul className="mt-1.5 space-y-0.5 text-slate-400">
+                {bulkResult.skipped.slice(0, 10).map((s, i) => <li key={i}>Row {s.row}: {s.reason}</li>)}
+                {bulkResult.skipped.length > 10 && <li>…and {bulkResult.skipped.length - 10} more.</li>}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between mb-3">

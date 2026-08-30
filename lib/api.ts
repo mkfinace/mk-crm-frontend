@@ -55,6 +55,8 @@ export const api = {
   getVariants: (modelId?: string) => apiFetch(`/catalogue/variants${modelId ? `?modelId=${modelId}` : ''}`),
   getModelDetail: (brandSlug: string, modelSlug: string) => apiFetch(`/catalogue/model/${brandSlug}/${modelSlug}`),
   createVariant: (data: any) => apiFetch('/catalogue/variants', { method: 'POST', body: JSON.stringify(data) }),
+  bulkImportVariants: (modelId: string, rows: { name: string; fuelType: string; transmission: string; exShowroomPrice: number }[]) =>
+    apiFetch(`/catalogue/models/${modelId}/variants/bulk-import`, { method: 'POST', body: JSON.stringify({ rows }) }),
   updateVariant: (id: string, data: any) => apiFetch(`/catalogue/variants/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteVariant: (id: string) => apiFetch(`/catalogue/variants/${id}`, { method: 'DELETE' }),
 

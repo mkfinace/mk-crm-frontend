@@ -96,6 +96,23 @@ export default function PortalLeadDetail() {
         <p className="text-[13px] text-white/40 mt-0.5">{lead.leadCode}</p>
       </div>
 
+      {(() => {
+        const openQuery = lead.financeCase?.bankQueries?.find((bq: any) => bq.status === 'OPEN');
+        if (!openQuery) return null;
+        return (
+          <div className="mb-6 bg-amber-500/10 border border-amber-500/25 rounded-lg px-4 py-3 flex items-start gap-2.5">
+            <span className="text-lg leading-none">📋</span>
+            <div>
+              <p className="text-amber-300 font-semibold text-[13.5px]">Action needed: additional document required</p>
+              <p className="text-white/60 text-[12.5px] mt-0.5">
+                {openQuery.requestedDocument ? `Please provide: ${openQuery.requestedDocument}. ` : ''}
+                See "Bank Requests" below for details.
+              </p>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* STATUS TIMELINE */}
       <Section title="Status">
         {lead.isLost ? (
@@ -168,6 +185,45 @@ export default function PortalLeadDetail() {
             <div><p className="text-white/40 text-[11.5px]">EMI</p><p className="text-white/80">{fmtMoney(lead.financeCase.emi)}/mo</p></div>
             <div><p className="text-white/40 text-[11.5px]">Tenure</p><p className="text-white/80">{lead.financeCase.tenureMonths} months</p></div>
             <div><p className="text-white/40 text-[11.5px]">Stage</p><p className="text-white/80">{STAGE_LABEL[lead.financeCase.stage] || lead.financeCase.stage}</p></div>
+          </div>
+        </Section>
+      )}
+
+      {/* BANK QUERIES — customer-facing plain-language version of any open/
+          past bank query, so the customer knows exactly what's needed
+          without having to call and ask what "Bank Query" status means. */}
+      {lead.financeCase?.bankQueries?.length > 0 && (
+        <Section title="Bank Requests">
+          <div className="space-y-3">
+            {lead.financeCase.bankQueries.map((bq: any) => {
+              const isOpen = bq.status === 'OPEN';
+              return (
+                <div
+                  key={bq.id}
+                  className={`rounded-lg px-4 py-3 text-[13px] border ${isOpen ? 'bg-amber-500/[0.08] border-amber-500/25' : 'bg-emerald-500/[0.06] border-emerald-500/20'}`}
+                >
+                  <p className={`font-semibold ${isOpen ? 'text-amber-300' : 'text-emerald-300'}`}>
+                    {isOpen ? '📋 Additional Document Required' : '✅ Resolved'}
+                  </p>
+                  {bq.requestedDocument && (
+                    <p className="text-white/80 mt-1">Please provide: <span className="font-medium">{bq.requestedDocument}</span></p>
+                  )}
+                  <p className="text-white/60 mt-1">{bq.query}</p>
+                  {isOpen && bq.dueDate && (
+                    <p className="text-amber-300/80 text-[12px] mt-1.5">Please submit by {new Date(bq.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}.</p>
+                  )}
+                  {isOpen && (
+                    <p className="text-white/35 text-[11.5px] mt-2">Message us below or contact your dealer to send this across.</p>
+                  )}
+                  {!isOpen && bq.resolutionNotes && (
+                    <p className="text-white/50 text-[12px] mt-1.5">{bq.resolutionNotes}</p>
+                  )}
+                  {!isOpen && bq.resolvedAt && (
+                    <p className="text-white/30 text-[11px] mt-1">Resolved on {new Date(bq.resolvedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </Section>
       )}

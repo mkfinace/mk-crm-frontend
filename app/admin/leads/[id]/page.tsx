@@ -34,15 +34,16 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 // discount/offers subtracted, then final total — used consistently for
 // Quotation, Finance Case, and the Loan Calculator's synced view.
 function PriceBreakdownReceipt({
-  charges, deductions, finalTotal,
+  charges, deductions,
 }: {
   charges: [string, number | undefined | null][];
   deductions: [string, number | undefined | null][];
-  finalTotal: number;
 }) {
   const filledCharges = charges.filter(([, v]) => v) as [string, number][];
   const filledDeductions = deductions.filter(([, v]) => v) as [string, number][];
   const subtotal = filledCharges.reduce((s, [, v]) => s + v, 0);
+  const deductionTotal = filledDeductions.reduce((s, [, v]) => s + v, 0);
+  const finalTotal = subtotal - deductionTotal;
 
   return (
     <div className="text-[13px]">
@@ -1287,7 +1288,6 @@ export default function LeadDetailPage() {
                 ['Discount', latestQuotation.discount], ['Exchange bonus', latestQuotation.exchangeBonus],
                 ['Dealer offer', latestQuotation.dealerOffer], ['Manufacturer offer', latestQuotation.manufacturerOffer],
               ]}
-              finalTotal={latestQuotation.onRoadPrice}
             />
             {latestQuotation.exchangeValue ? (
               <p className="text-[12px] text-slate-500 mt-2">Exchange value: ₹{Number(latestQuotation.exchangeValue).toLocaleString('en-IN')}</p>
@@ -1519,7 +1519,7 @@ export default function LeadDetailPage() {
                         <div>
                           <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">On-Road Price Breakdown</p>
                           {hasBreakdown ? (
-                            <PriceBreakdownReceipt charges={chargeFields} deductions={[['Discount', breakdown?.discount]]} finalTotal={Number(onRoad)} />
+                            <PriceBreakdownReceipt charges={chargeFields} deductions={[['Discount', breakdown?.discount]]} />
                           ) : (
                             <p className="text-[12px] text-slate-400">No itemized breakdown recorded for this case.</p>
                           )}
@@ -1607,7 +1607,6 @@ export default function LeadDetailPage() {
                               ['Accessories', Number(calcAccessories) || null], ['RSA', Number(calcRsa) || null],
                             ]}
                             deductions={[['Discount', Number(calcDiscount) || null]]}
-                            finalTotal={calcOnRoad}
                           />
                         </div>
                       </>

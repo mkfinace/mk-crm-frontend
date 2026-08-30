@@ -245,6 +245,8 @@ export default function LeadDetailPage() {
   const staff = getStaffUser();
   const canAssignSales = staff?.role === 'SUPER_ADMIN' || staff?.role === 'SALES_ADMIN' || staff?.role === 'DEALER_MANAGER';
   const canAssignFinance = staff?.role === 'SUPER_ADMIN' || staff?.role === 'FINANCE_ADMIN';
+  const canEditSalesStatus = staff?.role === 'SUPER_ADMIN' || staff?.role === 'SALES_ADMIN' || staff?.role === 'DEALER_MANAGER' || staff?.role === 'DEALER_EXECUTIVE';
+  const canEditFinanceStatus = staff?.role === 'SUPER_ADMIN' || staff?.role === 'FINANCE_ADMIN' || staff?.role === 'FINANCE_EXECUTIVE';
   const canCreateFinanceCase = staff?.role === 'SUPER_ADMIN' || staff?.role === 'FINANCE_ADMIN' || staff?.role === 'FINANCE_EXECUTIVE';
   const canCreateQuotation = staff?.role === 'SUPER_ADMIN' || staff?.role === 'SALES_ADMIN' || staff?.role === 'DEALER_MANAGER' || staff?.role === 'DEALER_EXECUTIVE';
 
@@ -255,6 +257,7 @@ export default function LeadDetailPage() {
 
   const [editingLead, setEditingLead] = useState(false);
   const [activeStep, setActiveStep] = useState('overview');
+  const [hasAutoNavigated, setHasAutoNavigated] = useState(false);
   const stepIndex = STEPS.findIndex((s) => s.key === activeStep);
   const [catalogue, setCatalogue] = useState<any[]>([]);
   const [editCustomerName, setEditCustomerName] = useState('');
@@ -564,10 +567,33 @@ export default function LeadDetailPage() {
     loadLead();
     loadMessages();
     loadNegotiations();
+    setHasAutoNavigated(false);
+    setActiveStep('overview');
     api.listDealers().then(setDealers).catch(() => {});
     api.listBanks().then(setBanks).catch(() => {});
     api.getFullCatalogue().then(setCatalogue).catch(() => {});
   }, [id]);
+
+  // Jump straight to whichever step still has this role's work pending,
+  // instead of always opening on Overview — but only on first load, so a
+  // save-triggered reload doesn't yank the user back around afterward.
+  // Manual tab clicks always still work regardless.
+  useEffect(() => {
+    if (!lead || hasAutoNavigated) return;
+    const role = staff?.role;
+    const isFinanceRole = role === 'FINANCE_EXECUTIVE' || role === 'FINANCE_ADMIN';
+    const isSalesRole = role === 'DEALER_EXECUTIVE' || role === 'DEALER_MANAGER' || role === 'SALES_ADMIN';
+    let step = 'overview';
+    if (isFinanceRole && lead.financeRequired && (!lead.financeCase || lead.financeCase.stage !== 'FINANCE_COMPLETED')) {
+      step = 'finance';
+    } else if (isSalesRole && lead.salesStatus === 'NEW') {
+      step = 'assignment';
+    } else if (isSalesRole && (!lead.quotations || lead.quotations.length === 0) && lead.salesStatus !== 'LOST' && lead.salesStatus !== 'CLOSED') {
+      step = 'sales';
+    }
+    setActiveStep(step);
+    setHasAutoNavigated(true);
+  }, [lead, hasAutoNavigated, staff?.role]);
 
   async function loadLead() {
     setLoading(true);
@@ -1341,35 +1367,48 @@ export default function LeadDetailPage() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-xs font-semibold text-slate-600 mb-1.5">Sales Status</p>
-            <select className={`${inputCls} w-full`} value={salesStatus} onChange={(e) => setSalesStatus(e.target.value)}>
-              {SALES_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+            {canEditSalesStatus ? (
+              <select className={`${inputCls} w-full`} value={salesStatus} onChange={(e) => setSalesStatus(e.target.value)}>
+                {SALES_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            ) : (
+              <p className={`${pillCls} bg-slate-100 text-slate-600 inline-block`}>{lead.salesStatus}</p>
+            )}
           </div>
           {lead.financeRequired && (
             <div>
               <p className="text-xs font-semibold text-slate-600 mb-1.5">Finance Status</p>
-              <select className={`${inputCls} w-full`} value={financeStatus} onChange={(e) => setFinanceStatus(e.target.value)}>
-                {FINANCE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
+              {canEditFinanceStatus ? (
+                <select className={`${inputCls} w-full`} value={financeStatus} onChange={(e) => setFinanceStatus(e.target.value)}>
+                  {FINANCE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              ) : (
+                <p className={`${pillCls} bg-slate-100 text-slate-600 inline-block`}>{lead.financeStatus}</p>
+              )}
             </div>
           )}
         </div>
-        {salesStatus === 'LOST' && (
+        {canEditSalesStatus && salesStatus === 'LOST' && (
           <select className={`${inputCls} w-full mt-3`} value={lostReason} onChange={(e) => setLostReason(e.target.value)}>
             <option value="">Select reason</option>
             {LOST_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
         )}
-        <button
-          disabled={saving}
-          onClick={async () => {
-            await handleSalesStatusUpdate();
-            if (lead.financeRequired) await handleFinanceStatusUpdate();
-          }}
-          className={`${primaryBtnCls} mt-3`}
-        >
-          Update Status
-        </button>
+        {(canEditSalesStatus || canEditFinanceStatus) && (
+          <button
+            disabled={saving}
+            onClick={async () => {
+              if (canEditSalesStatus) await handleSalesStatusUpdate();
+              if (canEditFinanceStatus && lead.financeRequired) await handleFinanceStatusUpdate();
+            }}
+            className={`${primaryBtnCls} mt-3`}
+          >
+            Update Status
+          </button>
+        )}
+        {!canEditSalesStatus && !canEditFinanceStatus && (
+          <p className="text-[12px] text-slate-400 mt-2">You don't have permission to update status on this lead.</p>
+        )}
       </Section>
       </>
       )}

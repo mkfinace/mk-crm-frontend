@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { getStaffUser } from '@/lib/auth';
+import { getSocket } from '@/lib/socket';
 import { inputCls, selectCls, primaryBtnCls, secondaryBtnCls, cardCls, pillCls, dangerTextBtnCls, linkBtnCls } from '@/components/adminStyles';
 
 const SALES_STATUSES = ['NEW', 'CONTACTED', 'QUALIFIED', 'INTERESTED', 'TEST_DRIVE', 'QUOTATION', 'NEGOTIATION', 'BOOKING', 'DELIVERY', 'CLOSED', 'HOLD', 'LOST'];
@@ -713,6 +714,53 @@ export default function LeadDetailPage() {
     api.getSlaConfig().then(setSlaConfig).catch(() => {});
   }, [id]);
 
+  // Real-time sync — so two people (e.g. Dealer Executive + Finance
+  // Executive) viewing the same lead at once see each other's changes
+  // within a second, without a manual refresh. The socket only ever
+  // carries a "something changed" signal; the actual refetch reuses the
+  // same loaders as everywhere else in this page (silent, so it never
+  // shows the full-page loading state or interrupts an in-progress edit).
+  const [liveConnected, setLiveConnected] = useState(false);
+  useEffect(() => {
+    const socket = getSocket();
+
+    function refreshAll() {
+      loadLead({ silent: true });
+      loadMessages();
+      loadNegotiations();
+      loadFinanceApplications();
+    }
+    function handleUpdate(payload: { leadId: string }) {
+      if (payload?.leadId === id) refreshAll();
+    }
+    function handleConnect() {
+      setLiveConnected(true);
+      socket.emit('joinLead', id);
+    }
+    function handleDisconnect() {
+      setLiveConnected(false);
+    }
+
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+    socket.on('lead:updated', handleUpdate);
+    if (socket.connected) handleConnect();
+
+    // Polling fallback — safety net for the window right after Render's
+    // free-tier backend wakes from an idle spin-down, where the socket may
+    // take a few seconds to reconnect. Guarantees updates still land within
+    // ~20s even if the live connection is briefly down.
+    const pollId = setInterval(() => loadLead({ silent: true }), 20000);
+
+    return () => {
+      socket.emit('leaveLead', id);
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
+      socket.off('lead:updated', handleUpdate);
+      clearInterval(pollId);
+    };
+  }, [id]);
+
   // Jump straight to whichever step still has this role's work pending,
   // instead of always opening on Overview — but only on first load, so a
   // save-triggered reload doesn't yank the user back around afterward.
@@ -734,8 +782,8 @@ export default function LeadDetailPage() {
     setHasAutoNavigated(true);
   }, [lead, hasAutoNavigated, staff?.role]);
 
-  async function loadLead() {
-    setLoading(true);
+  async function loadLead(opts?: { silent?: boolean }) {
+    if (!opts?.silent) setLoading(true);
     setError('');
     try {
       const data = await api.getLead(id);
@@ -760,30 +808,34 @@ export default function LeadDetailPage() {
         setBankQueries([]);
       }
 
-      setEditCustomerName(data.customer?.name || '');
-      setEditCustomerMobile(data.customer?.mobile || '');
-      setEditCity(data.customer?.city || '');
-      setEditBrandId(data.brandId || '');
-      setEditModelId(data.modelId || '');
-      setEditVariantId(data.variantId || '');
-      setEditBudget(data.budget ? String(data.budget) : '');
-      setEditFinanceRequired(!!data.financeRequired);
-      setEditSource(data.source || 'WEBSITE');
-      setEditTemperature(data.temperature || 'WARM');
-      setEditPurpose(data.purpose || '');
-      setEditDecisionMaker(data.decisionMaker || '');
-      setEditCurrentCar(data.currentCar || '');
-      setEditExchangeValue(data.exchangeValue ? String(data.exchangeValue) : '');
-      setEditCustomerPriority(data.customerPriority || '');
-      setEditFuelPref(data.fuelPreference || '');
-      setEditTransmissionPref(data.transmissionPreference || '');
-      setEditColourPref(data.colourPreference || '');
-      setEditSpecialReq(data.specialRequirements || '');
-      setEditCustomerNotes(data.customerNotes || '');
+      // Skip clobbering the Edit Lead form's in-progress typing when a
+      // background sync (socket/poll) lands while the user has it open.
+      if (!opts?.silent || !editingLead) {
+        setEditCustomerName(data.customer?.name || '');
+        setEditCustomerMobile(data.customer?.mobile || '');
+        setEditCity(data.customer?.city || '');
+        setEditBrandId(data.brandId || '');
+        setEditModelId(data.modelId || '');
+        setEditVariantId(data.variantId || '');
+        setEditBudget(data.budget ? String(data.budget) : '');
+        setEditFinanceRequired(!!data.financeRequired);
+        setEditSource(data.source || 'WEBSITE');
+        setEditTemperature(data.temperature || 'WARM');
+        setEditPurpose(data.purpose || '');
+        setEditDecisionMaker(data.decisionMaker || '');
+        setEditCurrentCar(data.currentCar || '');
+        setEditExchangeValue(data.exchangeValue ? String(data.exchangeValue) : '');
+        setEditCustomerPriority(data.customerPriority || '');
+        setEditFuelPref(data.fuelPreference || '');
+        setEditTransmissionPref(data.transmissionPreference || '');
+        setEditColourPref(data.colourPreference || '');
+        setEditSpecialReq(data.specialRequirements || '');
+        setEditCustomerNotes(data.customerNotes || '');
+      }
     } catch (e: any) {
-      setError(e.message);
+      if (!opts?.silent) setError(e.message);
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }
 
@@ -1260,11 +1312,17 @@ export default function LeadDetailPage() {
           <h1 className="text-[22px] font-semibold text-slate-900 tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>{lead.customer?.name}</h1>
           <p className="text-[13px] text-slate-500 mt-0.5">{lead.customer?.mobile} · {lead.customer?.city || 'No city'}</p>
         </div>
-        {!editingLead && (
-          <button onClick={() => setEditingLead(true)} className={linkBtnCls}>
-            Edit Lead Details
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          <span className={`flex items-center gap-1.5 text-[11px] font-medium ${liveConnected ? 'text-emerald-600' : 'text-slate-400'}`} title={liveConnected ? 'Live — updates sync automatically' : 'Reconnecting…'}>
+            <span className={`w-1.5 h-1.5 rounded-full ${liveConnected ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+            {liveConnected ? 'Live' : 'Reconnecting…'}
+          </span>
+          {!editingLead && (
+            <button onClick={() => setEditingLead(true)} className={linkBtnCls}>
+              Edit Lead Details
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (

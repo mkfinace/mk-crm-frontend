@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://mk-crm-backend.onrender.com';
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://mk-crm-backend.onrender.com';
 
 // Admin (staff) and Customer Portal sessions are kept in separate storage
 // keys so both can be logged in at once in the same browser (e.g. testing

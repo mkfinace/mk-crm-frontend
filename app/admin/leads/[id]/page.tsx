@@ -320,6 +320,8 @@ export default function LeadDetailPage() {
   const [editTenure, setEditTenure] = useState('');
   const [editRoi, setEditRoi] = useState('');
   const [editEmi, setEditEmi] = useState('');
+  const [editOtherCharges, setEditOtherCharges] = useState<any>(null);
+  const [showEditCalculator, setShowEditCalculator] = useState(false);
 
   // ---- Loan Calculator (on-road price → funding % → loan → EMI → net disbursed) ----
   const [showCalculator, setShowCalculator] = useState(false);
@@ -373,19 +375,139 @@ export default function LeadDetailPage() {
   }
 
   function applyCalculatorToForm() {
-    setLoanAmount(String(calcTotalLoan));
-    setDownPayment(String(calcDownPayment > 0 ? calcDownPayment : 0));
-    setTenure(calcTenure);
-    setRoi(calcRoi);
-    setEmi(String(calcEmi));
-    setOtherCharges({
+    const computedCharges = {
       exShowroomPrice: n(calcExShowroom), rto: n(calcRto), insurance: n(calcInsurance), tcs: n(calcTcs),
       fastag: n(calcFastag), extraWarranty: n(calcWarranty), accessories: n(calcAccessories), rsa: n(calcRsa), discount: n(calcDiscount), onRoadPrice: calcOnRoad,
       fundingPercent: n(calcFundingPct), loanSurakshaAmount: n(calcSuraksha),
       deductions: calcDeductions,
       totalDeductions: calcTotalDeductions, netDisbursedAmount: calcNetDisbursed,
-    });
-    setShowCalculator(false);
+    };
+    if (editingFinanceCase) {
+      setEditLoanAmount(String(calcTotalLoan));
+      setEditDownPayment(String(calcDownPayment > 0 ? calcDownPayment : 0));
+      setEditTenure(calcTenure);
+      setEditRoi(calcRoi);
+      setEditEmi(String(calcEmi));
+      setEditOtherCharges(computedCharges);
+      setShowEditCalculator(false);
+    } else {
+      setLoanAmount(String(calcTotalLoan));
+      setDownPayment(String(calcDownPayment > 0 ? calcDownPayment : 0));
+      setTenure(calcTenure);
+      setRoi(calcRoi);
+      setEmi(String(calcEmi));
+      setOtherCharges(computedCharges);
+      setShowCalculator(false);
+    }
+  }
+
+  function renderCalculatorPanel() {
+    return (
+      <div className="border border-emerald-200 rounded-lg p-4 bg-emerald-50/40 space-y-4">
+        <div>
+          <p className="text-xs font-semibold text-slate-600 mb-1">On-Road Price Breakdown</p>
+          {latestQuotation ? (
+            <>
+              <p className="text-[11px] text-emerald-700 mb-2">Synced from Sales Quotation v{latestQuotation.version || 1} — read-only here.</p>
+              <div className="bg-white/60 rounded-lg p-3">
+                <PriceBreakdownReceipt
+                  charges={[
+                    ['Ex-showroom', Number(calcExShowroom) || null], ['RTO', Number(calcRto) || null], ['Insurance', Number(calcInsurance) || null],
+                    ['TCS', Number(calcTcs) || null], ['FASTag', Number(calcFastag) || null], ['Extra Warranty', Number(calcWarranty) || null],
+                    ['Accessories', Number(calcAccessories) || null], ['RSA', Number(calcRsa) || null],
+                  ]}
+                  deductions={[['Discount', Number(calcDiscount) || null]]}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <input type="number" className={inputCls} placeholder="Ex-showroom price" value={calcExShowroom} onChange={(e) => setCalcExShowroom(e.target.value)} />
+              <input type="number" className={inputCls} placeholder="RTO" value={calcRto} onChange={(e) => setCalcRto(e.target.value)} />
+              <input type="number" className={inputCls} placeholder="Insurance" value={calcInsurance} onChange={(e) => setCalcInsurance(e.target.value)} />
+              <input type="number" className={inputCls} placeholder="TCS" value={calcTcs} onChange={(e) => setCalcTcs(e.target.value)} />
+              <input type="number" className={inputCls} placeholder="FASTag" value={calcFastag} onChange={(e) => setCalcFastag(e.target.value)} />
+              <input type="number" className={inputCls} placeholder="Extra Warranty" value={calcWarranty} onChange={(e) => setCalcWarranty(e.target.value)} />
+              <input type="number" className={inputCls} placeholder="Accessories" value={calcAccessories} onChange={(e) => setCalcAccessories(e.target.value)} />
+              <input type="number" className={inputCls} placeholder="RSA" value={calcRsa} onChange={(e) => setCalcRsa(e.target.value)} />
+              <input type="number" className={`${inputCls} col-span-2`} placeholder="Discount (subtracted)" value={calcDiscount} onChange={(e) => setCalcDiscount(e.target.value)} />
+            </div>
+          )}
+          {!latestQuotation && (
+            <p className="text-sm font-semibold mt-2 text-slate-700">On-Road Price: ₹{calcOnRoad.toLocaleString('en-IN')}</p>
+          )}
+        </div>
+
+        <div className="border-t border-emerald-200 pt-3">
+          <p className="text-xs font-semibold text-slate-600 mb-2">Loan Amount</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[11px] text-slate-500">% Funding on ex-showroom</label>
+              <input type="number" className={`${inputCls} w-full`} value={calcFundingPct} onChange={(e) => setCalcFundingPct(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-[11px] text-slate-500">Loan Suraksha (insurance) amount</label>
+              <input type="number" className={`${inputCls} w-full`} value={calcSuraksha} onChange={(e) => setCalcSuraksha(e.target.value)} />
+            </div>
+          </div>
+          <p className="text-sm mt-2 text-slate-700">Base Loan (funding %): ₹{calcBaseLoan.toLocaleString('en-IN')}</p>
+          <p className="text-sm font-semibold text-slate-700">Total Loan Amount: ₹{calcTotalLoan.toLocaleString('en-IN')}</p>
+          <p className="text-xs text-slate-500">Down Payment needed (covers bank deductions too): ₹{Math.max(0, calcDownPayment).toLocaleString('en-IN')}</p>
+        </div>
+
+        <div className="border-t border-emerald-200 pt-3">
+          <p className="text-xs font-semibold text-slate-600 mb-2">EMI</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[11px] text-slate-500">ROI %</label>
+              <input type="number" step="0.1" className={`${inputCls} w-full`} value={calcRoi} onChange={(e) => setCalcRoi(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-[11px] text-slate-500">Tenure (months)</label>
+              <input type="number" className={`${inputCls} w-full`} value={calcTenure} onChange={(e) => setCalcTenure(e.target.value)} />
+            </div>
+          </div>
+          <p className="text-sm font-semibold mt-2 text-slate-700">EMI: ₹{calcEmi.toLocaleString('en-IN')}/mo</p>
+        </div>
+
+        <div className="border-t border-emerald-200 pt-3">
+          <p className="text-xs font-semibold text-slate-600 mb-2">Deductions (from loan amount)</p>
+
+          {calcDeductions.length > 0 && (
+            <div className="space-y-1.5 mb-3">
+              {calcDeductions.map((d, i) => (
+                <div key={i} className="flex items-center justify-between bg-white/70 rounded-lg px-3 py-2 text-[13px]">
+                  <span className="text-slate-700">{d.label}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-slate-800">₹{d.amount.toLocaleString('en-IN')}</span>
+                    <button type="button" onClick={() => removeDeduction(i)} className="text-red-500 hover:text-red-700 text-[12px]">✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-2">
+            <select className={selectCls} value={deductionType} onChange={(e) => setDeductionType(e.target.value)}>
+              {DEDUCTION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            {deductionType === 'Other' && (
+              <input className={inputCls} placeholder="Charge name" value={deductionCustomLabel} onChange={(e) => setDeductionCustomLabel(e.target.value)} />
+            )}
+            <input type="number" className={inputCls} placeholder="Amount" value={deductionAmount} onChange={(e) => setDeductionAmount(e.target.value)} />
+            <button type="button" onClick={addDeduction} className={secondaryBtnCls}>+ Add</button>
+          </div>
+
+          <p className="text-sm mt-3 text-slate-600">Total Deductions: ₹{calcTotalDeductions.toLocaleString('en-IN')}</p>
+          <p className="text-[15px] font-bold mt-1 text-emerald-800">Net Disbursed Amount: ₹{calcNetDisbursed.toLocaleString('en-IN')}</p>
+          <p className="text-[11px] text-slate-500 mt-0.5">This is what the customer actually receives after the bank's deductions — share this figure with the customer, not the loan amount.</p>
+        </div>
+
+        <button type="button" onClick={applyCalculatorToForm} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-4 py-2.5 text-sm font-semibold">
+          ✓ Apply {editingFinanceCase ? 'to Edit Form' : 'to Finance Case Below'} Above
+        </button>
+      </div>
+    );
   }
 
   const [bookingAmount, setBookingAmount] = useState('');
@@ -787,6 +909,28 @@ export default function LeadDetailPage() {
     setEditTenure(String(lead.financeCase.tenureMonths ?? ''));
     setEditRoi(String(lead.financeCase.roi ?? ''));
     setEditEmi(String(lead.financeCase.emi ?? ''));
+    // Pre-fill the calculator with whatever breakdown was saved before, so
+    // "Recalculate" starts from the real numbers instead of blank fields.
+    try {
+      const existing = lead.financeCase.otherChargesJson ? JSON.parse(lead.financeCase.otherChargesJson) : null;
+      if (existing) {
+        setCalcExShowroom(existing.exShowroomPrice ? String(existing.exShowroomPrice) : '');
+        setCalcRto(existing.rto ? String(existing.rto) : '');
+        setCalcInsurance(existing.insurance ? String(existing.insurance) : '');
+        setCalcTcs(existing.tcs ? String(existing.tcs) : '');
+        setCalcFastag(existing.fastag ? String(existing.fastag) : '');
+        setCalcWarranty(existing.extraWarranty ? String(existing.extraWarranty) : '');
+        setCalcAccessories(existing.accessories ? String(existing.accessories) : '');
+        setCalcRsa(existing.rsa ? String(existing.rsa) : '');
+        setCalcDiscount(existing.discount ? String(existing.discount) : '');
+        setCalcDeductions(existing.deductions || []);
+      }
+      setEditOtherCharges(existing);
+    } catch {
+      setEditOtherCharges(null);
+    }
+    setCalcRoi(String(lead.financeCase.roi ?? ''));
+    setCalcTenure(String(lead.financeCase.tenureMonths ?? ''));
     setEditingFinanceCase(true);
   }
 
@@ -797,8 +941,11 @@ export default function LeadDetailPage() {
       tenureMonths: Number(editTenure),
       roi: Number(editRoi),
       emi: Number(editEmi),
+      processingFee: editOtherCharges?.totalDeductions || undefined,
+      otherChargesJson: editOtherCharges ? JSON.stringify(editOtherCharges) : undefined,
     });
     setEditingFinanceCase(false);
+    setShowEditCalculator(false);
     await loadLead();
   });
 
@@ -1463,6 +1610,16 @@ export default function LeadDetailPage() {
 
               {editingFinanceCase ? (
                 <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditCalculator((v) => !v)}
+                    className="w-full text-left bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg px-4 py-2.5 text-sm font-medium flex items-center justify-between"
+                  >
+                    <span>🧮 Recalculate {editOtherCharges ? '(applied ✓)' : ''}</span>
+                    <span>{showEditCalculator ? '▲' : '▼'}</span>
+                  </button>
+                  {showEditCalculator && renderCalculatorPanel()}
+
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="text-[11px] text-slate-500 block mb-1">Loan Amount</label>
@@ -1592,112 +1749,7 @@ export default function LeadDetailPage() {
                 <span>{showCalculator ? '▲' : '▼'}</span>
               </button>
 
-              {showCalculator && (
-                <div className="border border-emerald-200 rounded-lg p-4 bg-emerald-50/40 space-y-4">
-                  <div>
-                    <p className="text-xs font-semibold text-slate-600 mb-1">On-Road Price Breakdown</p>
-                    {latestQuotation ? (
-                      <>
-                        <p className="text-[11px] text-emerald-700 mb-2">Synced from Sales Quotation v{latestQuotation.version || 1} — read-only here.</p>
-                        <div className="bg-white/60 rounded-lg p-3">
-                          <PriceBreakdownReceipt
-                            charges={[
-                              ['Ex-showroom', Number(calcExShowroom) || null], ['RTO', Number(calcRto) || null], ['Insurance', Number(calcInsurance) || null],
-                              ['TCS', Number(calcTcs) || null], ['FASTag', Number(calcFastag) || null], ['Extra Warranty', Number(calcWarranty) || null],
-                              ['Accessories', Number(calcAccessories) || null], ['RSA', Number(calcRsa) || null],
-                            ]}
-                            deductions={[['Discount', Number(calcDiscount) || null]]}
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-2">
-                        <input type="number" className={inputCls} placeholder="Ex-showroom price" value={calcExShowroom} onChange={(e) => setCalcExShowroom(e.target.value)} />
-                        <input type="number" className={inputCls} placeholder="RTO" value={calcRto} onChange={(e) => setCalcRto(e.target.value)} />
-                        <input type="number" className={inputCls} placeholder="Insurance" value={calcInsurance} onChange={(e) => setCalcInsurance(e.target.value)} />
-                        <input type="number" className={inputCls} placeholder="TCS" value={calcTcs} onChange={(e) => setCalcTcs(e.target.value)} />
-                        <input type="number" className={inputCls} placeholder="FASTag" value={calcFastag} onChange={(e) => setCalcFastag(e.target.value)} />
-                        <input type="number" className={inputCls} placeholder="Extra Warranty" value={calcWarranty} onChange={(e) => setCalcWarranty(e.target.value)} />
-                        <input type="number" className={inputCls} placeholder="Accessories" value={calcAccessories} onChange={(e) => setCalcAccessories(e.target.value)} />
-                        <input type="number" className={inputCls} placeholder="RSA" value={calcRsa} onChange={(e) => setCalcRsa(e.target.value)} />
-                        <input type="number" className={`${inputCls} col-span-2`} placeholder="Discount (subtracted)" value={calcDiscount} onChange={(e) => setCalcDiscount(e.target.value)} />
-                      </div>
-                    )}
-                    {!latestQuotation && (
-                      <p className="text-sm font-semibold mt-2 text-slate-700">On-Road Price: ₹{calcOnRoad.toLocaleString('en-IN')}</p>
-                    )}
-                  </div>
-
-                  <div className="border-t border-emerald-200 pt-3">
-                    <p className="text-xs font-semibold text-slate-600 mb-2">Loan Amount</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="text-[11px] text-slate-500">% Funding on ex-showroom</label>
-                        <input type="number" className={`${inputCls} w-full`} value={calcFundingPct} onChange={(e) => setCalcFundingPct(e.target.value)} />
-                      </div>
-                      <div>
-                        <label className="text-[11px] text-slate-500">Loan Suraksha (insurance) amount</label>
-                        <input type="number" className={`${inputCls} w-full`} value={calcSuraksha} onChange={(e) => setCalcSuraksha(e.target.value)} />
-                      </div>
-                    </div>
-                    <p className="text-sm mt-2 text-slate-700">Base Loan (funding %): ₹{calcBaseLoan.toLocaleString('en-IN')}</p>
-                    <p className="text-sm font-semibold text-slate-700">Total Loan Amount: ₹{calcTotalLoan.toLocaleString('en-IN')}</p>
-                    <p className="text-xs text-slate-500">Down Payment needed (covers bank deductions too): ₹{Math.max(0, calcDownPayment).toLocaleString('en-IN')}</p>
-                  </div>
-
-                  <div className="border-t border-emerald-200 pt-3">
-                    <p className="text-xs font-semibold text-slate-600 mb-2">EMI</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="text-[11px] text-slate-500">ROI %</label>
-                        <input type="number" step="0.1" className={`${inputCls} w-full`} value={calcRoi} onChange={(e) => setCalcRoi(e.target.value)} />
-                      </div>
-                      <div>
-                        <label className="text-[11px] text-slate-500">Tenure (months)</label>
-                        <input type="number" className={`${inputCls} w-full`} value={calcTenure} onChange={(e) => setCalcTenure(e.target.value)} />
-                      </div>
-                    </div>
-                    <p className="text-sm font-semibold mt-2 text-slate-700">EMI: ₹{calcEmi.toLocaleString('en-IN')}/mo</p>
-                  </div>
-
-                  <div className="border-t border-emerald-200 pt-3">
-                    <p className="text-xs font-semibold text-slate-600 mb-2">Deductions (from loan amount)</p>
-
-                    {calcDeductions.length > 0 && (
-                      <div className="space-y-1.5 mb-3">
-                        {calcDeductions.map((d, i) => (
-                          <div key={i} className="flex items-center justify-between bg-white/70 rounded-lg px-3 py-2 text-[13px]">
-                            <span className="text-slate-700">{d.label}</span>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-slate-800">₹{d.amount.toLocaleString('en-IN')}</span>
-                              <button type="button" onClick={() => removeDeduction(i)} className="text-red-500 hover:text-red-700 text-[12px]">✕</button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-3 gap-2">
-                      <select className={selectCls} value={deductionType} onChange={(e) => setDeductionType(e.target.value)}>
-                        {DEDUCTION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                      {deductionType === 'Other' && (
-                        <input className={inputCls} placeholder="Charge name" value={deductionCustomLabel} onChange={(e) => setDeductionCustomLabel(e.target.value)} />
-                      )}
-                      <input type="number" className={inputCls} placeholder="Amount" value={deductionAmount} onChange={(e) => setDeductionAmount(e.target.value)} />
-                      <button type="button" onClick={addDeduction} className={secondaryBtnCls}>+ Add</button>
-                    </div>
-
-                    <p className="text-sm mt-3 text-slate-600">Total Deductions: ₹{calcTotalDeductions.toLocaleString('en-IN')}</p>
-                    <p className="text-[15px] font-bold mt-1 text-emerald-800">Net Disbursed Amount: ₹{calcNetDisbursed.toLocaleString('en-IN')}</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">This is what the customer actually receives after the bank's deductions — share this figure with the customer, not the loan amount.</p>
-                  </div>
-
-                  <button type="button" onClick={applyCalculatorToForm} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-4 py-2.5 text-sm font-semibold">
-                    ✓ Apply to Finance Case Below
-                  </button>
-                </div>
-              )}
+              {showCalculator && renderCalculatorPanel()}
 
               {dealerBanks.length > 0 && (
                 <p className="text-[12px] text-slate-500">Showing banks tied to this lead's dealer.</p>

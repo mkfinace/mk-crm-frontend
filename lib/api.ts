@@ -90,6 +90,9 @@ export const api = {
     const qs = q.toString();
     return apiFetch(`/audit-logs${qs ? `?${qs}` : ''}`);
   },
+  getPermissionsMatrix: () => apiFetch('/permissions/matrix'),
+  grantPermission: (role: string, code: string) => apiFetch(`/permissions/${role}/${code}`, { method: 'PUT' }),
+  revokePermission: (role: string, code: string) => apiFetch(`/permissions/${role}/${code}`, { method: 'DELETE' }),
   setSameDayDeal: (id: string, sameDayDeal: boolean) => apiFetch(`/leads/${id}/same-day-deal`, { method: 'PUT', body: JSON.stringify({ sameDayDeal }) }),
   createFinanceApplication: (data: any) => apiFetch('/finance-applications', { method: 'POST', body: JSON.stringify(data) }),
   listFinanceApplications: (leadId: string) => apiFetch(`/finance-applications?leadId=${leadId}`),

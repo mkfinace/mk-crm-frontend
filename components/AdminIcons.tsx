@@ -178,3 +178,13 @@ export function IconHistory({ className = 'w-[18px] h-[18px]' }: { className?: s
     </svg>
   );
 }
+
+export function IconShieldLock({ className = 'w-[18px] h-[18px]' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <rect x="9.5" y="11" width="5" height="4" rx="0.8" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M10.3 11V9.7a1.7 1.7 0 0 1 3.4 0V11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}

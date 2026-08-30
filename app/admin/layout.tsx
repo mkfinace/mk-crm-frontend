@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Manrope } from 'next/font/google';
 import { getStaffUser, clearStaffUser, StaffUser } from '@/lib/auth';
 import {
-  IconGrid, IconUsers, IconCar, IconBuilding, IconBank, IconUser, IconBell, IconLogout, IconLayers, IconEdit, IconChart, IconClock, IconFlag, IconHistory,
+  IconGrid, IconUsers, IconCar, IconBuilding, IconBank, IconUser, IconBell, IconLogout, IconLayers, IconEdit, IconChart, IconClock, IconFlag, IconHistory, IconShieldLock,
 } from '@/components/AdminIcons';
 
 const manrope = Manrope({ subsets: ['latin'], weight: ['500', '600', '700', '800'], variable: '--font-display' });
@@ -59,6 +59,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/dealers', label: 'Dealers', icon: IconBuilding, roles: ['SUPER_ADMIN', 'SALES_ADMIN', 'DEALER_MANAGER'] },
     { href: '/admin/banks', label: 'Banks', icon: IconBank, roles: ['SUPER_ADMIN', 'FINANCE_ADMIN'] },
     { href: '/admin/users', label: 'Users', icon: IconUser, roles: ['SUPER_ADMIN'] },
+    { href: '/admin/permissions', label: 'Permissions', icon: IconShieldLock, roles: ['SUPER_ADMIN'] },
     { href: '/admin/sla-settings', label: 'SLA Settings', icon: IconClock, roles: ['SUPER_ADMIN', 'SALES_ADMIN', 'FINANCE_ADMIN'] },
     { href: '/admin/audit-logs', label: 'Audit Log', icon: IconHistory, roles: ['SUPER_ADMIN', 'SALES_ADMIN', 'FINANCE_ADMIN'] },
     { href: '/admin/notifications', label: 'Notifications', icon: IconBell, roles: null },

@@ -517,7 +517,7 @@ export default function LeadDetailPage() {
     setFollowUpDate('');
   });
 
-  const latestQuotation = lead.quotations?.length > 0
+  const latestQuotation = lead?.quotations?.length > 0
     ? [...lead.quotations].sort((a: any, b: any) => (b.version || 1) - (a.version || 1))[0]
     : null;
 

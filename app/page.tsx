@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Rajdhani, Montserrat } from 'next/font/google';
 import { api } from '@/lib/api';
+import { getCustomer, type PortalCustomer } from '@/lib/auth';
 import { slugify } from '@/lib/slugify';
 import EnquiryModal from '@/components/EnquiryModal';
 
@@ -164,6 +165,10 @@ export default function HomePage() {
   const [enquiryIds, setEnquiryIds] = useState<{ brandId?: string; modelId?: string }>({});
   const [selectedVehicle, setSelectedVehicle] = useState<any | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [customer, setCustomer] = useState<PortalCustomer | null>(null);
+  useEffect(() => {
+    setCustomer(getCustomer());
+  }, []);
   const [activeCommercialCat, setActiveCommercialCat] = useState<string | null>(null);
 
   const [price, setPrice] = useState(1000000);
@@ -345,7 +350,17 @@ export default function HomePage() {
           <li><button onClick={() => scrollTo('commercial-vehicles')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Commercial</button></li>
           <li><button onClick={() => scrollTo('loans')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Finance</button></li>
           <li><button onClick={() => scrollTo('insurance')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Insurance</button></li>
-          <li><Link href="/portal/login" className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Track My Enquiry</Link></li>
+          <li><Link href="/portal/login" className={customer ? 'hidden' : 'text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide'}>Track My Enquiry</Link></li>
+          {customer && (
+            <li>
+              <Link href="/portal" className="flex items-center gap-2 text-white/85 hover:text-white text-[13px] font-medium">
+                <span className="w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-bold text-white" style={{ background: 'linear-gradient(135deg,#2a8aad,#1a3a6e)' }}>
+                  {(customer.name || 'M').charAt(0).toUpperCase()}
+                </span>
+                Hi, {customer.name?.split(' ')[0] || 'there'}
+              </Link>
+            </li>
+          )}
           <li><button onClick={() => scrollTo('contact')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Contact</button></li>
           <li><button onClick={() => openEnquiry()} className="bg-[#e63030] hover:bg-[#b01c1c] text-white px-5 py-2 rounded text-[13px] font-semibold">Get Quote</button></li>
         </ul>

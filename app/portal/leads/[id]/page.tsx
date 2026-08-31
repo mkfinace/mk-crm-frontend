@@ -12,16 +12,16 @@ const STAGE_LABEL: Record<string, string> = {
   BOOKING: 'Booked', DELIVERY: 'Delivery', CLOSED: 'Delivered',
 };
 const DOC_STATUS_STYLE: Record<string, { bg: string; text: string; label: string }> = {
-  PENDING: { bg: 'bg-slate-500/10', text: 'text-slate-400', label: 'Pending' },
-  UPLOADED: { bg: 'bg-amber-500/10', text: 'text-amber-400', label: 'Under Review' },
-  VERIFIED: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', label: 'Verified' },
-  REJECTED: { bg: 'bg-red-500/10', text: 'text-red-400', label: 'Rejected — Reupload Needed' },
+  PENDING: { bg: 'bg-slate-500/10', text: 'text-slate-500', label: 'Pending' },
+  UPLOADED: { bg: 'bg-amber-500/10', text: 'text-amber-700', label: 'Under Review' },
+  VERIFIED: { bg: 'bg-emerald-500/10', text: 'text-emerald-700', label: 'Verified' },
+  REJECTED: { bg: 'bg-red-500/10', text: 'text-red-600', label: 'Rejected — Reupload Needed' },
 };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-[#141414] border border-white/[0.08] rounded-2xl p-5 mb-5">
-      <h3 className="text-[13px] font-bold text-white/70 uppercase tracking-wide mb-4">{title}</h3>
+    <div className="bg-[#FFFFFF] border border-[#E3E8EF] rounded-2xl p-5 mb-5">
+      <h3 className="text-[13px] font-bold text-[#68758A] uppercase tracking-wide mb-4">{title}</h3>
       {children}
     </div>
   );
@@ -96,13 +96,13 @@ export default function PortalLeadDetail() {
   if (loading) {
     return (
       <div className="space-y-3">
-        {[0, 1, 2].map((i) => <div key={i} className="h-24 bg-white/[0.03] border border-white/[0.08] rounded-lg animate-pulse" />)}
+        {[0, 1, 2].map((i) => <div key={i} className="h-24 bg-[#F9FAFC] border border-[#E3E8EF] rounded-lg animate-pulse" />)}
       </div>
     );
   }
 
   if (error || !lead) {
-    return <p className="text-red-400 text-sm">{error || 'Not found.'}</p>;
+    return <p className="text-red-600 text-sm">{error || 'Not found.'}</p>;
   }
 
   const stageIdx = SALES_PIPELINE.indexOf(lead.salesStatus);
@@ -115,16 +115,16 @@ export default function PortalLeadDetail() {
       {/* HERO — vehicle + on-road price, glowing accent panel matching the
           site's red/blue brand instead of a generic dark card. */}
       <div
-        className="relative rounded-2xl overflow-hidden p-6 mb-6 border border-white/[0.08]"
-        style={{ background: 'radial-gradient(circle at 85% 20%, rgba(43,156,255,0.28), transparent 55%), radial-gradient(circle at 10% 100%, rgba(128,85,255,0.14), transparent 45%), #0c0c0c' }}
+        className="relative rounded-2xl overflow-hidden p-6 mb-6 border border-[#E3E8EF]"
+        style={{ background: 'radial-gradient(circle at 85% 20%, rgba(47,140,255,0.28), transparent 55%), radial-gradient(circle at 10% 100%, rgba(113,70,255,0.14), transparent 45%), #0D1B35' }}
       >
-        <p className="text-[11px] font-bold tracking-[3px] uppercase text-[#2b9cff] mb-2">{lead.leadCode}</p>
-        <h1 className="text-[26px] sm:text-[32px] font-extrabold leading-tight">{lead.brand?.name} {lead.model?.name} <span className="text-[#2b9cff]">{lead.variant?.name}</span></h1>
+        <p className="text-[11px] font-bold tracking-[3px] uppercase text-[#2F8CFF] mb-2">{lead.leadCode}</p>
+        <h1 className="text-[26px] sm:text-[32px] font-extrabold leading-tight">{lead.brand?.name} {lead.model?.name} <span className="text-[#2F8CFF]">{lead.variant?.name}</span></h1>
         {latestQuote && (
-          <p className="text-[18px] font-bold text-white/90 mt-2">{fmtMoney(latestQuote.onRoadPrice)} <span className="text-[12px] font-normal text-white/40">on-road, as quoted</span></p>
+          <p className="text-[18px] font-bold text-[#172033] mt-2">{fmtMoney(latestQuote.onRoadPrice)} <span className="text-[12px] font-normal text-[#94A0AF]">on-road, as quoted</span></p>
         )}
         {!lead.isLost && (
-          <p className="text-[13px] text-white/50 mt-3">Currently: <span className="text-white font-semibold">{STAGE_LABEL[lead.salesStatus] || lead.salesStatus}</span></p>
+          <p className="text-[13px] text-[#8894A5] mt-3">Currently: <span className="text-white font-semibold">{STAGE_LABEL[lead.salesStatus] || lead.salesStatus}</span></p>
         )}
       </div>
 
@@ -135,8 +135,8 @@ export default function PortalLeadDetail() {
           <div className="mb-6 bg-amber-500/10 border border-amber-500/25 rounded-lg px-4 py-3 flex items-start gap-2.5">
             <span className="text-lg leading-none">📋</span>
             <div>
-              <p className="text-amber-300 font-semibold text-[13.5px]">Action needed: additional document required</p>
-              <p className="text-white/60 text-[12.5px] mt-0.5">
+              <p className="text-amber-700 font-semibold text-[13.5px]">Action needed: additional document required</p>
+              <p className="text-[#68758A] text-[12.5px] mt-0.5">
                 {openQuery.requestedDocument ? `Please provide: ${openQuery.requestedDocument}. ` : ''}
                 See "Bank Requests" below for details.
               </p>
@@ -148,7 +148,7 @@ export default function PortalLeadDetail() {
       {/* DEAL JOURNEY */}
       <Section title="Your Deal Journey">
         {lead.isLost ? (
-          <p className="text-red-400 text-sm">This enquiry is closed.</p>
+          <p className="text-red-600 text-sm">This enquiry is closed.</p>
         ) : (
           <div className="flex items-start overflow-x-auto pb-1 gap-0">
             {SALES_PIPELINE.map((s, i) => {
@@ -159,16 +159,16 @@ export default function PortalLeadDetail() {
                   <div className="flex flex-col items-center w-[74px]">
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-shadow ${
-                        done ? 'bg-emerald-500/20 border border-emerald-400/50 text-emerald-300'
-                        : current ? 'bg-[#2b9cff] text-white shadow-[0_0_18px_rgba(43,156,255,0.65)] border border-[#7fd4f0]'
-                        : 'bg-white/[0.05] border border-white/10 text-white/25'
+                        done ? 'bg-emerald-500/20 border border-emerald-400/50 text-emerald-700'
+                        : current ? 'bg-[#2F8CFF] text-white shadow-[0_0_18px_rgba(47,140,255,0.65)] border border-[#7fd4f0]'
+                        : 'bg-[#F5F7FA] border border-[#E3E8EF] text-[#a8b7be]'
                       }`}
                     >
                       {done ? '✓' : i + 1}
                     </div>
-                    <p className={`text-[10px] mt-2 text-center leading-tight ${current ? 'text-white font-semibold' : done ? 'text-white/60' : 'text-white/25'}`}>{STAGE_LABEL[s]}</p>
+                    <p className={`text-[10px] mt-2 text-center leading-tight ${current ? 'text-[#146BFF] font-semibold' : done ? 'text-[#68758A]' : 'text-[#a8b7be]'}`}>{STAGE_LABEL[s]}</p>
                   </div>
-                  {i < SALES_PIPELINE.length - 1 && <div className={`h-0.5 w-6 mt-4 ${i < stageIdx ? 'bg-emerald-400/50' : 'bg-white/10'}`} />}
+                  {i < SALES_PIPELINE.length - 1 && <div className={`h-0.5 w-6 mt-4 ${i < stageIdx ? 'bg-emerald-400/50' : 'bg-[#E3E8EF]'}`} />}
                 </div>
               );
             })}
@@ -177,29 +177,29 @@ export default function PortalLeadDetail() {
 
         {/* Quick status row — sales / finance / documents / booking / delivery at a glance */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-5">
-          <div className="bg-white/[0.03] border border-white/[0.07] rounded-xl px-3 py-2.5">
-            <p className="text-[10px] text-white/35 uppercase tracking-wide">Sales</p>
-            <p className="text-[12.5px] font-semibold text-white/85 mt-0.5">{STAGE_LABEL[lead.salesStatus] || lead.salesStatus}</p>
+          <div className="bg-[#F9FAFC] border border-[#E9EDF3] rounded-xl px-3 py-2.5">
+            <p className="text-[10px] text-[#9FABB8] uppercase tracking-wide">Sales</p>
+            <p className="text-[12.5px] font-semibold text-[#172033] mt-0.5">{STAGE_LABEL[lead.salesStatus] || lead.salesStatus}</p>
           </div>
           {lead.financeRequired && (
-            <div className="bg-white/[0.03] border border-white/[0.07] rounded-xl px-3 py-2.5">
-              <p className="text-[10px] text-white/35 uppercase tracking-wide">Finance</p>
-              <p className="text-[12.5px] font-semibold text-white/85 mt-0.5">{STAGE_LABEL[lead.financeCase?.stage] || lead.financeStatus || 'Pending'}</p>
+            <div className="bg-[#F9FAFC] border border-[#E9EDF3] rounded-xl px-3 py-2.5">
+              <p className="text-[10px] text-[#9FABB8] uppercase tracking-wide">Finance</p>
+              <p className="text-[12.5px] font-semibold text-[#172033] mt-0.5">{STAGE_LABEL[lead.financeCase?.stage] || lead.financeStatus || 'Pending'}</p>
             </div>
           )}
           {docsTotal > 0 && (
-            <div className="bg-white/[0.03] border border-white/[0.07] rounded-xl px-3 py-2.5">
-              <p className="text-[10px] text-white/35 uppercase tracking-wide">Documents</p>
-              <p className="text-[12.5px] font-semibold text-white/85 mt-0.5">{docsVerified} / {docsTotal} Verified</p>
+            <div className="bg-[#F9FAFC] border border-[#E9EDF3] rounded-xl px-3 py-2.5">
+              <p className="text-[10px] text-[#9FABB8] uppercase tracking-wide">Documents</p>
+              <p className="text-[12.5px] font-semibold text-[#172033] mt-0.5">{docsVerified} / {docsTotal} Verified</p>
             </div>
           )}
-          <div className="bg-white/[0.03] border border-white/[0.07] rounded-xl px-3 py-2.5">
-            <p className="text-[10px] text-white/35 uppercase tracking-wide">Booking</p>
-            <p className="text-[12.5px] font-semibold text-white/85 mt-0.5">{lead.booking ? 'Confirmed' : 'Pending'}</p>
+          <div className="bg-[#F9FAFC] border border-[#E9EDF3] rounded-xl px-3 py-2.5">
+            <p className="text-[10px] text-[#9FABB8] uppercase tracking-wide">Booking</p>
+            <p className="text-[12.5px] font-semibold text-[#172033] mt-0.5">{lead.booking ? 'Confirmed' : 'Pending'}</p>
           </div>
-          <div className="bg-white/[0.03] border border-white/[0.07] rounded-xl px-3 py-2.5">
-            <p className="text-[10px] text-white/35 uppercase tracking-wide">Delivery</p>
-            <p className="text-[12.5px] font-semibold text-white/85 mt-0.5">
+          <div className="bg-[#F9FAFC] border border-[#E9EDF3] rounded-xl px-3 py-2.5">
+            <p className="text-[10px] text-[#9FABB8] uppercase tracking-wide">Delivery</p>
+            <p className="text-[12.5px] font-semibold text-[#172033] mt-0.5">
               {lead.delivery?.deliveredAt ? 'Delivered' : lead.delivery?.scheduledAt ? new Date(lead.delivery.scheduledAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Pending'}
             </p>
           </div>
@@ -212,33 +212,33 @@ export default function PortalLeadDetail() {
       {(docsTotal > 0 || lead.financeCase || lead.delivery) && (
         <div className="grid sm:grid-cols-3 gap-4 mb-6">
           {docsTotal > 0 && (
-            <div className="rounded-2xl p-5 border border-white/[0.08]" style={{ background: 'radial-gradient(circle at 90% 15%, rgba(43,156,255,0.18), transparent 50%), #0c1019' }}>
-              <p className="text-[10px] font-bold tracking-wide uppercase text-white/35">Documents</p>
-              <p className="text-[20px] font-extrabold mt-1">{docsVerified} / {docsTotal} <span className="text-[13px] font-normal text-white/40">Verified</span></p>
-              <p className="text-[12px] text-white/40 mt-1">{(lead.documents || []).map((d: any) => d.type).join(' • ')}</p>
+            <div className="rounded-2xl p-5 border border-[#E3E8EF]" style={{ background: 'radial-gradient(circle at 90% 15%, rgba(47,140,255,0.10), transparent 50%), #F5F7FA' }}>
+              <p className="text-[10px] font-bold tracking-wide uppercase text-[#94A0AF]">Documents</p>
+              <p className="text-[20px] font-extrabold mt-1 text-[#172033]">{docsVerified} / {docsTotal} <span className="text-[13px] font-normal text-[#94A0AF]">Verified</span></p>
+              <p className="text-[12px] text-[#94A0AF] mt-1">{(lead.documents || []).map((d: any) => d.type).join(' • ')}</p>
             </div>
           )}
           {(lead.financeCase || lead.booking) && (
-            <div className="rounded-2xl p-5 border border-white/[0.08] bg-[#0c0c0c]">
-              <p className="text-[10px] font-bold tracking-wide uppercase text-white/35">Finance & Booking</p>
-              {lead.financeCase && <p className="text-[20px] font-extrabold mt-1">{fmtMoney(lead.financeCase.emi)}<span className="text-[13px] font-normal text-white/40">/mo</span></p>}
-              <p className="text-[12px] text-white/40 mt-1">
+            <div className="rounded-2xl p-5 border border-[#E3E8EF] bg-[#F5F7FA]">
+              <p className="text-[10px] font-bold tracking-wide uppercase text-[#94A0AF]">Finance & Booking</p>
+              {lead.financeCase && <p className="text-[20px] font-extrabold mt-1 text-[#172033]">{fmtMoney(lead.financeCase.emi)}<span className="text-[13px] font-normal text-[#94A0AF]">/mo</span></p>}
+              <p className="text-[12px] text-[#94A0AF] mt-1">
                 {lead.financeCase ? `${STAGE_LABEL[lead.financeCase.stage] || lead.financeCase.stage} · ` : ''}
                 {lead.booking ? `Booked ${new Date(lead.booking.bookedAt).toLocaleDateString('en-IN')}` : 'Booking pending'}
               </p>
             </div>
           )}
           {lead.delivery && (
-            <div className="rounded-2xl p-5 border border-white/[0.08]" style={{ background: 'radial-gradient(circle at 90% 15%, rgba(128,85,255,0.16), transparent 50%), #0c0c0c' }}>
-              <p className="text-[10px] font-bold tracking-wide uppercase text-white/35">Delivery {lead.delivery.deliveredAt ? '' : 'Countdown'}</p>
+            <div className="rounded-2xl p-5 border border-[#E3E8EF]" style={{ background: 'radial-gradient(circle at 90% 15%, rgba(113,70,255,0.10), transparent 50%), #F5F7FA' }}>
+              <p className="text-[10px] font-bold tracking-wide uppercase text-[#94A0AF]">Delivery {lead.delivery.deliveredAt ? '' : 'Countdown'}</p>
               {lead.delivery.deliveredAt ? (
-                <p className="text-[20px] font-extrabold mt-1 text-emerald-400">Delivered ✓</p>
+                <p className="text-[20px] font-extrabold mt-1 text-emerald-700">Delivered ✓</p>
               ) : lead.delivery.scheduledAt ? (
-                <p className="text-[20px] font-extrabold mt-1 tabular-nums"><DeliveryCountdown target={lead.delivery.scheduledAt} /></p>
+                <p className="text-[20px] font-extrabold mt-1 tabular-nums text-[#172033]"><DeliveryCountdown target={lead.delivery.scheduledAt} /></p>
               ) : (
-                <p className="text-[15px] text-white/50 mt-1">Date to be scheduled</p>
+                <p className="text-[15px] text-[#8894A5] mt-1">Date to be scheduled</p>
               )}
-              <p className="text-[12px] text-white/40 mt-1">
+              <p className="text-[12px] text-[#94A0AF] mt-1">
                 {lead.delivery.deliveredAt
                   ? new Date(lead.delivery.deliveredAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
                   : lead.delivery.scheduledAt ? `Target: ${new Date(lead.delivery.scheduledAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
@@ -253,12 +253,12 @@ export default function PortalLeadDetail() {
       {lead.quotations?.length > 0 && (
         <Section title="Quotations">
           {lead.quotations.map((q: any) => (
-            <div key={q.id} className="flex justify-between items-center py-2 border-b border-white/[0.06] last:border-0 text-[13px]">
+            <div key={q.id} className="flex justify-between items-center py-2 border-b border-[#EDF1F6] last:border-0 text-[13px]">
               <div>
-                <p className="text-white/80">On-road: {fmtMoney(q.onRoadPrice)}</p>
-                <p className="text-white/40 text-[11.5px]">Valid till {new Date(q.validTill).toLocaleDateString('en-IN')}</p>
+                <p className="text-[#374357]">On-road: {fmtMoney(q.onRoadPrice)}</p>
+                <p className="text-[#94A0AF] text-[11.5px]">Valid till {new Date(q.validTill).toLocaleDateString('en-IN')}</p>
               </div>
-              <p className="font-semibold text-[#2b9cff]">{fmtMoney(q.price)}</p>
+              <p className="font-semibold text-[#2F8CFF]">{fmtMoney(q.price)}</p>
             </div>
           ))}
         </Section>
@@ -268,9 +268,9 @@ export default function PortalLeadDetail() {
       {lead.testDrives?.length > 0 && (
         <Section title="Test Drives">
           {lead.testDrives.map((t: any) => (
-            <div key={t.id} className="flex justify-between items-center py-2 border-b border-white/[0.06] last:border-0 text-[13px]">
-              <span className="text-white/70">{new Date(t.scheduledAt).toLocaleString('en-IN')}</span>
-              <span className="text-white/50">{t.status}</span>
+            <div key={t.id} className="flex justify-between items-center py-2 border-b border-[#EDF1F6] last:border-0 text-[13px]">
+              <span className="text-[#68758A]">{new Date(t.scheduledAt).toLocaleString('en-IN')}</span>
+              <span className="text-[#8894A5]">{t.status}</span>
             </div>
           ))}
         </Section>
@@ -282,8 +282,8 @@ export default function PortalLeadDetail() {
           {lead.documents.map((d: any) => {
             const style = DOC_STATUS_STYLE[d.status] || DOC_STATUS_STYLE.PENDING;
             return (
-              <div key={d.id} className="flex justify-between items-center py-2 border-b border-white/[0.06] last:border-0 text-[13px]">
-                <span className="text-white/70">{d.type}</span>
+              <div key={d.id} className="flex justify-between items-center py-2 border-b border-[#EDF1F6] last:border-0 text-[13px]">
+                <span className="text-[#68758A]">{d.type}</span>
                 <span className={`text-[11px] px-2.5 py-1 rounded-full ${style.bg} ${style.text}`}>{style.label}</span>
               </div>
             );
@@ -295,11 +295,11 @@ export default function PortalLeadDetail() {
       {lead.financeCase && (
         <Section title="Finance">
           <div className="grid grid-cols-2 gap-3 text-[13px]">
-            <div><p className="text-white/40 text-[11.5px]">Bank</p><p className="text-white/80">{lead.financeCase.bank?.name}</p></div>
-            <div><p className="text-white/40 text-[11.5px]">Loan Amount</p><p className="text-white/80">{fmtMoney(lead.financeCase.loanAmount)}</p></div>
-            <div><p className="text-white/40 text-[11.5px]">EMI</p><p className="text-white/80">{fmtMoney(lead.financeCase.emi)}/mo</p></div>
-            <div><p className="text-white/40 text-[11.5px]">Tenure</p><p className="text-white/80">{lead.financeCase.tenureMonths} months</p></div>
-            <div><p className="text-white/40 text-[11.5px]">Stage</p><p className="text-white/80">{STAGE_LABEL[lead.financeCase.stage] || lead.financeCase.stage}</p></div>
+            <div><p className="text-[#94A0AF] text-[11.5px]">Bank</p><p className="text-[#374357]">{lead.financeCase.bank?.name}</p></div>
+            <div><p className="text-[#94A0AF] text-[11.5px]">Loan Amount</p><p className="text-[#374357]">{fmtMoney(lead.financeCase.loanAmount)}</p></div>
+            <div><p className="text-[#94A0AF] text-[11.5px]">EMI</p><p className="text-[#374357]">{fmtMoney(lead.financeCase.emi)}/mo</p></div>
+            <div><p className="text-[#94A0AF] text-[11.5px]">Tenure</p><p className="text-[#374357]">{lead.financeCase.tenureMonths} months</p></div>
+            <div><p className="text-[#94A0AF] text-[11.5px]">Stage</p><p className="text-[#374357]">{STAGE_LABEL[lead.financeCase.stage] || lead.financeCase.stage}</p></div>
           </div>
         </Section>
       )}
@@ -317,24 +317,24 @@ export default function PortalLeadDetail() {
                   key={bq.id}
                   className={`rounded-lg px-4 py-3 text-[13px] border ${isOpen ? 'bg-amber-500/[0.08] border-amber-500/25' : 'bg-emerald-500/[0.06] border-emerald-500/20'}`}
                 >
-                  <p className={`font-semibold ${isOpen ? 'text-amber-300' : 'text-emerald-300'}`}>
+                  <p className={`font-semibold ${isOpen ? 'text-amber-700' : 'text-emerald-700'}`}>
                     {isOpen ? '📋 Additional Document Required' : '✅ Resolved'}
                   </p>
                   {bq.requestedDocument && (
-                    <p className="text-white/80 mt-1">Please provide: <span className="font-medium">{bq.requestedDocument}</span></p>
+                    <p className="text-[#374357] mt-1">Please provide: <span className="font-medium">{bq.requestedDocument}</span></p>
                   )}
-                  <p className="text-white/60 mt-1">{bq.query}</p>
+                  <p className="text-[#68758A] mt-1">{bq.query}</p>
                   {isOpen && bq.dueDate && (
-                    <p className="text-amber-300/80 text-[12px] mt-1.5">Please submit by {new Date(bq.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}.</p>
+                    <p className="text-amber-700/80 text-[12px] mt-1.5">Please submit by {new Date(bq.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}.</p>
                   )}
                   {isOpen && (
-                    <p className="text-white/35 text-[11.5px] mt-2">Message us below or contact your dealer to send this across.</p>
+                    <p className="text-[#9FABB8] text-[11.5px] mt-2">Message us below or contact your dealer to send this across.</p>
                   )}
                   {!isOpen && bq.resolutionNotes && (
-                    <p className="text-white/50 text-[12px] mt-1.5">{bq.resolutionNotes}</p>
+                    <p className="text-[#8894A5] text-[12px] mt-1.5">{bq.resolutionNotes}</p>
                   )}
                   {!isOpen && bq.resolvedAt && (
-                    <p className="text-white/30 text-[11px] mt-1">Resolved on {new Date(bq.resolvedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                    <p className="text-[#a8b7be] text-[11px] mt-1">Resolved on {new Date(bq.resolvedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                   )}
                 </div>
               );
@@ -348,14 +348,14 @@ export default function PortalLeadDetail() {
         <Section title="Booking & Delivery">
           {lead.booking && (
             <div className="text-[13px] mb-2">
-              <p className="text-white/80">Booking Amount: {fmtMoney(lead.booking.bookingAmount)}</p>
-              <p className="text-white/40 text-[11.5px]">Booked on {new Date(lead.booking.bookedAt).toLocaleDateString('en-IN')}</p>
+              <p className="text-[#374357]">Booking Amount: {fmtMoney(lead.booking.bookingAmount)}</p>
+              <p className="text-[#94A0AF] text-[11.5px]">Booked on {new Date(lead.booking.bookedAt).toLocaleDateString('en-IN')}</p>
             </div>
           )}
           {lead.delivery && (
             <div className="text-[13px]">
-              <p className="text-white/80">Delivery: {lead.delivery.status}</p>
-              <p className="text-white/40 text-[11.5px]">
+              <p className="text-[#374357]">Delivery: {lead.delivery.status}</p>
+              <p className="text-[#94A0AF] text-[11.5px]">
                 {lead.delivery.deliveredAt ? `Delivered on ${new Date(lead.delivery.deliveredAt).toLocaleDateString('en-IN')}` : `Scheduled: ${new Date(lead.delivery.scheduledAt).toLocaleDateString('en-IN')}`}
               </p>
             </div>
@@ -366,23 +366,23 @@ export default function PortalLeadDetail() {
       {/* DEALER CONTACT */}
       {lead.dealer && (
         <Section title="Your Dealer">
-          <p className="text-[13px] text-white/80">{lead.dealer.name}</p>
-          <p className="text-[12px] text-white/40">{[lead.dealer.address, lead.dealer.city].filter(Boolean).join(', ')}</p>
-          {lead.dealer.phone && <a href={`tel:${lead.dealer.phone}`} className="text-[12.5px] text-[#2b9cff] mt-1 inline-block">📞 {lead.dealer.phone}</a>}
+          <p className="text-[13px] text-[#374357]">{lead.dealer.name}</p>
+          <p className="text-[12px] text-[#94A0AF]">{[lead.dealer.address, lead.dealer.city].filter(Boolean).join(', ')}</p>
+          {lead.dealer.phone && <a href={`tel:${lead.dealer.phone}`} className="text-[12.5px] text-[#2F8CFF] mt-1 inline-block">📞 {lead.dealer.phone}</a>}
         </Section>
       )}
 
       {/* MESSAGES */}
       <Section title="Messages">
         <div className="space-y-3 mb-4 max-h-72 overflow-y-auto">
-          {lead.messages?.length === 0 && <p className="text-[12.5px] text-white/30">No messages yet.</p>}
+          {lead.messages?.length === 0 && <p className="text-[12.5px] text-[#a8b7be]">No messages yet.</p>}
           {lead.messages?.map((m: any) => {
             const fromMe = !!m.senderCustomerId;
             return (
               <div key={m.id} className={`flex ${fromMe ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[75%] rounded-lg px-3 py-2 text-[13px] ${fromMe ? 'bg-[#176dff]/25 text-white' : 'bg-white/[0.06] text-white/80'}`}>
+                <div className={`max-w-[75%] rounded-lg px-3 py-2 text-[13px] ${fromMe ? 'bg-[#146BFF] text-white' : 'bg-[#F5F7FA] text-[#374357]'}`}>
                   <p>{m.body}</p>
-                  <p className="text-[10px] text-white/35 mt-1">{fromMe ? 'You' : (m.sender?.name || 'MK Finance')} · {new Date(m.createdAt).toLocaleString('en-IN')}</p>
+                  <p className={`text-[10px] mt-1 ${fromMe ? 'text-white/70' : 'text-[#9FABB8]'}`}>{fromMe ? 'You' : (m.sender?.name || 'MK Finance')} · {new Date(m.createdAt).toLocaleString('en-IN')}</p>
                 </div>
               </div>
             );
@@ -390,12 +390,12 @@ export default function PortalLeadDetail() {
         </div>
         <form onSubmit={handleSendMessage} className="flex gap-2">
           <input
-            className="flex-1 bg-[#0a0a0a] border border-white/10 text-white placeholder:text-white/25 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2b9cff]/40"
+            className="flex-1 bg-[#F5F7FA] border border-[#E3E8EF] text-[#172033] placeholder:text-[#a8b7be] rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2F8CFF]/40"
             value={messageBody}
             onChange={(e) => setMessageBody(e.target.value)}
             placeholder="Type a message…"
           />
-          <button disabled={sending} className="bg-[#8055ff] hover:bg-[#6020c0] text-white rounded-lg px-5 text-sm font-semibold disabled:opacity-60">
+          <button disabled={sending} className="bg-[#7146FF] hover:bg-[#5732CC] text-white rounded-lg px-5 text-sm font-semibold disabled:opacity-60">
             {sending ? '…' : 'Send'}
           </button>
         </form>

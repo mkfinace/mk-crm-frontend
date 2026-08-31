@@ -27,11 +27,21 @@ type Row = {
   transmissions: string[];
   variantCount: number;
   image: string | null;
+  dynamicValues: Record<string, string[]>; // fieldId -> distinct raw values present across this model's variants
 };
+
+function fieldValueLabel(field: any, rawValue: string): string {
+  if (field.dataType === 'BOOLEAN') return rawValue === 'true' ? 'Yes' : 'No';
+  if (field.dataType === 'SELECT' || field.dataType === 'MULTI_SELECT') {
+    return field.options?.find((o: any) => o.value === rawValue)?.label || rawValue;
+  }
+  return rawValue;
+}
 
 export default function CarsListingPage() {
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<Row[]>([]);
+  const [filterableFields, setFilterableFields] = useState<any[]>([]);
 
   const [search, setSearch] = useState('');
   const [selCategories, setSelCategories] = useState<string[]>([]);
@@ -39,14 +49,15 @@ export default function CarsListingPage() {
   const [selFuels, setSelFuels] = useState<string[]>([]);
   const [selTrans, setSelTrans] = useState<string[]>([]);
   const [priceMax, setPriceMax] = useState<number>(0); // 0 = no cap
+  const [selDynamic, setSelDynamic] = useState<Record<string, string[]>>({}); // fieldId -> selected raw values
   const [sort, setSort] = useState<'price-asc' | 'price-desc' | 'name'>('name');
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
-    api
-      .getFullCatalogue()
-      .then((brands: any[]) => {
+    Promise.all([api.getFullCatalogue(), api.getFilterableFields()])
+      .then(([brands, fields]: [any[], any[]]) => {
+        setFilterableFields(fields || []);
         const out: Row[] = [];
         for (const b of brands || []) {
           for (const m of b.models || []) {
@@ -61,6 +72,22 @@ export default function CarsListingPage() {
                 break;
               }
             }
+            const dynamicValues: Record<string, string[]> = {};
+            for (const field of fields || []) {
+              const values = new Set<string>();
+              for (const v of variants) {
+                const fv = (v.fieldValues || []).find((x: any) => x.fieldId === field.id);
+                if (!fv) continue;
+                if (field.dataType === 'BOOLEAN' && fv.valueBoolean !== null && fv.valueBoolean !== undefined) {
+                  values.add(String(fv.valueBoolean));
+                } else if (field.dataType === 'MULTI_SELECT' && fv.valueText) {
+                  fv.valueText.split(',').filter(Boolean).forEach((x: string) => values.add(x));
+                } else if (fv.valueText) {
+                  values.add(fv.valueText);
+                }
+              }
+              dynamicValues[field.id] = Array.from(values);
+            }
             out.push({
               brandName: b.name,
               modelName: m.name,
@@ -73,6 +100,7 @@ export default function CarsListingPage() {
               transmissions: Array.from(new Set(variants.map((v: any) => v.transmission).filter(Boolean))) as string[],
               variantCount: variants.length,
               image,
+              dynamicValues,
             });
           }
         }
@@ -87,6 +115,13 @@ export default function CarsListingPage() {
   const allFuels = useMemo(() => Array.from(new Set(rows.flatMap((r) => r.fuelTypes))).sort(), [rows]);
   const allTrans = useMemo(() => Array.from(new Set(rows.flatMap((r) => r.transmissions))).sort(), [rows]);
   const maxCatalogPrice = useMemo(() => Math.max(0, ...rows.map((r) => r.minPrice)), [rows]);
+  const allDynamicOptions = useMemo(() => {
+    const out: Record<string, string[]> = {};
+    for (const field of filterableFields) {
+      out[field.id] = Array.from(new Set(rows.flatMap((r) => r.dynamicValues[field.id] || []))).sort();
+    }
+    return out;
+  }, [rows, filterableFields]);
 
   function toggle(list: string[], setList: (v: string[]) => void, val: string) {
     setList(list.includes(val) ? list.filter((x) => x !== val) : [...list, val]);
@@ -100,13 +135,26 @@ export default function CarsListingPage() {
       if (selFuels.length && !r.fuelTypes.some((f) => selFuels.includes(f))) return false;
       if (selTrans.length && !r.transmissions.some((t) => selTrans.includes(t))) return false;
       if (priceMax > 0 && r.minPrice > priceMax) return false;
+      for (const [fieldId, selected] of Object.entries(selDynamic)) {
+        if (selected.length === 0) continue;
+        const present = r.dynamicValues[fieldId] || [];
+        if (!present.some((v) => selected.includes(v))) return false;
+      }
       return true;
     });
     if (sort === 'price-asc') list = [...list].sort((a, b) => (a.minPrice || Infinity) - (b.minPrice || Infinity));
     else if (sort === 'price-desc') list = [...list].sort((a, b) => (b.minPrice || 0) - (a.minPrice || 0));
     else list = [...list].sort((a, b) => `${a.brandName}${a.modelName}`.localeCompare(`${b.brandName}${b.modelName}`));
     return list;
-  }, [rows, search, selCategories, selBrands, selFuels, selTrans, priceMax, sort]);
+  }, [rows, search, selCategories, selBrands, selFuels, selTrans, priceMax, selDynamic, sort]);
+
+  function toggleDynamic(fieldId: string, val: string) {
+    setSelDynamic((prev) => {
+      const current = prev[fieldId] || [];
+      const next = current.includes(val) ? current.filter((x) => x !== val) : [...current, val];
+      return { ...prev, [fieldId]: next };
+    });
+  }
 
   function clearFilters() {
     setSelCategories([]);
@@ -114,10 +162,12 @@ export default function CarsListingPage() {
     setSelFuels([]);
     setSelTrans([]);
     setPriceMax(0);
+    setSelDynamic({});
     setSearch('');
   }
 
-  const activeFilterCount = selCategories.length + selBrands.length + selFuels.length + selTrans.length + (priceMax > 0 ? 1 : 0);
+  const dynamicFilterCount = Object.values(selDynamic).reduce((sum, v) => sum + v.length, 0);
+  const activeFilterCount = selCategories.length + selBrands.length + selFuels.length + selTrans.length + (priceMax > 0 ? 1 : 0) + dynamicFilterCount;
 
   return (
     <div className="lpage">
@@ -279,6 +329,21 @@ export default function CarsListingPage() {
               ))}
             </div>
           )}
+
+          {filterableFields.map((field) => {
+            const options = allDynamicOptions[field.id] || [];
+            if (options.length === 0) return null;
+            return (
+              <div className="filter-group" key={field.id}>
+                <h4>{field.name}</h4>
+                {options.map((v) => (
+                  <label key={v} className="filter-opt">
+                    <input type="checkbox" checked={(selDynamic[field.id] || []).includes(v)} onChange={() => toggleDynamic(field.id, v)} /> {fieldValueLabel(field, v)}
+                  </label>
+                ))}
+              </div>
+            );
+          })}
         </aside>
 
         <main>
@@ -299,6 +364,9 @@ export default function CarsListingPage() {
                   {selFuels.map((f) => <span key={f} className="chip">{f} <span className="x" onClick={() => toggle(selFuels, setSelFuels, f)}>✕</span></span>)}
                   {selTrans.map((t) => <span key={t} className="chip">{t} <span className="x" onClick={() => toggle(selTrans, setSelTrans, t)}>✕</span></span>)}
                   {priceMax > 0 && <span className="chip">Under {formatPrice(priceMax)} <span className="x" onClick={() => setPriceMax(0)}>✕</span></span>}
+                  {filterableFields.map((field) => (selDynamic[field.id] || []).map((v) => (
+                    <span key={`${field.id}-${v}`} className="chip">{fieldValueLabel(field, v)} <span className="x" onClick={() => toggleDynamic(field.id, v)}>✕</span></span>
+                  )))}
                 </div>
               )}
 

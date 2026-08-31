@@ -118,6 +118,24 @@ export default function ModelDetailPage() {
       .finally(() => setLoading(false));
   }, [params.brand, params.model]);
 
+  // Applies the admin-configured SEO fields (Catalogue → edit Model) to the
+  // actual page — falls back to an auto-generated title/description when
+  // left blank, so every model page has reasonable SEO even before an
+  // admin fills these in specifically.
+  useEffect(() => {
+    if (!data?.model) return;
+    const fallbackTitle = `${data.brand?.name} ${data.model.name} — Price, Specs & Offers | MK Finance`;
+    const fallbackDescription = `Explore the ${data.brand?.name} ${data.model.name} — on-road price, variants, specifications, colours and finance offers at MK Finance.`;
+    document.title = data.model.metaTitle || fallbackTitle;
+    let meta = document.querySelector('meta[name="description"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.setAttribute('name', 'description');
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute('content', data.model.metaDescription || fallbackDescription);
+  }, [data]);
+
   // Full catalogue tree — used both for "Compare More Options" and the
   // "+ Add Vehicle" picker (Brand → Model → Variant), fetched once per page load.
   useEffect(() => {

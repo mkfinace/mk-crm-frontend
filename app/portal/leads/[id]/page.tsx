@@ -116,10 +116,10 @@ export default function PortalLeadDetail() {
           site's red/blue brand instead of a generic dark card. */}
       <div
         className="relative rounded-2xl overflow-hidden p-6 mb-6 border border-white/[0.08]"
-        style={{ background: 'radial-gradient(circle at 85% 20%, rgba(42,138,173,0.28), transparent 55%), radial-gradient(circle at 10% 100%, rgba(230,48,48,0.14), transparent 45%), #0c0c0c' }}
+        style={{ background: 'radial-gradient(circle at 85% 20%, rgba(43,156,255,0.28), transparent 55%), radial-gradient(circle at 10% 100%, rgba(128,85,255,0.14), transparent 45%), #0c0c0c' }}
       >
-        <p className="text-[11px] font-bold tracking-[3px] uppercase text-[#2a8aad] mb-2">{lead.leadCode}</p>
-        <h1 className="text-[26px] sm:text-[32px] font-extrabold leading-tight">{lead.brand?.name} {lead.model?.name} <span className="text-[#2a8aad]">{lead.variant?.name}</span></h1>
+        <p className="text-[11px] font-bold tracking-[3px] uppercase text-[#2b9cff] mb-2">{lead.leadCode}</p>
+        <h1 className="text-[26px] sm:text-[32px] font-extrabold leading-tight">{lead.brand?.name} {lead.model?.name} <span className="text-[#2b9cff]">{lead.variant?.name}</span></h1>
         {latestQuote && (
           <p className="text-[18px] font-bold text-white/90 mt-2">{fmtMoney(latestQuote.onRoadPrice)} <span className="text-[12px] font-normal text-white/40">on-road, as quoted</span></p>
         )}
@@ -160,7 +160,7 @@ export default function PortalLeadDetail() {
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-shadow ${
                         done ? 'bg-emerald-500/20 border border-emerald-400/50 text-emerald-300'
-                        : current ? 'bg-[#2a8aad] text-white shadow-[0_0_18px_rgba(42,138,173,0.65)] border border-[#7fd4f0]'
+                        : current ? 'bg-[#2b9cff] text-white shadow-[0_0_18px_rgba(43,156,255,0.65)] border border-[#7fd4f0]'
                         : 'bg-white/[0.05] border border-white/10 text-white/25'
                       }`}
                     >
@@ -212,7 +212,7 @@ export default function PortalLeadDetail() {
       {(docsTotal > 0 || lead.financeCase || lead.delivery) && (
         <div className="grid sm:grid-cols-3 gap-4 mb-6">
           {docsTotal > 0 && (
-            <div className="rounded-2xl p-5 border border-white/[0.08]" style={{ background: 'radial-gradient(circle at 90% 15%, rgba(42,138,173,0.18), transparent 50%), #0c1019' }}>
+            <div className="rounded-2xl p-5 border border-white/[0.08]" style={{ background: 'radial-gradient(circle at 90% 15%, rgba(43,156,255,0.18), transparent 50%), #0c1019' }}>
               <p className="text-[10px] font-bold tracking-wide uppercase text-white/35">Documents</p>
               <p className="text-[20px] font-extrabold mt-1">{docsVerified} / {docsTotal} <span className="text-[13px] font-normal text-white/40">Verified</span></p>
               <p className="text-[12px] text-white/40 mt-1">{(lead.documents || []).map((d: any) => d.type).join(' • ')}</p>
@@ -229,7 +229,7 @@ export default function PortalLeadDetail() {
             </div>
           )}
           {lead.delivery && (
-            <div className="rounded-2xl p-5 border border-white/[0.08]" style={{ background: 'radial-gradient(circle at 90% 15%, rgba(230,48,48,0.16), transparent 50%), #0c0c0c' }}>
+            <div className="rounded-2xl p-5 border border-white/[0.08]" style={{ background: 'radial-gradient(circle at 90% 15%, rgba(128,85,255,0.16), transparent 50%), #0c0c0c' }}>
               <p className="text-[10px] font-bold tracking-wide uppercase text-white/35">Delivery {lead.delivery.deliveredAt ? '' : 'Countdown'}</p>
               {lead.delivery.deliveredAt ? (
                 <p className="text-[20px] font-extrabold mt-1 text-emerald-400">Delivered ✓</p>
@@ -258,7 +258,7 @@ export default function PortalLeadDetail() {
                 <p className="text-white/80">On-road: {fmtMoney(q.onRoadPrice)}</p>
                 <p className="text-white/40 text-[11.5px]">Valid till {new Date(q.validTill).toLocaleDateString('en-IN')}</p>
               </div>
-              <p className="font-semibold text-[#2a8aad]">{fmtMoney(q.price)}</p>
+              <p className="font-semibold text-[#2b9cff]">{fmtMoney(q.price)}</p>
             </div>
           ))}
         </Section>
@@ -368,7 +368,7 @@ export default function PortalLeadDetail() {
         <Section title="Your Dealer">
           <p className="text-[13px] text-white/80">{lead.dealer.name}</p>
           <p className="text-[12px] text-white/40">{[lead.dealer.address, lead.dealer.city].filter(Boolean).join(', ')}</p>
-          {lead.dealer.phone && <a href={`tel:${lead.dealer.phone}`} className="text-[12.5px] text-[#2a8aad] mt-1 inline-block">📞 {lead.dealer.phone}</a>}
+          {lead.dealer.phone && <a href={`tel:${lead.dealer.phone}`} className="text-[12.5px] text-[#2b9cff] mt-1 inline-block">📞 {lead.dealer.phone}</a>}
         </Section>
       )}
 
@@ -380,7 +380,7 @@ export default function PortalLeadDetail() {
             const fromMe = !!m.senderCustomerId;
             return (
               <div key={m.id} className={`flex ${fromMe ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[75%] rounded-lg px-3 py-2 text-[13px] ${fromMe ? 'bg-[#1a6e8e]/25 text-white' : 'bg-white/[0.06] text-white/80'}`}>
+                <div className={`max-w-[75%] rounded-lg px-3 py-2 text-[13px] ${fromMe ? 'bg-[#176dff]/25 text-white' : 'bg-white/[0.06] text-white/80'}`}>
                   <p>{m.body}</p>
                   <p className="text-[10px] text-white/35 mt-1">{fromMe ? 'You' : (m.sender?.name || 'MK Finance')} · {new Date(m.createdAt).toLocaleString('en-IN')}</p>
                 </div>
@@ -390,12 +390,12 @@ export default function PortalLeadDetail() {
         </div>
         <form onSubmit={handleSendMessage} className="flex gap-2">
           <input
-            className="flex-1 bg-[#0a0a0a] border border-white/10 text-white placeholder:text-white/25 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2a8aad]/40"
+            className="flex-1 bg-[#0a0a0a] border border-white/10 text-white placeholder:text-white/25 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2b9cff]/40"
             value={messageBody}
             onChange={(e) => setMessageBody(e.target.value)}
             placeholder="Type a message…"
           />
-          <button disabled={sending} className="bg-[#e63030] hover:bg-[#b01c1c] text-white rounded-lg px-5 text-sm font-semibold disabled:opacity-60">
+          <button disabled={sending} className="bg-[#8055ff] hover:bg-[#6020c0] text-white rounded-lg px-5 text-sm font-semibold disabled:opacity-60">
             {sending ? '…' : 'Send'}
           </button>
         </form>

@@ -48,7 +48,7 @@ export default function PortalDashboard() {
     <div>
       <div
         className="relative rounded-2xl overflow-hidden p-6 mb-6 border border-white/[0.08]"
-        style={{ background: 'radial-gradient(circle at 85% 15%, rgba(42,138,173,0.22), transparent 55%), #0c0c0c' }}
+        style={{ background: 'radial-gradient(circle at 85% 15%, rgba(43,156,255,0.22), transparent 55%), #0c0c0c' }}
       >
         <h1 className="text-[24px] font-extrabold">Your Enquiries</h1>
         <p className="text-white/45 text-[13px] mt-1">Track the status of your vehicle &amp; loan enquiries.</p>
@@ -69,22 +69,22 @@ export default function PortalDashboard() {
               <Link
                 key={l.id}
                 href={`/portal/leads/${l.id}`}
-                className="group block bg-[#141414] border border-white/[0.08] rounded-2xl p-5 transition-all hover:-translate-y-0.5 hover:border-[#2a8aad]/40 hover:shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
+                className="group block bg-[#141414] border border-white/[0.08] rounded-2xl p-5 transition-all hover:-translate-y-0.5 hover:border-[#2b9cff]/40 hover:shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
               >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-semibold text-[15px]">{l.brand?.name} {l.model?.name} {l.variant?.name}</p>
                     <p className="text-[12px] text-white/40 mt-0.5">{l.leadCode} · {new Date(l.createdAt).toLocaleDateString('en-IN')}</p>
                   </div>
-                  <span className={`text-[11px] px-2.5 py-1 rounded-full border whitespace-nowrap ${isClosed ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' : 'bg-[#1a6e8e]/15 text-[#2a8aad] border-[#1a6e8e]/30'}`}>
+                  <span className={`text-[11px] px-2.5 py-1 rounded-full border whitespace-nowrap ${isClosed ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' : 'bg-[#176dff]/15 text-[#2b9cff] border-[#176dff]/30'}`}>
                     {STAGE_LABEL[l.salesStatus] || l.salesStatus}
                   </span>
                 </div>
                 {stageIdx >= 0 && (
                   <div className="mt-4 h-1 rounded-full bg-white/[0.06] overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all ${isClosed ? 'bg-emerald-400' : 'bg-[#2a8aad]'}`}
-                      style={{ width: `${progressPct}%`, boxShadow: isClosed ? 'none' : '0 0 10px rgba(42,138,173,0.6)' }}
+                      className={`h-full rounded-full transition-all ${isClosed ? 'bg-emerald-400' : 'bg-[#2b9cff]'}`}
+                      style={{ width: `${progressPct}%`, boxShadow: isClosed ? 'none' : '0 0 10px rgba(43,156,255,0.6)' }}
                     />
                   </div>
                 )}

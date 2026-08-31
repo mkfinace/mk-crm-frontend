@@ -497,7 +497,10 @@ export default function ModelDetailPage() {
   return (
     <div className="vpage">
       <style>{`
-        .vpage{--blue:#159ac4;--blue-dark:#1f56c5;--red:#ef3030;--text:#fff;--muted:#8fa3ad;--line:rgba(42,138,173,.20);--green:#159447;--shadow:0 18px 45px rgba(0,0,0,.28);
+        /* --red is named for its historical role (the site's accent
+           variable) — its value is now purple (#8055ff) to match the
+           blue/purple rebrand; every var(--red) usage below inherits this. */
+        .vpage{--blue:#2b9cff;--blue-dark:#176dff;--red:#8055ff;--text:#fff;--muted:#8fa3ad;--line:rgba(43,156,255,.20);--green:#159447;--shadow:0 18px 45px rgba(0,0,0,.28);
           font-family:Inter,Roboto,Arial,sans-serif;background:#06131a;color:var(--text);line-height:1.5;min-height:100vh;}
         .vpage *{box-sizing:border-box}
         .vpage a{text-decoration:none;color:inherit}

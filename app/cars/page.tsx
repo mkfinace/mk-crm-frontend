@@ -172,7 +172,10 @@ export default function CarsListingPage() {
   return (
     <div className="lpage">
       <style>{`
-        .lpage{--blue:#159ac4;--blue-dark:#1f56c5;--red:#ef3030;--muted:#8fa3ad;--line:rgba(42,138,173,.20);--shadow:0 18px 45px rgba(0,0,0,.28);
+        /* --red is named for its historical role (the site's accent
+           variable) — its value is now purple (#8055ff) to match the
+           blue/purple rebrand; every var(--red) usage below inherits this. */
+        .lpage{--blue:#2b9cff;--blue-dark:#176dff;--red:#8055ff;--muted:#8fa3ad;--line:rgba(43,156,255,.20);--shadow:0 18px 45px rgba(0,0,0,.28);
           font-family:Inter,Roboto,Arial,sans-serif;background:#06131a;color:#fff;line-height:1.5;min-height:100vh}
         .lpage *{box-sizing:border-box}
         .lpage a{text-decoration:none;color:inherit}
@@ -303,7 +306,7 @@ export default function CarsListingPage() {
                 step={50000}
                 value={priceMax || maxCatalogPrice}
                 onChange={(e) => setPriceMax(Number(e.target.value))}
-                style={{ width: '100%', accentColor: '#159ac4' }}
+                style={{ width: '100%', accentColor: '#2b9cff' }}
               />
             </div>
           )}

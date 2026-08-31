@@ -457,9 +457,7 @@ export default function HomePage() {
 
               {!isBanner && (
                 <div className="hidden md:flex items-center justify-center relative w-full h-full min-h-[420px]">
-                  {/* Glow ring + big CSS car silhouette, floating directly on the hero
-                      backdrop (no boxed panel) — MK Finance red/blue instead of the
-                      reference's blue/purple, matching its scale and presence. */}
+                  {/* Glow ring + big CSS car silhouette, floating directly on the hero backdrop. */}
                   <div
                     className="absolute w-[420px] h-[120px] rounded-full border-[3px] border-[#2a8aad]"
                     style={{ boxShadow: '0 0 55px rgba(42,138,173,0.55)', transform: 'rotate(-3deg)' }}
@@ -541,9 +539,9 @@ export default function HomePage() {
             <button
               key={t.label}
               onClick={t.action}
-              className="text-left bg-[#111111] border border-white/[0.08] rounded-xl px-4 py-3.5 transition-all hover:-translate-y-1 hover:border-[#2a8aad]/40"
+              className="text-left bg-[#111111] border border-white/[0.08] rounded-xl px-4 py-3.5 transition-all hover:-translate-y-1 hover:border-[#426bc0]/50"
             >
-              <b className="block text-[14px]"><span className="text-[#2a8aad] mr-1.5">{t.icon}</span>{t.label}</b>
+              <b className="block text-[14px]"><span className="text-[#2b9cff] mr-1.5">{t.icon}</span>{t.label}</b>
               <small className="text-white/40 text-[11px]">{t.sub}</small>
             </button>
           ))}
@@ -605,7 +603,7 @@ export default function HomePage() {
               <button
                 key={t}
                 onClick={() => setActiveBodyTypeTab(t)}
-                className={`text-[12px] px-4 py-2 rounded-full border transition-colors ${activeBodyTypeTab === t ? 'bg-[#1a3a6e] border-[#2a8aad] text-white' : 'border-white/15 text-white/50 hover:text-white hover:border-white/30'}`}
+                className={`text-[12px] px-4 py-2 rounded-full border transition-colors ${activeBodyTypeTab === t ? 'bg-[#172a4c] border-[#2b9cff] text-white' : 'border-white/15 text-white/50 hover:text-white hover:border-white/30'}`}
               >
                 {t}
               </button>
@@ -690,11 +688,11 @@ export default function HomePage() {
       <section className="py-20 px-6 md:px-8 bg-[#0f0f0f]">
         <div className="max-w-[1200px] mx-auto mb-10 flex items-end justify-between flex-wrap gap-3">
           <div>
-            <div className="flex items-center gap-2 text-[11px] tracking-[3px] uppercase text-[#2a8aad] font-semibold mb-3">
-              <span className="w-6 h-0.5 bg-[#2a8aad]" /> One Connected Ecosystem
+            <div className="flex items-center gap-2 text-[11px] tracking-[3px] uppercase text-[#2b9cff] font-semibold mb-3">
+              <span className="w-6 h-0.5 bg-[#2b9cff]" /> One Connected Ecosystem
             </div>
             <h2 className="text-[1.8rem] md:text-[2.4rem] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>
-              Used Car <span className="text-[#e63030]">•</span> Finance <span className="text-[#e63030]">•</span> Insurance
+              Used Car <span className="text-[#8055ff]">•</span> Finance <span className="text-[#8055ff]">•</span> Insurance
             </h2>
           </div>
         </div>
@@ -703,19 +701,19 @@ export default function HomePage() {
             <p className="text-[10px] font-bold tracking-wide uppercase text-white/35">Used Cars</p>
             <h3 className="text-[1.4rem] font-bold mt-2 mb-3" style={{ fontFamily: 'var(--font-heading)' }}>Find a car you can trust.</h3>
             <p className="text-[13px] text-white/50 leading-relaxed flex-1">Enquire about a used vehicle — inspection, ownership history, valuation, finance and insurance, all handled by our team.</p>
-            <button onClick={() => openEnquiry()} className="mt-5 bg-[#e63030] hover:bg-[#b01c1c] px-6 py-3 rounded font-semibold text-sm transition-colors self-start">Enquire About a Used Car</button>
+            <button onClick={() => openEnquiry()} className="mt-5 text-white px-6 py-3 rounded font-semibold text-sm transition-opacity hover:opacity-90 self-start" style={{ background: 'linear-gradient(100deg,#176dff,#823dff)' }}>Explore Used Cars</button>
           </div>
-          <div className="rounded-2xl p-7 border border-white/[0.08] min-h-[220px] flex flex-col" style={{ background: 'radial-gradient(circle at 90% 20%, rgba(42,138,173,0.22), transparent 45%), #0a1019' }}>
+          <div className="rounded-2xl p-7 border border-white/[0.08] min-h-[220px] flex flex-col" style={{ background: 'radial-gradient(circle at 90% 20%, rgba(25,63,118,0.55), transparent 45%), #0a1019' }}>
             <p className="text-[10px] font-bold tracking-wide uppercase text-white/35">Finance</p>
             <h3 className="text-[1.4rem] font-bold mt-2 mb-3" style={{ fontFamily: 'var(--font-heading)' }}>Know your EMI.</h3>
-            <p className="text-[13px] text-white/50 leading-relaxed flex-1">Compare loan options and calculate your EMI before you decide.</p>
-            <button onClick={() => scrollTo('loans')} className="mt-5 border-2 border-white/25 hover:border-[#2a8aad] hover:text-[#2a8aad] px-6 py-3 rounded font-semibold text-sm transition-colors self-start">Check EMI</button>
+            <p className="text-[13px] text-white/50 leading-relaxed flex-1">Compare loan options and start a finance enquiry.</p>
+            <button onClick={() => scrollTo('loans')} className="mt-5 border-2 border-white/25 hover:border-[#2b9cff] hover:text-[#2b9cff] px-6 py-3 rounded font-semibold text-sm transition-colors self-start">Check EMI</button>
           </div>
-          <div className="rounded-2xl p-7 border border-white/[0.08] min-h-[220px] flex flex-col" style={{ background: 'radial-gradient(circle at 90% 20%, rgba(230,48,48,0.16), transparent 45%), #100b19' }}>
+          <div className="rounded-2xl p-7 border border-white/[0.08] min-h-[220px] flex flex-col" style={{ background: 'radial-gradient(circle at 90% 20%, rgba(58,32,109,0.6), transparent 45%), #100b19' }}>
             <p className="text-[10px] font-bold tracking-wide uppercase text-white/35">Insurance</p>
             <h3 className="text-[1.4rem] font-bold mt-2 mb-3" style={{ fontFamily: 'var(--font-heading)' }}>Drive worry free.</h3>
             <p className="text-[13px] text-white/50 leading-relaxed flex-1">Get a vehicle insurance quote and manage your policy journey with us.</p>
-            <button onClick={() => scrollTo('insurance')} className="mt-5 border-2 border-white/25 hover:border-[#2a8aad] hover:text-[#2a8aad] px-6 py-3 rounded font-semibold text-sm transition-colors self-start">Get Insurance</button>
+            <button onClick={() => scrollTo('insurance')} className="mt-5 border-2 border-white/25 hover:border-[#8055ff] hover:text-[#8055ff] px-6 py-3 rounded font-semibold text-sm transition-colors self-start">Get Insurance</button>
           </div>
         </div>
       </section>
@@ -726,18 +724,18 @@ export default function HomePage() {
       <section className="py-20 px-6 md:px-8 bg-[#0a0a0a] border-t border-white/[0.06]">
         <div
           className="max-w-[1200px] mx-auto rounded-2xl overflow-hidden p-10 md:p-14 relative border border-white/[0.08] flex flex-col md:flex-row items-center justify-between gap-8"
-          style={{ background: 'radial-gradient(circle at 85% 20%, rgba(42,138,173,0.22), transparent 55%), radial-gradient(circle at 10% 100%, rgba(230,48,48,0.12), transparent 45%), #0c0c0c' }}
+          style={{ background: 'radial-gradient(circle at 85% 20%, rgba(23,109,255,0.22), transparent 55%), radial-gradient(circle at 10% 100%, rgba(130,61,255,0.16), transparent 45%), #0c0c0c' }}
         >
           <div>
-            <p className="text-[11px] font-bold tracking-[3px] uppercase text-[#2a8aad] mb-3">Already Enquired With Us?</p>
+            <p className="text-[11px] font-bold tracking-[3px] uppercase text-[#2b9cff] mb-3">Already Enquired With Us?</p>
             <h2 className="text-[1.8rem] md:text-[2.4rem] font-bold leading-tight" style={{ fontFamily: 'var(--font-heading)' }}>
-              Track Your <span className="text-[#e63030]">Deal Journey</span>, Live.
+              Track Your <span className="text-[#8055ff]">Deal Journey</span>, Live.
             </h2>
             <p className="text-white/50 text-[14px] mt-3 max-w-[440px]">
               Sales status, finance progress, documents, booking and delivery — everything about your enquiry, updated in real time.
             </p>
           </div>
-          <Link href="/portal/login" className="shrink-0 bg-[#e63030] hover:bg-[#b01c1c] px-9 py-4 rounded font-semibold text-sm transition-colors whitespace-nowrap">
+          <Link href="/portal/login" className="shrink-0 text-white px-9 py-4 rounded font-semibold text-sm transition-opacity hover:opacity-90 whitespace-nowrap" style={{ background: 'linear-gradient(100deg,#176dff,#823dff)' }}>
             Track My Enquiry →
           </Link>
         </div>

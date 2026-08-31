@@ -482,6 +482,28 @@ export default function HomePage() {
         );
       })()}
 
+      {/* QUICK TOOLS — compact one-tap shortcuts, mockup-style tile row */}
+      <div className="max-w-[1200px] mx-auto px-6 md:px-8 -mt-8 relative z-10">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {[
+            { icon: '◈', label: 'Finance', sub: 'Easy Car Loan', action: () => scrollTo('loans') },
+            { icon: '◇', label: 'Insurance', sub: 'Best Policy Plans', action: () => scrollTo('insurance') },
+            { icon: '◉', label: 'Test Drive', sub: 'Book Now', action: () => openEnquiry() },
+            { icon: '▣', label: 'EMI Calculator', sub: 'Calculate EMI', action: () => scrollTo('loans') },
+            { icon: '⌖', label: 'Find Dealers', sub: 'Near You', action: () => scrollTo('contact') },
+          ].map((t) => (
+            <button
+              key={t.label}
+              onClick={t.action}
+              className="text-left bg-[#111111] border border-white/[0.08] rounded-xl px-4 py-3.5 transition-all hover:-translate-y-1 hover:border-[#2a8aad]/40"
+            >
+              <b className="block text-[14px]"><span className="text-[#2a8aad] mr-1.5">{t.icon}</span>{t.label}</b>
+              <small className="text-white/40 text-[11px]">{t.sub}</small>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* SERVICES */}
       <section className="py-24 px-6 md:px-8 bg-[#0f0f0f]">
         <div className="max-w-[1200px] mx-auto mb-16">
@@ -519,13 +541,16 @@ export default function HomePage() {
 
       {/* CARS */}
       <section id="vehicles" className="py-24 px-6 md:px-8 bg-[#0a0a0a]">
-        <div className="max-w-[1200px] mx-auto mb-8">
-          <div className="flex items-center gap-2 text-[11px] tracking-[3px] uppercase text-[#2a8aad] font-semibold mb-3">
-            <span className="w-6 h-0.5 bg-[#2a8aad]" /> Our Catalogue
+        <div className="max-w-[1200px] mx-auto mb-8 flex items-end justify-between flex-wrap gap-3">
+          <div>
+            <div className="flex items-center gap-2 text-[11px] tracking-[3px] uppercase text-[#2a8aad] font-semibold mb-3">
+              <span className="w-6 h-0.5 bg-[#2a8aad]" /> Our Catalogue
+            </div>
+            <h2 className="text-[2.2rem] md:text-[3rem] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>
+              🚗 <span className="text-[#e63030]">Cars</span>
+            </h2>
           </div>
-          <h2 className="text-[2.2rem] md:text-[3rem] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>
-            🚗 <span className="text-[#e63030]">Cars</span>
-          </h2>
+          <Link href="/cars" className="text-[13px] text-[#2a8aad] hover:text-white font-semibold whitespace-nowrap">View All Vehicles →</Link>
         </div>
 
         <div className="max-w-[1200px] mx-auto">
@@ -593,6 +618,29 @@ export default function HomePage() {
               </div>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* TRACK YOUR ENQUIRY — the real, honest equivalent of a live "My Deal"
+          panel for a visitor who isn't signed in yet: a direct path into the
+          actual per-enquiry journey (see /portal/leads/[id]) once they log in. */}
+      <section className="py-20 px-6 md:px-8 bg-[#0a0a0a] border-t border-white/[0.06]">
+        <div
+          className="max-w-[1200px] mx-auto rounded-2xl overflow-hidden p-10 md:p-14 relative border border-white/[0.08] flex flex-col md:flex-row items-center justify-between gap-8"
+          style={{ background: 'radial-gradient(circle at 85% 20%, rgba(42,138,173,0.22), transparent 55%), radial-gradient(circle at 10% 100%, rgba(230,48,48,0.12), transparent 45%), #0c0c0c' }}
+        >
+          <div>
+            <p className="text-[11px] font-bold tracking-[3px] uppercase text-[#2a8aad] mb-3">Already Enquired With Us?</p>
+            <h2 className="text-[1.8rem] md:text-[2.4rem] font-bold leading-tight" style={{ fontFamily: 'var(--font-heading)' }}>
+              Track Your <span className="text-[#e63030]">Deal Journey</span>, Live.
+            </h2>
+            <p className="text-white/50 text-[14px] mt-3 max-w-[440px]">
+              Sales status, finance progress, documents, booking and delivery — everything about your enquiry, updated in real time.
+            </p>
+          </div>
+          <Link href="/portal/login" className="shrink-0 bg-[#e63030] hover:bg-[#b01c1c] px-9 py-4 rounded font-semibold text-sm transition-colors whitespace-nowrap">
+            Track My Enquiry →
+          </Link>
         </div>
       </section>
 

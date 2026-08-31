@@ -169,7 +169,6 @@ export default function HomePage() {
   useEffect(() => {
     setCustomer(getCustomer());
   }, []);
-  const [activeCommercialCat, setActiveCommercialCat] = useState<string | null>(null);
 
   const [price, setPrice] = useState(1000000);
   const [downPay, setDownPay] = useState(200000);
@@ -630,54 +629,42 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* COMMERCIAL VEHICLES */}
-      <section id="commercial-vehicles" className="py-24 px-6 md:px-8 bg-[#0f0f0f] border-t border-white/[0.06]">
-        <div className="max-w-[1200px] mx-auto mb-8">
-          <div className="flex items-center gap-2 text-[11px] tracking-[3px] uppercase text-[#2b9cff] font-semibold mb-3">
-            <span className="w-6 h-0.5 bg-[#2b9cff]" /> Business Fleet
-          </div>
-          <h2 className="text-[2.2rem] md:text-[3rem] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>
-            🚛 <span className="text-[#8055ff]">Commercial</span> Vehicles
-          </h2>
-        </div>
-
-        <div className="max-w-[1200px] mx-auto">
-          {!loading && !activeCommercialCat && (
-            <div className="grid md:grid-cols-3 gap-6">
-              {COMMERCIAL_CATEGORIES.map((cat) => {
-                const count = (commercialByCategory[cat] || []).length;
-                return (
-                  <div
-                    key={cat}
-                    onClick={() => count > 0 && setActiveCommercialCat(cat)}
-                    className={`bg-[#141414] border border-white/[0.08] rounded-lg p-6 flex gap-4 items-center transition-all ${count > 0 ? 'cursor-pointer hover:border-[#176dff]/30 hover:bg-[#176dff]/[0.04]' : 'opacity-50'}`}
-                  >
-                    <div className="text-4xl shrink-0">{CATEGORY_ICON[cat]}</div>
-                    <div>
-                      <h4 className="text-[1.05rem] font-bold mb-1" style={{ fontFamily: 'var(--font-heading)' }}>{CATEGORY_LABEL[cat]}</h4>
-                      <p className="text-xs text-white/45">{count > 0 ? `${count} listed` : 'Contact us for availability'}</p>
-                    </div>
+      {/* COMMERCIAL VEHICLES — one dedicated section per category, same
+          treatment as the Cars section above, instead of a single
+          click-to-expand picker. */}
+      <div id="commercial-vehicles">
+        {COMMERCIAL_CATEGORIES.map((cat, idx) => {
+          const list = commercialByCategory[cat] || [];
+          return (
+            <section key={cat} className={`py-20 px-6 md:px-8 ${idx % 2 === 0 ? 'bg-[#0f0f0f]' : 'bg-[#0a0a0a]'} border-t border-white/[0.06]`}>
+              <div className="max-w-[1200px] mx-auto mb-8">
+                <div className="flex items-center gap-2 text-[11px] tracking-[3px] uppercase text-[#2b9cff] font-semibold mb-3">
+                  <span className="w-6 h-0.5 bg-[#2b9cff]" /> Business Fleet
+                </div>
+                <h2 className="text-[1.9rem] md:text-[2.4rem] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>
+                  {CATEGORY_ICON[cat]} <span className="text-[#8055ff]">{CATEGORY_LABEL[cat]}</span>
+                </h2>
+              </div>
+              <div className="max-w-[1200px] mx-auto">
+                {loading ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    {[0, 1].map((i) => <div key={i} className="h-[320px] bg-white/[0.03] border border-white/[0.08] rounded-lg animate-pulse" />)}
                   </div>
-                );
-              })}
-            </div>
-          )}
-
-          {!loading && activeCommercialCat && (
-            <div>
-              <div className="flex items-center gap-4 mb-6">
-                <button onClick={() => setActiveCommercialCat(null)} className="text-[13px] border border-white/20 text-white/70 hover:text-white px-4 py-2 rounded-md">← All Categories</button>
-                <h3 className="text-xl font-bold" style={{ fontFamily: 'var(--font-heading)' }}>{CATEGORY_LABEL[activeCommercialCat]}</h3>
+                ) : list.length === 0 ? (
+                  <div className="bg-[#141414] border border-white/[0.08] rounded-lg p-8 text-center">
+                    <p className="text-white/50 text-sm">No {CATEGORY_LABEL[cat].toLowerCase()} listed right now — contact us for availability.</p>
+                    <button onClick={() => openEnquiry()} className="mt-4 text-[13px] text-[#2b9cff] hover:text-white font-semibold">Enquire About {CATEGORY_LABEL[cat]} →</button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    {list.map((v, i) => <VehicleCard key={i} v={v} onOpenDetail={() => router.push(`/${slugify(v.brand)}/${slugify(v.model)}`)} onQuickQuote={() => setSelectedVehicle(v)} />)}
+                  </div>
+                )}
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                {(commercialByCategory[activeCommercialCat] || []).map((v, i) => (
-                  <VehicleCard key={i} v={v} onOpenDetail={() => router.push(`/${slugify(v.brand)}/${slugify(v.model)}`)} onQuickQuote={() => setSelectedVehicle(v)} />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
+            </section>
+          );
+        })}
+      </div>
 
       {/* USED CAR • FINANCE • INSURANCE — one connected ecosystem, mirroring
           the mockup's three-tile row. Each tile goes to a real destination:

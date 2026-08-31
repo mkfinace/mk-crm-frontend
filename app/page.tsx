@@ -736,15 +736,18 @@ export default function HomePage() {
       </section>
 
       {/* TRACK YOUR ENQUIRY — the real, honest equivalent of a live "My Deal"
-          panel for a visitor who isn't signed in yet: a direct path into the
-          actual per-enquiry journey (see /portal/leads/[id]) once they log in. */}
+          panel: for a signed-out visitor, a direct path to log in; for an
+          already-logged-in customer, this jumps straight to their actual
+          enquiries instead of asking them to log in again. */}
       <section className="py-20 px-6 md:px-8 bg-[#0a0a0a] border-t border-white/[0.06]">
         <div
           className="max-w-[1200px] mx-auto rounded-2xl overflow-hidden p-10 md:p-14 relative border border-white/[0.08] flex flex-col md:flex-row items-center justify-between gap-8"
           style={{ background: 'radial-gradient(circle at 85% 20%, rgba(23,109,255,0.22), transparent 55%), radial-gradient(circle at 10% 100%, rgba(130,61,255,0.16), transparent 45%), #0c0c0c' }}
         >
           <div>
-            <p className="text-[11px] font-bold tracking-[3px] uppercase text-[#2b9cff] mb-3">Already Enquired With Us?</p>
+            <p className="text-[11px] font-bold tracking-[3px] uppercase text-[#2b9cff] mb-3">
+              {customer ? `Welcome back, ${customer.name?.split(' ')[0]}` : 'Already Enquired With Us?'}
+            </p>
             <h2 className="text-[1.8rem] md:text-[2.4rem] font-bold leading-tight" style={{ fontFamily: 'var(--font-heading)' }}>
               Track Your <span className="text-[#8055ff]">Deal Journey</span>, Live.
             </h2>
@@ -752,8 +755,8 @@ export default function HomePage() {
               Sales status, finance progress, documents, booking and delivery — everything about your enquiry, updated in real time.
             </p>
           </div>
-          <Link href="/portal/login" className="shrink-0 text-white px-9 py-4 rounded font-semibold text-sm transition-opacity hover:opacity-90 whitespace-nowrap" style={{ background: 'linear-gradient(100deg,#176dff,#823dff)' }}>
-            Track My Enquiry →
+          <Link href={customer ? '/portal' : '/portal/login'} className="shrink-0 text-white px-9 py-4 rounded font-semibold text-sm transition-opacity hover:opacity-90 whitespace-nowrap" style={{ background: 'linear-gradient(100deg,#176dff,#823dff)' }}>
+            {customer ? 'View My Enquiries →' : 'Track My Enquiry →'}
           </Link>
         </div>
       </section>

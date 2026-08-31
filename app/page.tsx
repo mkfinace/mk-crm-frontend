@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Rajdhani, Montserrat } from 'next/font/google';
 import { api } from '@/lib/api';
-import { getCustomer, type PortalCustomer } from '@/lib/auth';
+import { getCustomer, clearCustomer, type PortalCustomer } from '@/lib/auth';
 import { slugify } from '@/lib/slugify';
 import EnquiryModal from '@/components/EnquiryModal';
 
@@ -166,9 +166,23 @@ export default function HomePage() {
   const [selectedVehicle, setSelectedVehicle] = useState<any | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [customer, setCustomer] = useState<PortalCustomer | null>(null);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLLIElement>(null);
   useEffect(() => {
     setCustomer(getCustomer());
   }, []);
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node)) setAccountMenuOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+  function handleLogout() {
+    clearCustomer();
+    setCustomer(null);
+    setAccountMenuOpen(false);
+  }
 
   const [price, setPrice] = useState(1000000);
   const [downPay, setDownPay] = useState(200000);
@@ -349,15 +363,35 @@ export default function HomePage() {
           <li><button onClick={() => scrollTo('commercial-vehicles')} className="text-white/75 hover:text-[#2b9cff] text-[13px] font-medium tracking-wide">Commercial</button></li>
           <li><button onClick={() => scrollTo('loans')} className="text-white/75 hover:text-[#2b9cff] text-[13px] font-medium tracking-wide">Finance</button></li>
           <li><button onClick={() => scrollTo('insurance')} className="text-white/75 hover:text-[#2b9cff] text-[13px] font-medium tracking-wide">Insurance</button></li>
-          <li><Link href="/portal/login" className={customer ? 'hidden' : 'text-white/75 hover:text-[#2b9cff] text-[13px] font-medium tracking-wide'}>Track My Enquiry</Link></li>
+          <li><Link href="/portal/login" className={customer ? 'hidden' : 'flex items-center gap-1.5 text-white/75 hover:text-[#2b9cff] text-[13px] font-medium tracking-wide'}>
+            👤 Login / Sign Up
+          </Link></li>
           {customer && (
-            <li>
-              <Link href="/portal" className="flex items-center gap-2 text-white/85 hover:text-white text-[13px] font-medium">
-                <span className="w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-bold text-white" style={{ background: 'linear-gradient(135deg,#2b9cff,#1a3a6e)' }}>
+            <li className="relative" ref={accountMenuRef}>
+              <button
+                onClick={() => setAccountMenuOpen((o) => !o)}
+                className="flex items-center gap-2 text-white/85 hover:text-white text-[13px] font-medium"
+              >
+                <span className="w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-bold text-white shrink-0" style={{ background: 'linear-gradient(135deg,#2b9cff,#1a3a6e)' }}>
                   {(customer.name || 'M').charAt(0).toUpperCase()}
                 </span>
                 Hi, {customer.name?.split(' ')[0] || 'there'}
-              </Link>
+                <span className={`text-[10px] transition-transform ${accountMenuOpen ? 'rotate-180' : ''}`}>▾</span>
+              </button>
+              {accountMenuOpen && (
+                <div className="absolute right-0 md:right-0 top-full mt-2 w-56 bg-[#141414] border border-white/[0.1] rounded-xl shadow-2xl py-2 z-50">
+                  <div className="px-4 py-2 border-b border-white/[0.08]">
+                    <p className="text-[13px] font-semibold text-white">{customer.name}</p>
+                    <p className="text-[11.5px] text-white/40">{customer.mobile}</p>
+                  </div>
+                  <Link href="/portal" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2.5 text-[13px] text-white/75 hover:bg-white/[0.05] hover:text-white">
+                    📋 My Enquiries
+                  </Link>
+                  <button onClick={handleLogout} className="w-full text-left px-4 py-2.5 text-[13px] text-red-400 hover:bg-white/[0.05]">
+                    ↩ Log Out
+                  </button>
+                </div>
+              )}
             </li>
           )}
           <li><button onClick={() => scrollTo('contact')} className="text-white/75 hover:text-[#2b9cff] text-[13px] font-medium tracking-wide">Contact</button></li>

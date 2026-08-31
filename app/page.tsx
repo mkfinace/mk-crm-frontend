@@ -341,11 +341,11 @@ export default function HomePage() {
         </Link>
         <ul className={`${menuOpen ? 'flex' : 'hidden'} md:flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 fixed md:static top-[70px] left-0 right-0 md:top-auto bg-black/98 md:bg-transparent p-6 md:p-0 border-b md:border-0 border-white/[0.08] list-none`}>
           <li><Link href="/cars" className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Browse Vehicles</Link></li>
-          <li><Link href="/portal/login" className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Track My Enquiry</Link></li>
-          <li><button onClick={() => scrollTo('vehicles')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Vehicles</button></li>
-          <li><button onClick={() => scrollTo('loans')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Loans</button></li>
+          <li><button onClick={() => scrollTo('vehicles')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Cars</button></li>
+          <li><button onClick={() => scrollTo('commercial-vehicles')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Commercial</button></li>
+          <li><button onClick={() => scrollTo('loans')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Finance</button></li>
           <li><button onClick={() => scrollTo('insurance')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Insurance</button></li>
-          <li><button onClick={() => scrollTo('brands')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Brands</button></li>
+          <li><Link href="/portal/login" className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Track My Enquiry</Link></li>
           <li><button onClick={() => scrollTo('contact')} className="text-white/75 hover:text-[#2a8aad] text-[13px] font-medium tracking-wide">Contact</button></li>
           <li><button onClick={() => openEnquiry()} className="bg-[#e63030] hover:bg-[#b01c1c] text-white px-5 py-2 rounded text-[13px] font-semibold">Get Quote</button></li>
         </ul>
@@ -663,6 +663,45 @@ export default function HomePage() {
               </div>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* USED CAR • FINANCE • INSURANCE — one connected ecosystem, mirroring
+          the mockup's three-tile row. Each tile goes to a real destination:
+          "Used Cars" isn't a separate catalogue yet, so it opens the same
+          enquiry form (a used-vehicle enquiry is still a real enquiry the
+          team can act on), while Finance/Insurance jump to the sections
+          that actually exist further down this page. */}
+      <section className="py-20 px-6 md:px-8 bg-[#0f0f0f]">
+        <div className="max-w-[1200px] mx-auto mb-10 flex items-end justify-between flex-wrap gap-3">
+          <div>
+            <div className="flex items-center gap-2 text-[11px] tracking-[3px] uppercase text-[#2a8aad] font-semibold mb-3">
+              <span className="w-6 h-0.5 bg-[#2a8aad]" /> One Connected Ecosystem
+            </div>
+            <h2 className="text-[1.8rem] md:text-[2.4rem] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>
+              Used Car <span className="text-[#e63030]">•</span> Finance <span className="text-[#e63030]">•</span> Insurance
+            </h2>
+          </div>
+        </div>
+        <div className="max-w-[1200px] mx-auto grid md:grid-cols-3 gap-5">
+          <div className="rounded-2xl p-7 border border-white/[0.08] bg-gradient-to-br from-[#141a20] to-[#0a0c0f] min-h-[220px] flex flex-col">
+            <p className="text-[10px] font-bold tracking-wide uppercase text-white/35">Used Cars</p>
+            <h3 className="text-[1.4rem] font-bold mt-2 mb-3" style={{ fontFamily: 'var(--font-heading)' }}>Find a car you can trust.</h3>
+            <p className="text-[13px] text-white/50 leading-relaxed flex-1">Enquire about a used vehicle — inspection, ownership history, valuation, finance and insurance, all handled by our team.</p>
+            <button onClick={() => openEnquiry()} className="mt-5 bg-[#e63030] hover:bg-[#b01c1c] px-6 py-3 rounded font-semibold text-sm transition-colors self-start">Enquire About a Used Car</button>
+          </div>
+          <div className="rounded-2xl p-7 border border-white/[0.08] min-h-[220px] flex flex-col" style={{ background: 'radial-gradient(circle at 90% 20%, rgba(42,138,173,0.22), transparent 45%), #0a1019' }}>
+            <p className="text-[10px] font-bold tracking-wide uppercase text-white/35">Finance</p>
+            <h3 className="text-[1.4rem] font-bold mt-2 mb-3" style={{ fontFamily: 'var(--font-heading)' }}>Know your EMI.</h3>
+            <p className="text-[13px] text-white/50 leading-relaxed flex-1">Compare loan options and calculate your EMI before you decide.</p>
+            <button onClick={() => scrollTo('loans')} className="mt-5 border-2 border-white/25 hover:border-[#2a8aad] hover:text-[#2a8aad] px-6 py-3 rounded font-semibold text-sm transition-colors self-start">Check EMI</button>
+          </div>
+          <div className="rounded-2xl p-7 border border-white/[0.08] min-h-[220px] flex flex-col" style={{ background: 'radial-gradient(circle at 90% 20%, rgba(230,48,48,0.16), transparent 45%), #100b19' }}>
+            <p className="text-[10px] font-bold tracking-wide uppercase text-white/35">Insurance</p>
+            <h3 className="text-[1.4rem] font-bold mt-2 mb-3" style={{ fontFamily: 'var(--font-heading)' }}>Drive worry free.</h3>
+            <p className="text-[13px] text-white/50 leading-relaxed flex-1">Get a vehicle insurance quote and manage your policy journey with us.</p>
+            <button onClick={() => scrollTo('insurance')} className="mt-5 border-2 border-white/25 hover:border-[#2a8aad] hover:text-[#2a8aad] px-6 py-3 rounded font-semibold text-sm transition-colors self-start">Get Insurance</button>
+          </div>
         </div>
       </section>
 

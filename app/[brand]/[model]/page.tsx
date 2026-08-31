@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
@@ -197,66 +197,11 @@ export default function ModelDetailPage() {
   const activeOffers = variant?.offers || [];
   const warranty = variant?.warranty;
 
-  // Scrollspy — the sticky Tabs bar highlights whichever section is
-  // currently in view as the page scrolls, instead of only reacting to a
-  // click. Same technique used further below for the Specifications
-  // category pills.
-  const [activeTab, setActiveTab] = useState('overview');
-  useEffect(() => {
-    if (!data) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible.length > 0) setActiveTab(visible[0].target.id);
-      },
-      { rootMargin: '-140px 0px -60% 0px', threshold: 0 }
-    );
-    TABS.forEach((t) => {
-      const el = document.getElementById(t.id);
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
-  }, [data]);
-
-  // Scrollspy for the Specifications category pills — highlights whichever
-  // spec category block is currently in view.
-  const [activeSpecCat, setActiveSpecCat] = useState('');
-  const specRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  useEffect(() => {
-    if (specsByCategory.length === 0) return;
-    setActiveSpecCat(specsByCategory[0].name);
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible.length > 0) {
-          const name = (visible[0].target as HTMLElement).dataset.cat;
-          if (name) setActiveSpecCat(name);
-        }
-      },
-      { rootMargin: '-160px 0px -60% 0px', threshold: 0 }
-    );
-    specsByCategory.forEach((cat) => {
-      const el = specRefs.current[cat.name];
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
-  }, [specsByCategory]);
-
-  function scrollToSpecCat(name: string) {
-    const el = specRefs.current[name];
-    if (!el) return;
-    const y = el.getBoundingClientRect().top + window.scrollY - 145;
-    window.scrollTo({ top: y, behavior: 'smooth' });
-  }
-
   function openEnquiry() {
     setModalOpen(true);
   }
   function scrollTo(id: string) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const y = el.getBoundingClientRect().top + window.scrollY - 90;
-    window.scrollTo({ top: y, behavior: 'smooth' });
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   }
 
   if (loading) {
@@ -325,10 +270,6 @@ export default function ModelDetailPage() {
         .lpage .tabs{display:flex;gap:4px;background:#fff;border:1px solid var(--line);border-radius:11px;margin-top:14px;padding:7px;position:sticky;top:75px;z-index:8;overflow:auto}
         .lpage .tabs button{white-space:nowrap;background:none;border:0;cursor:pointer;color:#5e6878;font-size:11px;padding:10px 13px;border-radius:7px;font-family:inherit;font-weight:600}
         .lpage .tabs button:hover{background:#edf4ff;color:var(--blue)}
-        .lpage .tabs button.active{background:var(--blue);color:#fff}
-        .lpage .speccats{display:flex;gap:6px;flex-wrap:wrap;margin-top:16px}
-        .lpage .speccats button{border:1px solid #dbe1e8;background:#fff;color:#5e6878;border-radius:20px;padding:7px 14px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit}
-        .lpage .speccats button.active{background:var(--blue);border-color:var(--blue);color:#fff}
         .lpage .section{background:#fff;border:1px solid var(--line);border-radius:15px;margin-top:14px;padding:24px}
         .lpage .head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
         .lpage .head h2{font-size:20px;margin:0}
@@ -445,7 +386,7 @@ export default function ModelDetailPage() {
         </section>
 
         <div className="tabs">
-          {TABS.map((t) => <button key={t.id} className={activeTab === t.id ? 'active' : ''} onClick={() => scrollTo(t.id)}>{t.label}</button>)}
+          {TABS.map((t) => <button key={t.id} onClick={() => scrollTo(t.id)}>{t.label}</button>)}
         </div>
 
         <section className="section" id="overview">
@@ -479,23 +420,16 @@ export default function ModelDetailPage() {
           {specsByCategory.length === 0 ? (
             <p className="muted" style={{ marginTop: 18 }}>Specifications for this variant haven't been added yet.</p>
           ) : (
-            <>
-              <div className="speccats">
-                {specsByCategory.map((cat) => (
-                  <button key={cat.name} className={activeSpecCat === cat.name ? 'active' : ''} onClick={() => scrollToSpecCat(cat.name)}>{cat.name}</button>
-                ))}
-              </div>
-              <div className="specgrid">
-                {specsByCategory.map((cat) => (
-                  <div className="spec" key={cat.name} ref={(el) => { specRefs.current[cat.name] = el; }}>
-                    <h3>{cat.name.toUpperCase()}</h3>
-                    {cat.items.map((s: any, i: number) => (
-                      <div className="row" key={i}><span>{s.fieldName}</span><b>{formatSpecValue(s)}</b></div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </>
+            <div className="specgrid">
+              {specsByCategory.map((cat) => (
+                <div className="spec" key={cat.name}>
+                  <h3>{cat.name.toUpperCase()}</h3>
+                  {cat.items.map((s: any, i: number) => (
+                    <div className="row" key={i}><span>{s.fieldName}</span><b>{formatSpecValue(s)}</b></div>
+                  ))}
+                </div>
+              ))}
+            </div>
           )}
         </section>
 

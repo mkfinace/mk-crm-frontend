@@ -630,40 +630,36 @@ export default function HomePage() {
       </section>
 
       {/* COMMERCIAL VEHICLES — one dedicated section per category, same
-          treatment as the Cars section above, instead of a single
-          click-to-expand picker. */}
+          treatment as the Cars section above. Only categories that actually
+          have a vehicle listed get a section — nothing shows up empty. */}
       <div id="commercial-vehicles">
-        {COMMERCIAL_CATEGORIES.map((cat, idx) => {
-          const list = commercialByCategory[cat] || [];
-          return (
-            <section key={cat} className={`py-20 px-6 md:px-8 ${idx % 2 === 0 ? 'bg-[#0f0f0f]' : 'bg-[#0a0a0a]'} border-t border-white/[0.06]`}>
-              <div className="max-w-[1200px] mx-auto mb-8">
-                <div className="flex items-center gap-2 text-[11px] tracking-[3px] uppercase text-[#2b9cff] font-semibold mb-3">
-                  <span className="w-6 h-0.5 bg-[#2b9cff]" /> Business Fleet
+        {loading ? (
+          <section className="py-20 px-6 md:px-8 bg-[#0f0f0f] border-t border-white/[0.06]">
+            <div className="max-w-[1200px] mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
+              {[0, 1, 2, 3].map((i) => <div key={i} className="h-[320px] bg-white/[0.03] border border-white/[0.08] rounded-lg animate-pulse" />)}
+            </div>
+          </section>
+        ) : (
+          COMMERCIAL_CATEGORIES.map((cat, idx) => {
+            const list = commercialByCategory[cat] || [];
+            if (list.length === 0) return null;
+            return (
+              <section key={cat} className={`py-20 px-6 md:px-8 ${idx % 2 === 0 ? 'bg-[#0f0f0f]' : 'bg-[#0a0a0a]'} border-t border-white/[0.06]`}>
+                <div className="max-w-[1200px] mx-auto mb-8">
+                  <div className="flex items-center gap-2 text-[11px] tracking-[3px] uppercase text-[#2b9cff] font-semibold mb-3">
+                    <span className="w-6 h-0.5 bg-[#2b9cff]" /> Business Fleet
+                  </div>
+                  <h2 className="text-[1.9rem] md:text-[2.4rem] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>
+                    {CATEGORY_ICON[cat]} <span className="text-[#8055ff]">{CATEGORY_LABEL[cat]}</span>
+                  </h2>
                 </div>
-                <h2 className="text-[1.9rem] md:text-[2.4rem] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>
-                  {CATEGORY_ICON[cat]} <span className="text-[#8055ff]">{CATEGORY_LABEL[cat]}</span>
-                </h2>
-              </div>
-              <div className="max-w-[1200px] mx-auto">
-                {loading ? (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    {[0, 1].map((i) => <div key={i} className="h-[320px] bg-white/[0.03] border border-white/[0.08] rounded-lg animate-pulse" />)}
-                  </div>
-                ) : list.length === 0 ? (
-                  <div className="bg-[#141414] border border-white/[0.08] rounded-lg p-8 text-center">
-                    <p className="text-white/50 text-sm">No {CATEGORY_LABEL[cat].toLowerCase()} listed right now — contact us for availability.</p>
-                    <button onClick={() => openEnquiry()} className="mt-4 text-[13px] text-[#2b9cff] hover:text-white font-semibold">Enquire About {CATEGORY_LABEL[cat]} →</button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    {list.map((v, i) => <VehicleCard key={i} v={v} onOpenDetail={() => router.push(`/${slugify(v.brand)}/${slugify(v.model)}`)} onQuickQuote={() => setSelectedVehicle(v)} />)}
-                  </div>
-                )}
-              </div>
-            </section>
-          );
-        })}
+                <div className="max-w-[1200px] mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
+                  {list.map((v, i) => <VehicleCard key={i} v={v} onOpenDetail={() => router.push(`/${slugify(v.brand)}/${slugify(v.model)}`)} onQuickQuote={() => setSelectedVehicle(v)} />)}
+                </div>
+              </section>
+            );
+          })
+        )}
       </div>
 
       {/* USED CAR • FINANCE • INSURANCE — one connected ecosystem, mirroring

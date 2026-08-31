@@ -261,12 +261,25 @@ export default function HomePage() {
         const min = pricedSorted[0]?.exShowroomPrice;
         const max = pricedSorted[pricedSorted.length - 1]?.exShowroomPrice;
         const category = model.category || 'CAR';
+        // Body-type tags for this model — taken from a "Body Type"-ish dynamic
+        // field on any of its variants, if the admin has set one up in Field
+        // Builder (e.g. SUV / Hatchback / Sedan). No fake categorisation.
+        const bodyTypes = new Set<string>();
+        for (const v of variants) {
+          for (const fv of v.fieldValues || []) {
+            const fname = (fv.field?.name || '').toLowerCase();
+            if ((fname.includes('body') || fname.includes('car type') || fname.includes('vehicle type')) && fv.valueText) {
+              bodyTypes.add(fv.valueText);
+            }
+          }
+        }
         list.push({
           brand: brand.name,
           brandId: brand.id,
           model: model.name,
           modelId: model.id,
           category,
+          bodyTypes: Array.from(bodyTypes),
           icon: category === 'CAR' ? '🚗' : CATEGORY_ICON[category] || '🚛',
           price: !min ? 'Price on request' : min === max ? formatLakh(min) : `${formatLakh(min)} - ${formatLakh(max)}`,
           fuelType: [...new Set(sorted.map((v: any) => v.fuelType))].join('/'),
@@ -280,6 +293,14 @@ export default function HomePage() {
 
   const cars = useMemo(() => allVehicles.filter((v) => v.category === 'CAR'), [allVehicles]);
   const commercial = useMemo(() => allVehicles.filter((v) => v.category !== 'CAR'), [allVehicles]);
+  // Only real, admin-tagged body types become tabs — if nothing's tagged yet,
+  // "Popular" (all cars) is the only tab, rather than faking empty ones.
+  const carBodyTypes = useMemo(() => Array.from(new Set(cars.flatMap((c) => c.bodyTypes))).sort(), [cars]);
+  const [activeBodyTypeTab, setActiveBodyTypeTab] = useState('Popular');
+  const popularCarsShown = useMemo(
+    () => (activeBodyTypeTab === 'Popular' ? cars : cars.filter((c) => c.bodyTypes.includes(activeBodyTypeTab))),
+    [cars, activeBodyTypeTab],
+  );
   const commercialByCategory = useMemo(() => {
     const map: Record<string, any[]> = {};
     for (const v of commercial) {
@@ -433,13 +454,23 @@ export default function HomePage() {
                     className={`relative w-[440px] h-[210px] ${heroAnimClass(activeSlideData.animation) || 'animate-hero-float'}`}
                     style={{ filter: 'drop-shadow(0 35px 22px rgba(0,0,0,0.55))' }}
                   >
-                    <div className="absolute left-[10%] top-[36%] w-[80%] h-[46%] rounded-[85px_95px_28px_25px]" style={{ background: 'linear-gradient(160deg,#4a5764,#161c23 52%,#05070a)', transform: 'skewX(-7deg)' }} />
-                    <div className="absolute left-[25%] top-[8%] w-[48%] h-[42%] rounded-t-[105px]" style={{ background: '#121a23', border: '2px solid #5c6b7a', transform: 'skewX(-9deg)' }} />
-                    <div className="absolute left-[30%] top-[16%] w-[17%] h-[26%]" style={{ background: '#172735', border: '1.5px solid #687b8b', transform: 'skewX(-9deg)' }} />
-                    <div className="absolute left-[49%] top-[16%] w-[18%] h-[26%]" style={{ background: '#172735', border: '1.5px solid #687b8b', transform: 'skewX(-9deg)' }} />
-                    <div className="absolute right-[5%] top-[42%] w-[8%] h-[11%] rounded-[5px_15px_9px_5px]" style={{ background: '#e4fbff', boxShadow: '0 0 28px 5px rgba(85,223,255,0.7)' }} />
-                    <div className="absolute left-[14%] top-[64%] w-[16%] h-[35%] rounded-full" style={{ background: '#05070a', border: '9px solid #28313b', boxShadow: 'inset 0 0 0 7px #080b10' }} />
-                    <div className="absolute left-[70%] top-[64%] w-[16%] h-[35%] rounded-full" style={{ background: '#05070a', border: '9px solid #28313b', boxShadow: 'inset 0 0 0 7px #080b10' }} />
+                    {/* Body — one smooth rounded silhouette instead of stacked rectangles */}
+                    <div
+                      className="absolute left-0 top-[42%] w-full h-[42%]"
+                      style={{ background: 'linear-gradient(165deg,#4a5764 0%,#2b333c 45%,#12161b 100%)', borderRadius: '50% 50% 20% 20% / 100% 100% 25% 25%' }}
+                    />
+                    {/* Glass roof — single smooth dome over both windows */}
+                    <div
+                      className="absolute left-[22%] top-0 w-[54%] h-[54%]"
+                      style={{ background: 'linear-gradient(180deg,#1c2733,#0e151c)', border: '2px solid #5c6b7a', borderBottom: 'none', borderRadius: '50% 50% 0 0 / 100% 100% 0 0' }}
+                    />
+                    <div className="absolute left-[27%] top-[11%] w-[20%] h-[32%] rounded-t-[60px]" style={{ background: '#172735', border: '1.5px solid #6b8092' }} />
+                    <div className="absolute left-[51%] top-[11%] w-[20%] h-[32%] rounded-t-[60px]" style={{ background: '#172735', border: '1.5px solid #6b8092' }} />
+                    {/* Headlamp */}
+                    <div className="absolute right-[3%] top-[52%] w-[7%] h-[10%] rounded-[50%]" style={{ background: '#f2fdff', boxShadow: '0 0 30px 6px rgba(120,235,255,0.8)' }} />
+                    {/* Wheels */}
+                    <div className="absolute left-[16%] top-[68%] w-[15%] h-[34%] rounded-full" style={{ background: '#05070a', border: '8px solid #262e37' }} />
+                    <div className="absolute left-[68%] top-[68%] w-[15%] h-[34%] rounded-full" style={{ background: '#05070a', border: '8px solid #262e37' }} />
                   </div>
                   <div className="absolute bottom-8 -left-2 bg-black/95 border border-[#1a6e8e]/30 rounded-lg px-4 py-3 text-xs shadow-lg backdrop-blur">
                     <div className="text-white/40 mb-0.5">Today's Best Rate</div>
@@ -553,6 +584,20 @@ export default function HomePage() {
           <Link href="/cars" className="text-[13px] text-[#2a8aad] hover:text-white font-semibold whitespace-nowrap">View All Vehicles →</Link>
         </div>
 
+        {carBodyTypes.length > 0 && (
+          <div className="max-w-[1200px] mx-auto flex gap-2 mb-6 flex-wrap">
+            {['Popular', ...carBodyTypes].map((t) => (
+              <button
+                key={t}
+                onClick={() => setActiveBodyTypeTab(t)}
+                className={`text-[12px] px-4 py-2 rounded-full border transition-colors ${activeBodyTypeTab === t ? 'bg-[#1a3a6e] border-[#2a8aad] text-white' : 'border-white/15 text-white/50 hover:text-white hover:border-white/30'}`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="max-w-[1200px] mx-auto">
           {loading && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -561,11 +606,11 @@ export default function HomePage() {
           )}
 
           {!loading && (
-            cars.length === 0
-              ? <p className="text-center text-white/40 py-12">No cars listed yet — check back soon.</p>
+            popularCarsShown.length === 0
+              ? <p className="text-center text-white/40 py-12">{activeBodyTypeTab === 'Popular' ? 'No cars listed yet — check back soon.' : `No ${activeBodyTypeTab} cars tagged yet.`}</p>
               : (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  {cars.map((v, i) => <VehicleCard key={i} v={v} onOpenDetail={() => router.push(`/${slugify(v.brand)}/${slugify(v.model)}`)} onQuickQuote={() => setSelectedVehicle(v)} />)}
+                  {popularCarsShown.map((v, i) => <VehicleCard key={i} v={v} onOpenDetail={() => router.push(`/${slugify(v.brand)}/${slugify(v.model)}`)} onQuickQuote={() => setSelectedVehicle(v)} />)}
                 </div>
               )
           )}

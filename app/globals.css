@@ -40,3 +40,8 @@ body {
 .animate-hero-fade { animation: hero-fade-in 0.9s ease-out both; }
 .animate-hero-slide { animation: hero-slide-in 0.9s ease-out both; }
 .animate-hero-zoom { animation: hero-zoom-in 0.9s ease-out both; }
+
+@keyframes hero-float {
+  50% { transform: translateY(-10px) rotate(0.4deg); }
+}
+.animate-hero-float { animation: hero-float 5s ease-in-out infinite; }

@@ -424,9 +424,18 @@ export default function HomePage() {
                   <div className="w-[400px] h-[300px] bg-gradient-to-br from-[#0d1f28] to-[#0a151c] border border-[#1a6e8e]/25 rounded-2xl flex items-center justify-center relative overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.45)]">
                     <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'radial-gradient(circle, rgba(42,138,173,0.25) 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
                     <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#e63030]/10 rounded-full blur-3xl" />
-                    <div className={`relative w-44 h-44 rounded-full bg-[#1a6e8e]/10 border border-[#1a6e8e]/20 flex items-center justify-center ${heroAnimClass(activeSlideData.animation)}`}>
-                      <span className="text-8xl drop-shadow-[0_12px_20px_rgba(0,0,0,0.5)]">🚗</span>
+                    {/* Glow ring + CSS car silhouette — MK Finance red/blue instead of a plain icon */}
+                    <div className="absolute w-[260px] h-[70px] rounded-full border-2 border-[#2a8aad]/60" style={{ boxShadow: '0 0 40px rgba(42,138,173,0.35)', transform: 'rotate(-3deg)' }} />
+                    <div className={`relative w-[300px] h-[135px] ${heroAnimClass(activeSlideData.animation)}`} style={{ filter: 'drop-shadow(0 25px 18px rgba(0,0,0,0.5))' }}>
+                      <div className="absolute left-[8%] top-[36%] w-[84%] h-[46%] rounded-[55px_65px_18px_15px]" style={{ background: 'linear-gradient(160deg,#3c4854,#12181f 55%,#050708)', transform: 'skewX(-7deg)' }} />
+                      <div className="absolute left-[24%] top-[10%] w-[52%] h-[42%] rounded-t-[70px]" style={{ background: '#0f151c', border: '1.5px solid #3a4d5c', transform: 'skewX(-9deg)' }} />
+                      <div className="absolute left-[30%] top-[17%] w-[18%] h-[26%]" style={{ background: '#152531', border: '1px solid #4a6072', transform: 'skewX(-9deg)' }} />
+                      <div className="absolute left-[50%] top-[17%] w-[19%] h-[26%]" style={{ background: '#152531', border: '1px solid #4a6072', transform: 'skewX(-9deg)' }} />
+                      <div className="absolute right-[6%] top-[42%] w-[9%] h-[13%] rounded-[4px_11px_6px_4px]" style={{ background: '#e4fbff', boxShadow: '0 0 18px 3px rgba(85,223,255,0.65)' }} />
+                      <div className="absolute left-[15%] top-[68%] w-[19%] h-[38%] rounded-full" style={{ background: '#05070a', border: '6px solid #1c2731', boxShadow: 'inset 0 0 0 4px #060809' }} />
+                      <div className="absolute left-[68%] top-[68%] w-[19%] h-[38%] rounded-full" style={{ background: '#05070a', border: '6px solid #1c2731', boxShadow: 'inset 0 0 0 4px #060809' }} />
                     </div>
+                    <div className="absolute bottom-6 w-[70%] h-6 rounded-full bg-[#2a8aad]/25 blur-xl" />
                   </div>
                   <div className="absolute bottom-5 -left-6 bg-black/95 border border-[#1a6e8e]/30 rounded-lg px-4 py-3 text-xs shadow-lg backdrop-blur">
                     <div className="text-white/40 mb-0.5">Today's Best Rate</div>

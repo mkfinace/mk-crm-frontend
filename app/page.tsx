@@ -44,12 +44,22 @@ function VehicleCard({ v, onOpenDetail, onQuickQuote }: { v: any; onOpenDetail: 
       className="group bg-[#FFFFFF] border border-[#E3E8EF] rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:border-[#2F8CFF]/50 hover:-translate-y-1.5 hover:shadow-[0_16px_35px_rgba(20,107,255,0.12)]"
     >
       <div
-        className="h-[150px] flex items-center justify-center relative overflow-hidden"
+        className="h-[125px] flex items-center justify-center relative overflow-hidden rounded-t-xl"
         style={{ background: 'radial-gradient(ellipse, #dceaff, #f5f7fa 68%)' }}
       >
-        <span className="text-6xl relative z-10 transition-transform duration-300 group-hover:scale-110">
-          {v.icon}
-        </span>
+        {/* ".mini" car silhouette — matches the reference mockup's CSS
+            car icon exactly (body trapezoid + roof arc), instead of a
+            generic emoji, so every card reads as "a car" at a glance. */}
+        <div className="relative w-[165px] h-[66px] transition-transform duration-300 group-hover:scale-105">
+          <div
+            className="absolute left-[12px] top-[26px] w-[142px] h-[34px]"
+            style={{ borderRadius: '38px 50px 11px 10px', background: 'linear-gradient(#6a7784,#1a222b)' }}
+          />
+          <div
+            className="absolute left-[47px] top-[10px] w-[70px] h-[29px] rounded-t-[40px]"
+            style={{ background: '#192a39', border: '1px solid #8aa0b4' }}
+          />
+        </div>
         <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide text-[#2A3648] border border-[#D9E0E9]">
           {v.brand}
         </span>
@@ -177,14 +187,17 @@ export default function HomePage() {
   );
 
   // Searchbar — filters real catalogue data and takes the visitor to /cars
-  // pre-filtered, rather than being decorative.
+  // pre-filtered, rather than being decorative. Two-tier like the reference:
+  // "Vehicle Type" (Car vs Commercial) narrows which "Category" options show.
   const [searchType, setSearchType] = useState('');
+  const [searchCategory, setSearchCategory] = useState('');
   const [searchBrand, setSearchBrand] = useState('');
   const [searchBudget, setSearchBudget] = useState('');
   const [searchFuel, setSearchFuel] = useState('');
   function runSearch() {
     const params = new URLSearchParams();
-    if (searchType) params.set('category', searchType);
+    if (searchCategory) params.set('category', searchCategory);
+    else if (searchType) params.set('category', searchType);
     if (searchBrand) params.set('brand', searchBrand);
     if (searchBudget) params.set('maxPrice', searchBudget);
     if (searchFuel) params.set('fuel', searchFuel);
@@ -295,10 +308,19 @@ export default function HomePage() {
 
         {/* SEARCHBAR */}
         <div className="mx-auto -mt-8 relative z-10 max-w-[1220px] bg-white border border-[#E3E8EF] shadow-[0_16px_40px_rgba(18,35,61,0.12)] rounded-2xl p-3 grid grid-cols-2 md:grid-cols-6 gap-2">
-          <select value={searchType} onChange={(e) => setSearchType(e.target.value)} className="border border-[#e0e6ed] bg-[#fbfcfd] rounded-lg px-3 py-2.5 text-[11px] text-[#748196]">
+          <select value={searchType} onChange={(e) => { setSearchType(e.target.value); setSearchCategory(''); }} className="border border-[#e0e6ed] bg-[#fbfcfd] rounded-lg px-3 py-2.5 text-[11px] text-[#748196]">
             <option value="">Vehicle Type — All</option>
             <option value="CAR">Car</option>
-            {COMMERCIAL_CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
+            <option value="COMMERCIAL">Commercial</option>
+          </select>
+          <select value={searchCategory} onChange={(e) => setSearchCategory(e.target.value)} className="border border-[#e0e6ed] bg-[#fbfcfd] rounded-lg px-3 py-2.5 text-[11px] text-[#748196]">
+            <option value="">Category — All</option>
+            {searchType === 'CAR' && carBodyTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+            {searchType === 'COMMERCIAL' && COMMERCIAL_CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
+            {searchType === '' && <>
+              <option value="CAR">All Cars</option>
+              {COMMERCIAL_CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
+            </>}
           </select>
           <select value={searchBrand} onChange={(e) => setSearchBrand(e.target.value)} className="border border-[#e0e6ed] bg-[#fbfcfd] rounded-lg px-3 py-2.5 text-[11px] text-[#748196]">
             <option value="">Brand — All</option>
@@ -312,13 +334,13 @@ export default function HomePage() {
             <option value="2500000">Under ₹25 Lakh</option>
           </select>
           <select value={searchFuel} onChange={(e) => setSearchFuel(e.target.value)} className="border border-[#e0e6ed] bg-[#fbfcfd] rounded-lg px-3 py-2.5 text-[11px] text-[#748196]">
-            <option value="">Fuel — Any</option>
+            <option value="">Fuel / Type — Any</option>
             <option value="Petrol">Petrol</option>
             <option value="Diesel">Diesel</option>
             <option value="EV">EV</option>
             <option value="CNG">CNG</option>
           </select>
-          <button onClick={runSearch} className="col-span-2 md:col-span-2 text-white rounded-lg text-[12px] font-extrabold" style={{ background: 'linear-gradient(100deg,#146BFF,#7146FF)' }}>SEARCH</button>
+          <button onClick={runSearch} className="col-span-2 md:col-span-1 text-white rounded-lg text-[12px] font-extrabold" style={{ background: 'linear-gradient(100deg,#146BFF,#7146FF)' }}>SEARCH</button>
         </div>
 
         {/* QUICK TOOLS */}

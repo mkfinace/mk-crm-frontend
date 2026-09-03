@@ -5,14 +5,24 @@ import Papa from 'papaparse';
 import { api } from '@/lib/api';
 import { inputCls, selectCls, primaryBtnCls, secondaryBtnCls, dangerTextBtnCls, linkBtnCls, cardCls } from '@/components/adminStyles';
 
+// The full set of vehicle categories a staff member can pick when adding or
+// editing a model. "Car" plus the newer, more specific commercial-vehicle
+// classes come first; the older, broader labels are kept below (marked
+// legacy) purely for backward compatibility with existing listings that
+// already use them — nothing is removed from what past choices meant.
 const CATEGORIES = [
   { value: 'CAR', label: 'Car', icon: '🚗' },
+  { value: 'MINI_TRUCK', label: 'Mini Truck', icon: '🚐' },
+  { value: 'PICKUP_TRUCK', label: 'Pickup Truck', icon: '🛻' },
+  { value: 'LCV', label: 'LCV', icon: '🚚' },
+  { value: 'MCV', label: 'MCV', icon: '🚛' },
+  { value: 'HCV', label: 'HCV', icon: '🚛' },
   { value: 'TRUCK', label: 'Truck', icon: '🚚' },
-  { value: 'TEMPO', label: 'Tempo', icon: '🚐' },
-  { value: 'PICKUP', label: 'Pickup', icon: '🛻' },
   { value: 'TRACTOR', label: 'Tractor', icon: '🚜' },
   { value: 'BUS', label: 'Bus', icon: '🚌' },
   { value: 'CONSTRUCTION', label: 'Construction', icon: '🏗️' },
+  { value: 'TEMPO', label: 'Tempo (legacy)', icon: '🚐' },
+  { value: 'PICKUP', label: 'Pickup (legacy)', icon: '🛻' },
 ];
 
 const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(CATEGORIES.map((c) => [c.value, c.label]));

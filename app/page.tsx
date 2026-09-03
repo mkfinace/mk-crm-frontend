@@ -86,6 +86,8 @@ export default function HomePage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [prefillVehicle, setPrefillVehicle] = useState('');
   const [enquiryIds, setEnquiryIds] = useState<{ brandId?: string; modelId?: string }>({});
+  const [modalEnquiryType, setModalEnquiryType] = useState<string | undefined>(undefined);
+  const [modalTitle, setModalTitle] = useState<string | undefined>(undefined);
   const [selectedVehicle, setSelectedVehicle] = useState<any | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [customer, setCustomer] = useState<PortalCustomer | null>(null);
@@ -204,9 +206,11 @@ export default function HomePage() {
     router.push(`/cars${params.toString() ? `?${params.toString()}` : ''}`);
   }
 
-  function openEnquiry(vehicleName?: string, ids?: { brandId?: string; modelId?: string }) {
+  function openEnquiry(vehicleName?: string, ids?: { brandId?: string; modelId?: string }, type?: string, title?: string) {
     setPrefillVehicle(vehicleName || '');
     setEnquiryIds(ids || {});
+    setModalEnquiryType(type);
+    setModalTitle(title);
     setModalOpen(true);
   }
   const scrollTo = (id: string) => {
@@ -349,9 +353,9 @@ export default function HomePage() {
             { icon: '◈', label: 'Finance', sub: 'Car & commercial vehicle loans', action: () => scrollTo('used') },
             { icon: '◇', label: 'Insurance', sub: 'New, used & commercial', action: () => scrollTo('used') },
             { icon: '✧', label: 'Exchange', sub: 'Get your vehicle value', action: () => scrollTo('exchange') },
-            { icon: '◉', label: 'Test Drive', sub: 'Book a vehicle', action: () => openEnquiry() },
+            { icon: '◉', label: 'Test Drive', sub: 'Book a vehicle', action: () => openEnquiry(undefined, undefined, 'TEST_DRIVE', 'Book a Test Drive') },
             { icon: '▣', label: 'EMI Calculator', sub: 'Plan your payment', action: () => scrollTo('used') },
-            { icon: '⌖', label: 'Find Dealers', sub: 'Find a dealer near you', action: () => openEnquiry() },
+            { icon: '⌖', label: 'Find Dealers', sub: 'Find a dealer near you', action: () => openEnquiry(undefined, undefined, 'DEALER_ENQUIRY', 'Find a Dealer Near You') },
           ].map((t) => (
             <button key={t.label} onClick={t.action} className="text-left bg-white border border-[#E3E8EF] rounded-xl p-4 transition-all hover:-translate-y-1 hover:border-[#a8c4fa]">
               <b className="block text-[12px]"><span className="text-[#146BFF] mr-1">{t.icon}</span>{t.label}</b>
@@ -405,7 +409,7 @@ export default function HomePage() {
               return (
                 <button
                   key={cat}
-                  onClick={() => count > 0 ? document.getElementById(`cv-${cat}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }) : openEnquiry()}
+                  onClick={() => count > 0 ? document.getElementById(`cv-${cat}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }) : openEnquiry(undefined, undefined, 'VEHICLE_ENQUIRY', 'Commercial Vehicle Enquiry')}
                   className="text-left border border-[#E3E8EF] rounded-xl p-4 min-h-[118px] bg-[#fbfcfd] transition-all hover:border-[#9fbdf2] hover:-translate-y-1"
                 >
                   <strong className="text-[12px] block mb-1">{String(i + 1).padStart(2, '0')} · {CATEGORY_LABEL[cat]}</strong>
@@ -439,19 +443,19 @@ export default function HomePage() {
               <div className="text-[10px] font-extrabold text-[#68b8ff]">TRUSTED USED VEHICLES</div>
               <h3 className="text-[22px] font-bold my-2.5" style={{ fontFamily: 'var(--font-heading)' }}>Find a vehicle that works for you.</h3>
               <p className="text-[11px] leading-relaxed text-[#b8c3d2] max-w-[330px] mb-4">Browse condition, year, kilometres, ownership, inspection, finance and insurance information in one connected journey.</p>
-              <button onClick={() => openEnquiry()} className="px-5 py-2.5 rounded-md text-[11px] font-extrabold text-white" style={{ background: 'linear-gradient(100deg,#146BFF,#7146FF)' }}>EXPLORE USED VEHICLES</button>
+              <button onClick={() => openEnquiry(undefined, undefined, 'USED_VEHICLE', 'Explore Used Vehicles')} className="px-5 py-2.5 rounded-md text-[11px] font-extrabold text-white" style={{ background: 'linear-gradient(100deg,#146BFF,#7146FF)' }}>EXPLORE USED VEHICLES</button>
             </div>
             <div className="rounded-[14px] p-6 min-h-[190px] border border-[#E3E8EF]" style={{ background: 'linear-gradient(140deg,#ecf4ff,#f4f0ff)' }}>
               <div className="text-[#68758A] text-[10px] font-bold uppercase">FINANCE</div>
               <h3 className="text-[22px] font-bold my-2.5" style={{ fontFamily: 'var(--font-heading)' }}>Finance for your vehicle.</h3>
               <p className="text-[11px] leading-relaxed text-[#68758A] mb-4">Calculate EMI and start a finance enquiry for cars or commercial vehicles.</p>
-              <button onClick={() => openEnquiry()} className="px-5 py-2.5 rounded-md text-[11px] font-extrabold border border-[#d5dce6] bg-white">CHECK EMI</button>
+              <button onClick={() => openEnquiry(undefined, undefined, 'FINANCE', 'Check EMI / Finance Enquiry')} className="px-5 py-2.5 rounded-md text-[11px] font-extrabold border border-[#d5dce6] bg-white">CHECK EMI</button>
             </div>
             <div className="rounded-[14px] p-6 min-h-[190px] border border-[#E3E8EF]" style={{ background: 'linear-gradient(140deg,#effaf5,#f6fbff)' }}>
               <div className="text-[#68758A] text-[10px] font-bold uppercase">INSURANCE</div>
               <h3 className="text-[22px] font-bold my-2.5" style={{ fontFamily: 'var(--font-heading)' }}>Protect your vehicle.</h3>
               <p className="text-[11px] leading-relaxed text-[#68758A] mb-4">Get insurance for new, used and commercial vehicles.</p>
-              <button onClick={() => openEnquiry()} className="px-5 py-2.5 rounded-md text-[11px] font-extrabold border border-[#d5dce6] bg-white">GET INSURANCE</button>
+              <button onClick={() => openEnquiry(undefined, undefined, 'INSURANCE', 'Get an Insurance Quote')} className="px-5 py-2.5 rounded-md text-[11px] font-extrabold border border-[#d5dce6] bg-white">GET INSURANCE</button>
             </div>
           </div>
         </section>
@@ -481,19 +485,19 @@ export default function HomePage() {
               <div className="text-[#68758A] text-[10px] font-bold uppercase">GET AN ESTIMATED VALUE</div>
               <h3 className="text-[19px] font-bold my-2.5" style={{ fontFamily: 'var(--font-heading)' }}>Turn your current vehicle into your next one.</h3>
               <p className="text-[11px] leading-relaxed text-[#68758A] mb-4">Share your vehicle details and our team will get back with an exchange valuation.</p>
-              <button onClick={() => openEnquiry()} className="px-5 py-2.5 rounded-md text-[11px] font-extrabold text-white" style={{ background: 'linear-gradient(100deg,#146BFF,#7146FF)' }}>REQUEST EXCHANGE VALUE</button>
+              <button onClick={() => openEnquiry(undefined, undefined, 'EXCHANGE', 'Request Exchange Value')} className="px-5 py-2.5 rounded-md text-[11px] font-extrabold text-white" style={{ background: 'linear-gradient(100deg,#146BFF,#7146FF)' }}>REQUEST EXCHANGE VALUE</button>
             </div>
             <div className="rounded-[14px] p-6 min-h-[190px] border border-[#E3E8EF] bg-[#fbfcfd]">
               <div className="text-[#68758A] text-[10px] font-bold uppercase">CURRENT VEHICLE</div>
               <h3 className="text-[19px] font-bold my-2.5" style={{ fontFamily: 'var(--font-heading)' }}>Car or commercial?</h3>
               <p className="text-[11px] leading-relaxed text-[#68758A] mb-4">Tell us the vehicle category, year, kilometres and condition.</p>
-              <button onClick={() => openEnquiry()} className="px-5 py-2.5 rounded-md text-[11px] font-extrabold border border-[#d5dce6] bg-white">START VALUATION</button>
+              <button onClick={() => openEnquiry(undefined, undefined, 'EXCHANGE', 'Start Your Vehicle Valuation')} className="px-5 py-2.5 rounded-md text-[11px] font-extrabold border border-[#d5dce6] bg-white">START VALUATION</button>
             </div>
             <div className="rounded-[14px] p-6 min-h-[190px] border border-[#E3E8EF] bg-[#fbfcfd]">
               <div className="text-[#68758A] text-[10px] font-bold uppercase">FINANCE + INSURANCE</div>
               <h3 className="text-[19px] font-bold my-2.5" style={{ fontFamily: 'var(--font-heading)' }}>Complete the deal.</h3>
               <p className="text-[11px] leading-relaxed text-[#68758A] mb-4">Connect exchange value with finance, insurance and the new vehicle purchase.</p>
-              <button onClick={() => openEnquiry()} className="px-5 py-2.5 rounded-md text-[11px] font-extrabold border border-[#d5dce6] bg-white">VIEW OPTIONS</button>
+              <button onClick={() => openEnquiry(undefined, undefined, 'EXCHANGE', 'Exchange + Finance + Insurance')} className="px-5 py-2.5 rounded-md text-[11px] font-extrabold border border-[#d5dce6] bg-white">VIEW OPTIONS</button>
             </div>
           </div>
         </section>
@@ -547,7 +551,7 @@ export default function HomePage() {
             <button onClick={() => scrollTo('used')} className="block text-[#8190a5] text-[10px] my-1.5 text-left">Finance</button>
             <button onClick={() => scrollTo('used')} className="block text-[#8190a5] text-[10px] my-1.5 text-left">Insurance</button>
             <button onClick={() => scrollTo('exchange')} className="block text-[#8190a5] text-[10px] my-1.5 text-left">Exchange</button>
-            <button onClick={() => openEnquiry()} className="block text-[#8190a5] text-[10px] my-1.5 text-left">Test Drive</button>
+            <button onClick={() => openEnquiry(undefined, undefined, 'TEST_DRIVE', 'Book a Test Drive')} className="block text-[#8190a5] text-[10px] my-1.5 text-left">Test Drive</button>
           </div>
           <div>
             <h4 className="text-white text-[11px] font-bold mb-2.5">SUPPORT</h4>
@@ -579,7 +583,7 @@ export default function HomePage() {
             <h3 className="text-[#172033] text-lg font-bold mb-1">{selectedVehicle.brand} {selectedVehicle.model}</h3>
             <p className="text-[#146BFF] text-xl font-black mb-4">{selectedVehicle.price}</p>
             <button
-              onClick={() => { openEnquiry(`${selectedVehicle.brand} ${selectedVehicle.model}`, { brandId: selectedVehicle.brandId, modelId: selectedVehicle.modelId }); setSelectedVehicle(null); }}
+              onClick={() => { openEnquiry(`${selectedVehicle.brand} ${selectedVehicle.model}`, { brandId: selectedVehicle.brandId, modelId: selectedVehicle.modelId }, 'VEHICLE_ENQUIRY', 'Enquire Now'); setSelectedVehicle(null); }}
               className="w-full py-3 text-white rounded-md font-bold text-sm"
               style={{ background: 'linear-gradient(100deg,#146BFF,#7146FF)' }}
             >
@@ -595,6 +599,8 @@ export default function HomePage() {
         prefillVehicle={prefillVehicle}
         brandId={enquiryIds.brandId}
         modelId={enquiryIds.modelId}
+        enquiryType={modalEnquiryType}
+        title={modalTitle}
       />
     </div>
   );

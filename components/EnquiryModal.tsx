@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { api } from '@/lib/api';
 
 export default function EnquiryModal({
-  open, onClose, prefillVehicle, brandId, modelId, variantId,
-}: { open: boolean; onClose: () => void; prefillVehicle?: string; brandId?: string; modelId?: string; variantId?: string }) {
+  open, onClose, prefillVehicle, brandId, modelId, variantId, enquiryType, title,
+}: { open: boolean; onClose: () => void; prefillVehicle?: string; brandId?: string; modelId?: string; variantId?: string; enquiryType?: string; title?: string }) {
   const [step, setStep] = useState<'form' | 'otp' | 'done'>('form');
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
@@ -52,6 +52,7 @@ export default function EnquiryModal({
         modelId: modelId || undefined,
         variantId: variantId || undefined,
         financeRequired: needsFinance,
+        enquiryType: enquiryType || undefined,
       });
       setStep('done');
     } catch (e: any) {
@@ -82,7 +83,7 @@ export default function EnquiryModal({
 
         {step === 'form' && (
           <>
-            <h3 className="text-[#172033] text-xl font-bold mb-1">Get a Quote</h3>
+            <h3 className="text-[#172033] text-xl font-bold mb-1">{title || 'Get a Quote'}</h3>
             <p className="text-[#68758A] text-sm mb-5">
               {prefillVehicle ? `Interested in: ${prefillVehicle}` : 'Share your details — our team will call you shortly.'}
             </p>

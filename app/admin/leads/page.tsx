@@ -12,6 +12,22 @@ const STATUS_LABEL: Record<string, string> = {
   BOOKING: 'Booking', DELIVERY: 'Delivery', CLOSED: 'Closed', HOLD: 'Hold', LOST: 'Lost',
 };
 
+const ENQUIRY_TYPE_LABEL: Record<string, string> = {
+  VEHICLE_ENQUIRY: 'Vehicle Enquiry', FINANCE: 'Finance', INSURANCE: 'Insurance',
+  EXCHANGE: 'Exchange', TEST_DRIVE: 'Test Drive', DEALER_ENQUIRY: 'Dealer Enquiry',
+  USED_VEHICLE: 'Used Vehicle',
+};
+
+const ENQUIRY_TYPE_BADGE_STYLE: Record<string, { bg: string; text: string }> = {
+  VEHICLE_ENQUIRY: { bg: 'bg-slate-100', text: 'text-slate-600' },
+  FINANCE: { bg: 'bg-sky-50', text: 'text-sky-700' },
+  INSURANCE: { bg: 'bg-emerald-50', text: 'text-emerald-700' },
+  EXCHANGE: { bg: 'bg-amber-50', text: 'text-amber-700' },
+  TEST_DRIVE: { bg: 'bg-violet-50', text: 'text-violet-700' },
+  DEALER_ENQUIRY: { bg: 'bg-rose-50', text: 'text-rose-700' },
+  USED_VEHICLE: { bg: 'bg-orange-50', text: 'text-orange-700' },
+};
+
 const BADGE_STYLE: Record<string, { bg: string; text: string }> = {
   NEW: { bg: 'bg-slate-100', text: 'text-slate-600' },
   CONTACTED: { bg: 'bg-sky-50', text: 'text-sky-700' },
@@ -43,6 +59,7 @@ export default function LeadsListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
+  const [enquiryTypeFilter, setEnquiryTypeFilter] = useState(searchParams.get('enquiryType') || '');
   const [search, setSearch] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -87,7 +104,7 @@ export default function LeadsListPage() {
 
   useEffect(() => {
     loadLeads();
-  }, [statusFilter]);
+  }, [statusFilter, enquiryTypeFilter]);
 
   async function loadLeads() {
     setLoading(true);
@@ -95,6 +112,7 @@ export default function LeadsListPage() {
     try {
       const parts: string[] = [];
       if (statusFilter) parts.push(`salesStatus=${statusFilter}`);
+      if (enquiryTypeFilter) parts.push(`enquiryType=${enquiryTypeFilter}`);
       if (isDealerExec && staff?.id) parts.push(`dealerExecutiveId=${staff.id}`);
       if (isFinanceExec && staff?.id) parts.push(`financeExecutiveId=${staff.id}`);
       const data = await api.listLeads(parts.join('&'));
@@ -113,7 +131,7 @@ export default function LeadsListPage() {
           <h1 className="text-[22px] font-semibold text-slate-900 tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
             {isDealerExec || isFinanceExec ? 'My Leads' : 'Leads'}
           </h1>
-          <p className="text-[13px] text-slate-500 mt-0.5">{leads.length} lead{leads.length === 1 ? '' : 's'}{statusFilter ? ` · ${STATUS_LABEL[statusFilter]}` : ''}</p>
+          <p className="text-[13px] text-slate-500 mt-0.5">{leads.length} lead{leads.length === 1 ? '' : 's'}{statusFilter ? ` · ${STATUS_LABEL[statusFilter]}` : ''}{enquiryTypeFilter ? ` · ${ENQUIRY_TYPE_LABEL[enquiryTypeFilter]}` : ''}</p>
         </div>
         <div className="flex items-center gap-2.5">
           <input
@@ -129,6 +147,14 @@ export default function LeadsListPage() {
           >
             <option value="">All statuses</option>
             {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+          <select
+            className="border border-slate-200 rounded-lg px-3 py-2 text-[13px] text-slate-700 bg-white"
+            value={enquiryTypeFilter}
+            onChange={(e) => setEnquiryTypeFilter(e.target.value)}
+          >
+            <option value="">All enquiry types</option>
+            {Object.entries(ENQUIRY_TYPE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
           <Link
             href="/admin/leads/new"
@@ -160,6 +186,7 @@ export default function LeadsListPage() {
               <tr className="border-b border-slate-100">
                 <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Customer</th>
                 <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Vehicle</th>
+                <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Enquiry Type</th>
                 <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Status</th>
                 <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Budget</th>
                 <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Created</th>
@@ -184,6 +211,13 @@ export default function LeadsListPage() {
                     </td>
                     <td className="px-5 py-3.5 text-slate-600">
                       {lead.brand?.name ? `${lead.brand.name} ${lead.model?.name || ''} ${lead.variant?.name || ''}` : <span className="text-slate-300">—</span>}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {lead.enquiryType ? (
+                        <span className={`text-[11px] px-2 py-1 rounded-full font-medium ${(ENQUIRY_TYPE_BADGE_STYLE[lead.enquiryType] || ENQUIRY_TYPE_BADGE_STYLE.VEHICLE_ENQUIRY).bg} ${(ENQUIRY_TYPE_BADGE_STYLE[lead.enquiryType] || ENQUIRY_TYPE_BADGE_STYLE.VEHICLE_ENQUIRY).text}`}>
+                          {ENQUIRY_TYPE_LABEL[lead.enquiryType] || lead.enquiryType}
+                        </span>
+                      ) : <span className="text-slate-300">—</span>}
                     </td>
                     <td className="px-5 py-3.5">
                       <span className={`text-[11px] px-2 py-1 rounded-full font-medium ${badge.bg} ${badge.text}`}>

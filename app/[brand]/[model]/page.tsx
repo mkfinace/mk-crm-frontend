@@ -87,6 +87,8 @@ export default function ModelDetailPage() {
   const [colourIdx, setColourIdx] = useState(0);
   const [imageIdx, setImageIdx] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalEnquiryType, setModalEnquiryType] = useState<string | undefined>(undefined);
+  const [modalTitle, setModalTitle] = useState<string | undefined>(undefined);
 
   const [contactInfo, setContactInfo] = useState({ contact_phone: '98247 42356', contact_city: 'Valsad, Gujarat' });
   const contactPhoneDigits = contactInfo.contact_phone.replace(/\s/g, '');
@@ -197,7 +199,9 @@ export default function ModelDetailPage() {
   const activeOffers = variant?.offers || [];
   const warranty = variant?.warranty;
 
-  function openEnquiry() {
+  function openEnquiry(type?: string, title?: string) {
+    setModalEnquiryType(type);
+    setModalTitle(title);
     setModalOpen(true);
   }
   function scrollTo(id: string) {
@@ -310,7 +314,7 @@ export default function ModelDetailPage() {
       <nav>
         <Link href="/" className="logo"><img src="/logo.png" alt="MK Finance" /></Link>
         <Link href="/cars" className="navlink">NEW CARS</Link>
-        <button className="navlink" onClick={() => openEnquiry()}>USED CARS</button>
+        <button className="navlink" onClick={() => openEnquiry('USED_VEHICLE', 'Used Vehicles Enquiry')}>USED CARS</button>
         <Link href="/cars" className="navlink">COMPARE</Link>
         <button className="navlink" onClick={() => scrollTo('finance')}>FINANCE</button>
         <button className="navlink" onClick={() => scrollTo('insurance')}>INSURANCE</button>
@@ -376,7 +380,7 @@ export default function ModelDetailPage() {
 
             <div className="actions">
               <button className="btn primary" onClick={() => scrollTo('finance')}>GET ON-ROAD PRICE</button>
-              <button className="btn" onClick={() => openEnquiry()}>BOOK TEST DRIVE</button>
+              <button className="btn" onClick={() => openEnquiry('TEST_DRIVE', 'Book a Test Drive')}>BOOK TEST DRIVE</button>
               <Link href="/cars" className="btn dark" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>COMPARE</Link>
             </div>
             <p className="muted" style={{ marginTop: 22 }}>
@@ -464,7 +468,7 @@ export default function ModelDetailPage() {
             ) : (
               <p className="muted">Contact us for a personalised finance quote.</p>
             )}
-            <button className="btn primary" onClick={() => openEnquiry()}>GET FINANCE OFFER</button>
+            <button className="btn primary" onClick={() => openEnquiry('FINANCE', 'Get a Finance Offer')}>GET FINANCE OFFER</button>
           </div>
           <div className="box green" id="insurance">
             <h2>Protect Your {data.model.name}</h2>
@@ -472,7 +476,7 @@ export default function ModelDetailPage() {
             <p>✓ Zero Depreciation option</p>
             <p>✓ Roadside Assistance</p>
             <p>✓ Add-on covers</p>
-            <button className="btn dark" onClick={() => openEnquiry()}>GET INSURANCE QUOTE</button>
+            <button className="btn dark" onClick={() => openEnquiry('INSURANCE', 'Get an Insurance Quote')}>GET INSURANCE QUOTE</button>
           </div>
         </section>
 
@@ -483,7 +487,7 @@ export default function ModelDetailPage() {
               <h2>{data.brand.name} {data.model.name} Brochure</h2>
               <p className="muted">Ask our team and we'll send you the official brochure directly.</p>
             </div>
-            <div><button className="btn primary" onClick={() => openEnquiry()}>REQUEST BROCHURE</button></div>
+            <div><button className="btn primary" onClick={() => openEnquiry('VEHICLE_ENQUIRY', 'Request Brochure')}>REQUEST BROCHURE</button></div>
           </div>
         </section>
 
@@ -502,8 +506,8 @@ export default function ModelDetailPage() {
         <div className="bp"><small>{data.model.name.toUpperCase()} STARTING FROM</small><br /><b>{priceRange.text}</b></div>
         <button className="btn" onClick={() => scrollTo('finance')}>CHECK EMI</button>
         <button className="btn" onClick={() => scrollTo('insurance')}>INSURANCE</button>
-        <button className="btn" onClick={() => openEnquiry()}>TEST DRIVE</button>
-        <button className="btn primary" onClick={() => openEnquiry()}>ENQUIRE NOW →</button>
+        <button className="btn" onClick={() => openEnquiry('TEST_DRIVE', 'Book a Test Drive')}>TEST DRIVE</button>
+        <button className="btn primary" onClick={() => openEnquiry('VEHICLE_ENQUIRY', 'Enquire Now')}>ENQUIRE NOW →</button>
       </div>
 
       <EnquiryModal
@@ -513,6 +517,8 @@ export default function ModelDetailPage() {
         brandId={data?.brand?.id}
         modelId={data?.model?.id}
         variantId={variant?.id}
+        enquiryType={modalEnquiryType}
+        title={modalTitle}
       />
     </div>
   );

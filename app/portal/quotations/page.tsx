@@ -1,0 +1,16 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { portalApi } from '@/lib/portalApi';
+
+const money=(n?:number)=>n == null ? '—' : `₹${Number(n).toLocaleString('en-IN')}`;
+
+export default function PortalQuotationsPage(){
+ const [quotes,setQuotes]=useState<any[]>([]); const [loading,setLoading]=useState(true); const [error,setError]=useState('');
+ useEffect(()=>{portalApi.listQuotations().then(setQuotes).catch(e=>setError(e.message)).finally(()=>setLoading(false));},[]);
+ return <div className="max-w-[1000px] mx-auto">
+  <div className="mb-7"><p className="text-[11px] font-bold tracking-[3px] uppercase text-[#146BFF]">Quotations</p><h1 className="text-[28px] font-extrabold tracking-tight mt-1">My Quotations</h1><p className="text-[13px] text-[#8894A5] mt-1">Review the latest price proposals shared for your enquiries.</p></div>
+  {loading ? <div className="space-y-3">{[1,2,3].map(i=><div key={i} className="h-40 bg-white border border-[#E3E8EF] rounded-2xl animate-pulse"/>)}</div> : error ? <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">{error}</div> : quotes.length===0 ? <div className="bg-white border border-[#E3E8EF] rounded-2xl p-7"><h2 className="font-extrabold">No quotation yet</h2><p className="text-[13px] text-[#8894A5] mt-1">When MK Finance shares a quotation for your enquiry, it will appear here.</p><Link href="/portal/enquiries" className="inline-flex mt-5 rounded-lg bg-[#146BFF] text-white px-5 py-2.5 text-[12.5px] font-semibold">View My Enquiries</Link></div> : <div className="space-y-4">{quotes.map(q=><div key={q.id} className="bg-white border border-[#E3E8EF] rounded-2xl p-5"><div className="flex items-start justify-between gap-4"><div><p className="text-[10px] uppercase tracking-[1.5px] text-[#8894A5]">Version {q.version}</p><h2 className="font-extrabold text-[16px] mt-1">Quotation {q.version}</h2></div><span className={`rounded-full px-3 py-1 text-[10px] font-semibold ${q.validTill && new Date(q.validTill).getTime()<Date.now()?'bg-red-50 text-red-600':'bg-[#F0F6FF] text-[#146BFF]'}`}>{q.validTill && new Date(q.validTill).getTime()<Date.now()?'Expired':'Valid'}</span></div><div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5"><div><p className="text-[10px] uppercase text-[#94A0AF]">On-road Price</p><p className="font-bold mt-1">{money(q.onRoadPrice)}</p></div><div><p className="text-[10px] uppercase text-[#94A0AF]">Discount</p><p className="font-bold mt-1">{money(q.discount)}</p></div><div><p className="text-[10px] uppercase text-[#94A0AF]">Exchange</p><p className="font-bold mt-1">{money(q.exchangeValue)}</p></div><div><p className="text-[10px] uppercase text-[#94A0AF]">Valid Till</p><p className="font-bold mt-1">{q.validTill?new Date(q.validTill).toLocaleDateString('en-IN'):'—'}</p></div></div><div className="mt-4 pt-4 border-t border-[#EEF1F5] text-[11px] text-[#8894A5]">Ex-showroom {money(q.exShowroomPrice)} · RTO {money(q.rto)} · Insurance {money(q.insurance)} · Accessories {money(q.accessories)} · Other charges {money(q.otherCharges)}</div><Link href={q.leadId?`/portal/leads/${q.leadId}`:'/portal/enquiries'} className="inline-flex mt-4 text-[12px] font-semibold text-[#146BFF]">View related deal →</Link></div>)}</div>}
+ </div>;
+}

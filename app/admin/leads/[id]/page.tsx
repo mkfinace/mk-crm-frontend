@@ -715,6 +715,9 @@ export default function LeadDetailPage() {
   const [regNumber, setRegNumber] = useState('');
   const [insurancePolicy, setInsurancePolicy] = useState('');
   const [editingVehicleDetails, setEditingVehicleDetails] = useState(false);
+  const [deliveryPhotos, setDeliveryPhotos] = useState<string[]>([]);
+  const [deliveryPhotoUploading, setDeliveryPhotoUploading] = useState(false);
+  const [deliveryPhotoError, setDeliveryPhotoError] = useState('');
 
   const [messages, setMessages] = useState<any[]>([]);
   const [messageBody, setMessageBody] = useState('');
@@ -1347,6 +1350,48 @@ export default function LeadDetailPage() {
   const handleSaveVehicleDetails = withSaving(async () => {
     await api.updateDelivery(lead.delivery.id, { registrationNumber: regNumber || undefined, insurancePolicyNumber: insurancePolicy || undefined });
     setEditingVehicleDetails(false);
+  });
+
+  function handleDeliveryPhotoSelect(fileList: FileList | null) {
+    if (!fileList || fileList.length === 0) return;
+    setDeliveryPhotoError('');
+    const maxBytes = 5 * 1024 * 1024;
+    const files = Array.from(fileList);
+    const tooLarge = files.find((f) => f.size > maxBytes);
+    if (tooLarge) {
+      setDeliveryPhotoError(`"${tooLarge.name}" is too large — max 5MB per photo.`);
+      return;
+    }
+    setDeliveryPhotoUploading(true);
+    let remaining = files.length;
+    const results: string[] = [];
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        results.push(reader.result as string);
+        remaining -= 1;
+        if (remaining === 0) {
+          setDeliveryPhotos((prev) => [...prev, ...results]);
+          setDeliveryPhotoUploading(false);
+        }
+      };
+      reader.onerror = () => {
+        setDeliveryPhotoError(`Could not read "${file.name}" — try again.`);
+        remaining -= 1;
+        if (remaining === 0) setDeliveryPhotoUploading(false);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function removeDeliveryPhoto(idx: number) {
+    setDeliveryPhotos((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  const handleSaveDeliveryPhotos = withSaving(async () => {
+    const existing: string[] = lead.delivery.photosJson ? JSON.parse(lead.delivery.photosJson) : [];
+    await api.updateDelivery(lead.delivery.id, { photos: [...existing, ...deliveryPhotos] });
+    setDeliveryPhotos([]);
   });
 
   async function handleSendMessage(e: React.FormEvent) {
@@ -2570,6 +2615,40 @@ export default function LeadDetailPage() {
                 </div>
               )}
               <p className="text-[11px] text-slate-400 mt-2">To upload the RC copy or insurance copy scans, use the Documents step — "RC Copy" and "Insurance Copy" are available there as document types.</p>
+            </div>
+
+            <div className="border-t border-slate-100 pt-3">
+              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-2">Delivery Photos</p>
+              <p className="text-[11px] text-slate-400 mb-2">These show on the customer's portal delivery page with a congratulations message.</p>
+              {(() => {
+                const existingPhotos: string[] = lead.delivery.photosJson ? JSON.parse(lead.delivery.photosJson) : [];
+                return existingPhotos.length > 0 ? (
+                  <div className="grid grid-cols-4 gap-2 mb-3">
+                    {existingPhotos.map((p: string, i: number) => (
+                      <img key={i} src={p} alt={`Delivery photo ${i + 1}`} className="w-full h-20 object-cover rounded-lg border border-slate-200" />
+                    ))}
+                  </div>
+                ) : null;
+              })()}
+              <input type="file" accept="image/*" multiple className={`${inputCls} w-full`} onChange={(e) => handleDeliveryPhotoSelect(e.target.files)} />
+              <p className="text-[11px] text-slate-400 mt-1">Max 5MB per photo. You can select multiple photos at once.</p>
+              {deliveryPhotoUploading && <p className="text-[12px] text-slate-500 mt-1">Reading photo(s)…</p>}
+              {deliveryPhotoError && <p className="text-[12px] text-red-600 mt-1">{deliveryPhotoError}</p>}
+              {deliveryPhotos.length > 0 && (
+                <>
+                  <div className="grid grid-cols-4 gap-2 mt-2">
+                    {deliveryPhotos.map((p, i) => (
+                      <div key={i} className="relative">
+                        <img src={p} alt={`New photo ${i + 1}`} className="w-full h-20 object-cover rounded-lg border border-slate-200" />
+                        <button type="button" onClick={() => removeDeliveryPhoto(i)} className="absolute top-1 right-1 bg-black/60 text-white rounded-full w-5 h-5 text-[11px] flex items-center justify-center">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                  <button disabled={saving} onClick={handleSaveDeliveryPhotos} className={`${primaryBtnCls} mt-2`}>
+                    Upload {deliveryPhotos.length} Photo{deliveryPhotos.length > 1 ? 's' : ''}
+                  </button>
+                </>
+              )}
             </div>
 
             {lead.delivery.status !== 'DELIVERED' && (

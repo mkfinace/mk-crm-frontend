@@ -309,6 +309,15 @@ export default function LeadDetailPage() {
   const canEditFinanceStatus = staff?.role === 'SUPER_ADMIN' || staff?.role === 'FINANCE_ADMIN' || staff?.role === 'FINANCE_EXECUTIVE';
   const canCreateFinanceCase = staff?.role === 'SUPER_ADMIN' || staff?.role === 'FINANCE_ADMIN' || staff?.role === 'FINANCE_EXECUTIVE';
   const canCreateQuotation = staff?.role === 'SUPER_ADMIN' || staff?.role === 'SALES_ADMIN' || staff?.role === 'DEALER_MANAGER' || staff?.role === 'DEALER_EXECUTIVE';
+  // Document download visibility: Admins and Finance staff can download every
+  // document a customer has uploaded. Sales/dealer staff can only download
+  // identity documents (Aadhaar, PAN) — enough to confirm who they're dealing
+  // with — not income/bank/ITR/GST documents, which are finance-sensitive.
+  const canDownloadAllDocs = staff?.role === 'SUPER_ADMIN' || staff?.role === 'FINANCE_ADMIN' || staff?.role === 'FINANCE_EXECUTIVE';
+  const SALES_DOWNLOADABLE_DOC_TYPES = ['Aadhaar', 'PAN'];
+  function canDownloadDoc(docType: string) {
+    return canDownloadAllDocs || SALES_DOWNLOADABLE_DOC_TYPES.includes(docType);
+  }
 
   const [lead, setLead] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -464,6 +473,7 @@ export default function LeadDetailPage() {
 
   const [docType, setDocType] = useState('Aadhaar');
   const [docUrl, setDocUrl] = useState('');
+  const [docFiles, setDocFiles] = useState<{ name: string; dataUrl: string }[]>([]);
   const [docPersonType, setDocPersonType] = useState('APPLICANT');
   const [docPersonName, setDocPersonName] = useState('');
   const [docUploading, setDocUploading] = useState(false);
@@ -1137,33 +1147,58 @@ export default function LeadDetailPage() {
   });
 
   const handleAddDocument = withSaving(async () => {
-    await api.createDocument({
-      leadId: id, type: docType, fileUrl: docUrl, uploadedBy: staff!.id,
-      personType: docPersonType, personName: docPersonName || undefined,
-    });
+    if (docFiles.length > 0) {
+      for (const f of docFiles) {
+        await api.createDocument({
+          leadId: id, type: docType, fileUrl: f.dataUrl, uploadedBy: staff!.id,
+          personType: docPersonType, personName: docPersonName || undefined,
+        });
+      }
+      setDocFiles([]);
+    } else {
+      await api.createDocument({
+        leadId: id, type: docType, fileUrl: docUrl, uploadedBy: staff!.id,
+        personType: docPersonType, personName: docPersonName || undefined,
+      });
+    }
     setDocUrl('');
     setDocPersonName('');
   });
 
-  function handleDocFileSelect(file: File | undefined) {
-    if (!file) return;
+  function handleDocFileSelect(fileList: FileList | null) {
+    if (!fileList || fileList.length === 0) return;
     setDocUploadError('');
     const maxBytes = 5 * 1024 * 1024;
-    if (file.size > maxBytes) {
-      setDocUploadError('File too large — max 5MB. Try a smaller/compressed file, or paste a link instead.');
+    const files = Array.from(fileList);
+    const tooLarge = files.find((f) => f.size > maxBytes);
+    if (tooLarge) {
+      setDocUploadError(`"${tooLarge.name}" is too large — max 5MB per file. Try a smaller/compressed file, or paste a link instead.`);
       return;
     }
     setDocUploading(true);
-    const reader = new FileReader();
-    reader.onload = () => {
-      setDocUrl(reader.result as string);
-      setDocUploading(false);
-    };
-    reader.onerror = () => {
-      setDocUploadError('Could not read that file — try again.');
-      setDocUploading(false);
-    };
-    reader.readAsDataURL(file);
+    let remaining = files.length;
+    const results: { name: string; dataUrl: string }[] = [];
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        results.push({ name: file.name, dataUrl: reader.result as string });
+        remaining -= 1;
+        if (remaining === 0) {
+          setDocFiles((prev) => [...prev, ...results]);
+          setDocUploading(false);
+        }
+      };
+      reader.onerror = () => {
+        setDocUploadError(`Could not read "${file.name}" — try again.`);
+        remaining -= 1;
+        if (remaining === 0) setDocUploading(false);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function removeDocFile(idx: number) {
+    setDocFiles((prev) => prev.filter((_, i) => i !== idx));
   }
 
   const handleCreateFinanceCase = withSaving(async () => {
@@ -2096,10 +2131,20 @@ export default function LeadDetailPage() {
 
           <div>
             <label className="text-[11px] text-slate-500 block mb-1">Upload from your computer</label>
-            <input type="file" accept="image/*,application/pdf" className={`${inputCls} w-full`} onChange={(e) => handleDocFileSelect(e.target.files?.[0])} />
-            <p className="text-[11px] text-slate-400 mt-1">Max 5MB — images or PDF.</p>
-            {docUploading && <p className="text-[12px] text-slate-500 mt-1">Reading file…</p>}
+            <input type="file" accept="image/*,application/pdf" multiple className={`${inputCls} w-full`} onChange={(e) => handleDocFileSelect(e.target.files)} />
+            <p className="text-[11px] text-slate-400 mt-1">Max 5MB per file — images or PDF. You can select multiple files at once.</p>
+            {docUploading && <p className="text-[12px] text-slate-500 mt-1">Reading file(s)…</p>}
             {docUploadError && <p className="text-[12px] text-red-600 mt-1">{docUploadError}</p>}
+            {docFiles.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {docFiles.map((f, i) => (
+                  <li key={i} className="flex items-center justify-between gap-2 text-[12px] text-slate-600 bg-slate-50 rounded-md px-2.5 py-1.5">
+                    <span className="truncate">✓ {f.name}</span>
+                    <button type="button" onClick={() => removeDocFile(i)} className="text-slate-400 hover:text-red-600 shrink-0">✕</button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
@@ -2109,13 +2154,13 @@ export default function LeadDetailPage() {
           </div>
           <input className={`${inputCls} w-full`} placeholder="https://…" value={docUrl.startsWith('data:') ? '' : docUrl} onChange={(e) => setDocUrl(e.target.value)} />
 
-          {docUrl && (
-            docUrl.startsWith('data:application/pdf')
-              ? <p className="text-[12px] text-emerald-600">✓ PDF ready to attach</p>
-              : <img src={docUrl} alt="Preview" className="h-20 w-auto rounded-lg border border-slate-200 object-cover" />
+          {docUrl && !docUrl.startsWith('data:') && (
+            <img src={docUrl} alt="Preview" className="h-20 w-auto rounded-lg border border-slate-200 object-cover" />
           )}
 
-          <button disabled={saving || !docUrl} className={`${primaryBtnCls} w-full`}>Add Document</button>
+          <button disabled={saving || (!docUrl && docFiles.length === 0)} className={`${primaryBtnCls} w-full`}>
+            {docFiles.length > 1 ? `Add ${docFiles.length} Documents` : 'Add Document'}
+          </button>
         </form>
 
         {lead.documents?.length === 0 && <p className="text-[13px] text-slate-500">No documents uploaded.</p>}
@@ -2135,9 +2180,15 @@ export default function LeadDetailPage() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className={`${pillCls} bg-slate-100 text-slate-600`}>{d.status}</span>
-                      <a href={d.fileUrl} target="_blank" rel="noreferrer" className={linkBtnCls}>
-                        View / Download
-                      </a>
+                      {canDownloadDoc(d.type) ? (
+                        <a href={d.fileUrl} target="_blank" rel="noreferrer" className={linkBtnCls}>
+                          View / Download
+                        </a>
+                      ) : (
+                        <span className="text-[11px] text-slate-400" title="Only Aadhaar/PAN are downloadable by sales staff. Finance/Admin can download all documents.">
+                          🔒 Restricted
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}

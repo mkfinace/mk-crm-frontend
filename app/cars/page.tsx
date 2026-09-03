@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { slugify } from '@/lib/slugify';
+import { addToCompare, removeFromCompare, clearCompare, isInCompare, useCompareList, COMPARE_MAX } from '@/lib/compare';
 
 function formatPrice(n: number | null | undefined) {
   if (!n) return 'Price on request';
@@ -52,6 +53,8 @@ export default function CarsListingPage() {
   const [selDynamic, setSelDynamic] = useState<Record<string, string[]>>({}); // fieldId -> selected raw values
   const [sort, setSort] = useState<'price-asc' | 'price-desc' | 'name'>('name');
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const compareList = useCompareList();
+  const [compareNotice, setCompareNotice] = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -125,6 +128,21 @@ export default function CarsListingPage() {
 
   function toggle(list: string[], setList: (v: string[]) => void, val: string) {
     setList(list.includes(val) ? list.filter((x) => x !== val) : [...list, val]);
+  }
+
+  function toggleCompare(e: React.MouseEvent, r: Row) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isInCompare(r.brandSlug, r.modelSlug)) {
+      removeFromCompare(r.brandSlug, r.modelSlug);
+      setCompareNotice('');
+    } else {
+      const result = addToCompare({ brandSlug: r.brandSlug, modelSlug: r.modelSlug, brandName: r.brandName, modelName: r.modelName });
+      if (!result.ok) {
+        setCompareNotice(result.reason || '');
+        setTimeout(() => setCompareNotice(''), 3000);
+      }
+    }
   }
 
   const filtered = useMemo(() => {
@@ -238,6 +256,18 @@ export default function CarsListingPage() {
           .lpage .grid,.lpage .loading-grid{grid-template-columns:repeat(2,1fr)}
         }
         @media(max-width:560px){.lpage .grid,.lpage .loading-grid{grid-template-columns:1fr}}
+        .lpage .compare-check{position:absolute;bottom:8px;right:8px;display:flex;align-items:center;gap:5px;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);padding:5px 9px;border-radius:6px;font-size:10.5px;color:#dbe4e8;cursor:pointer;z-index:2}
+        .lpage .compare-check input{accent-color:var(--blue);width:13px;height:13px;pointer-events:none}
+        .lpage .compare-toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#2b1420;border:1px solid rgba(255,90,90,.4);color:#ffb4b4;padding:10px 18px;border-radius:8px;font-size:12.5px;z-index:2100;box-shadow:var(--shadow)}
+        .lpage .compare-tray{position:fixed;left:0;right:0;bottom:0;z-index:1900;background:#0b1b23;border-top:1px solid var(--line);box-shadow:0 -10px 30px rgba(0,0,0,.4);padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+        .lpage .compare-tray-items{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+        .lpage .compare-tray-chip{display:flex;align-items:center;gap:8px;background:#0d2029;border:1px solid var(--line);border-radius:20px;padding:6px 12px;font-size:12px;color:#dbe4e8}
+        .lpage .compare-tray-chip .x{cursor:pointer;color:var(--muted)}.lpage .compare-tray-chip .x:hover{color:var(--red)}
+        .lpage .compare-tray-slot{border:1px dashed var(--line);border-radius:20px;padding:6px 12px;font-size:11.5px;color:var(--muted)}
+        .lpage .compare-tray-actions{display:flex;align-items:center;gap:16px}
+        .lpage .compare-tray-btn{background:var(--blue);color:#fff;font-weight:700;font-size:13px;padding:9px 18px;border-radius:8px;white-space:nowrap}
+        .lpage .compare-tray-btn.disabled{background:transparent;border:1px solid var(--line);color:var(--muted);cursor:default}
+        @media(max-width:900px){.lpage .compare-tray{padding:10px 12px}.lpage .compare-tray-items{max-width:100%;overflow-x:auto;flex-wrap:nowrap}}
       `}</style>
 
       <header className="topbar">
@@ -387,6 +417,13 @@ export default function CarsListingPage() {
                         {r.image ? <img src={r.image} alt={`${r.brandName} ${r.modelName}`} /> : (r.category === 'CAR' ? '🚗' : '🚛')}
                         <span className="card-badge">{r.brandName}</span>
                         {r.category !== 'CAR' && <span className="card-badge" style={{ left: 'auto', right: 10 }}>{CATEGORY_LABEL[r.category] || r.category}</span>}
+                        <label
+                          className="compare-check"
+                          onClick={(e) => toggleCompare(e, r)}
+                        >
+                          <input type="checkbox" readOnly checked={compareList.some((c) => c.brandSlug === r.brandSlug && c.modelSlug === r.modelSlug)} />
+                          Compare
+                        </label>
                       </div>
                       <div className="card-body">
                         <h3>{r.modelName}</h3>
@@ -402,6 +439,34 @@ export default function CarsListingPage() {
           )}
         </main>
       </div>
+
+      {compareNotice && (
+        <div className="compare-toast">{compareNotice}</div>
+      )}
+
+      {compareList.length > 0 && (
+        <div className="compare-tray">
+          <div className="compare-tray-items">
+            {compareList.map((c) => (
+              <span key={`${c.brandSlug}-${c.modelSlug}`} className="compare-tray-chip">
+                {c.brandName} {c.modelName}
+                <span className="x" onClick={() => removeFromCompare(c.brandSlug, c.modelSlug)}>✕</span>
+              </span>
+            ))}
+            {Array.from({ length: COMPARE_MAX - compareList.length }).map((_, i) => (
+              <span key={`empty-${i}`} className="compare-tray-slot">+ Add vehicle</span>
+            ))}
+          </div>
+          <div className="compare-tray-actions">
+            <span className="clear-link" onClick={clearCompare}>Clear</span>
+            {compareList.length >= 2 ? (
+              <Link href="/compare" className="compare-tray-btn">Compare ({compareList.length}) →</Link>
+            ) : (
+              <span className="compare-tray-btn disabled">Add {2 - compareList.length} more to compare</span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

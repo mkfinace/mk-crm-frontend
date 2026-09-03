@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { slugify } from '@/lib/slugify';
 import EnquiryModal from '@/components/EnquiryModal';
+import { addToCompare } from '@/lib/compare';
 
 function formatPrice(n: number | null | undefined) {
   if (!n) return 'Price on request';
@@ -79,6 +80,7 @@ const TABS = [
 
 export default function ModelDetailPage() {
   const params = useParams<{ brand: string; model: string }>();
+  const router = useRouter();
   const [data, setData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -204,6 +206,12 @@ export default function ModelDetailPage() {
     setModalTitle(title);
     setModalOpen(true);
   }
+  function goToCompare() {
+    if (data) {
+      addToCompare({ brandSlug: params.brand, modelSlug: params.model, brandName: data.brand.name, modelName: data.model.name });
+    }
+    router.push('/compare');
+  }
   function scrollTo(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   }
@@ -315,7 +323,7 @@ export default function ModelDetailPage() {
         <Link href="/" className="logo"><img src="/logo.png" alt="MK Finance" /></Link>
         <Link href="/cars" className="navlink">NEW CARS</Link>
         <button className="navlink" onClick={() => openEnquiry('USED_VEHICLE', 'Used Vehicles Enquiry')}>USED CARS</button>
-        <Link href="/cars" className="navlink">COMPARE</Link>
+        <button className="navlink" onClick={goToCompare}>COMPARE</button>
         <button className="navlink" onClick={() => scrollTo('finance')}>FINANCE</button>
         <button className="navlink" onClick={() => scrollTo('insurance')}>INSURANCE</button>
         <Link href="/portal/login" className="navlink">TRACK MY ENQUIRY</Link>
@@ -381,7 +389,7 @@ export default function ModelDetailPage() {
             <div className="actions">
               <button className="btn primary" onClick={() => scrollTo('finance')}>GET ON-ROAD PRICE</button>
               <button className="btn" onClick={() => openEnquiry('TEST_DRIVE', 'Book a Test Drive')}>BOOK TEST DRIVE</button>
-              <Link href="/cars" className="btn dark" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>COMPARE</Link>
+              <button className="btn dark" onClick={goToCompare}>COMPARE</button>
             </div>
             <p className="muted" style={{ marginTop: 22 }}>
               ✓ Dynamic specifications　✓ Finance available　✓ Insurance available{warranty ? `　✓ ${warranty.standardYears}yr warranty` : ''}

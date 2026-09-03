@@ -27,7 +27,17 @@ function readList(): CompareItem[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    // Self-heal: entries saved before the category field existed (or any
+    // otherwise malformed entry) are silently dropped rather than causing
+    // cars and commercial vehicles to mix.
+    const clean: CompareItem[] = parsed.filter(
+      (i) => i && typeof i.category === 'string' && i.category.length > 0 && typeof i.brandSlug === 'string' && typeof i.modelSlug === 'string'
+    );
+    if (clean.length !== parsed.length) writeList(clean);
+    return clean;
   } catch {
     return [];
   }

@@ -9,6 +9,8 @@ const items = [
   { href: '/portal/finance', label: 'Finance' },
   { href: '/portal/documents', label: 'Documents' },
   { href: '/portal/test-drive', label: 'Test Drives' },
+  { href: '/portal/bookings', label: 'Bookings' },
+  { href: '/portal/delivery', label: 'Delivery' },
   { href: '/portal/profile', label: 'Profile' },
   { href: '/cars', label: 'Explore Cars' },
   { href: '/compare', label: 'Compare' },

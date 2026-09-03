@@ -19,13 +19,16 @@ const FINANCE_STATUS_LABEL: Record<string, string> = {
 const LOST_REASONS = ['Price High', 'Other Brand', 'Other Dealer', 'Finance Rejected', 'Loan Amount Issue', 'Purchase Postponed', 'No Response', 'Not Interested', 'Other'];
 const DOC_TYPES = ['Aadhaar', 'PAN', 'Address Proof', 'Income Proof', 'Bank Statement', 'ITR', 'GST'];
 
+// Order follows the real-world sales flow: qualify → collect KYC documents
+// → quote → book → then run the finance case through to disbursement.
 const STEPS = [
   { key: 'overview', label: 'Overview' },
   { key: 'assignment', label: 'Assignment & Status' },
   { key: 'followup', label: 'Follow-ups & Notes' },
+  { key: 'documents', label: 'Documents' },
   { key: 'sales', label: 'Sales Process' },
-  { key: 'finance', label: 'Documents & Finance' },
   { key: 'closing', label: 'Booking & Delivery' },
+  { key: 'finance', label: 'Finance' },
   { key: 'timeline', label: 'Timeline' },
 ];
 
@@ -37,6 +40,7 @@ function computeStepCompletion(lead: any): Record<string, boolean> {
     overview: true,
     assignment: !!lead.dealerExecutiveId && (!lead.financeRequired || !!lead.financeExecutiveId),
     followup: (lead.followUps?.length || 0) > 0,
+    documents: (lead.documents?.length || 0) > 0,
     sales: (lead.quotations?.length || 0) > 0,
     finance: !lead.financeRequired || lead.financeCase?.stage === 'FINANCE_COMPLETED',
     closing: lead.delivery?.status === 'DELIVERED',
@@ -360,7 +364,7 @@ export default function LeadDetailPage() {
         nextActionDueAt: nextActionDue ? new Date(nextActionDue).toISOString() : undefined,
       });
       setEditingNextAction(false);
-      await loadLead();
+      await loadLead({ silent: true });
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -380,7 +384,7 @@ export default function LeadDetailPage() {
     try {
       await api.updateLeadBlocker(id, clear ? null : blockerText || null, clear ? null : blockerCategory);
       setEditingBlocker(false);
-      await loadLead();
+      await loadLead({ silent: true });
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -393,7 +397,7 @@ export default function LeadDetailPage() {
     setError('');
     try {
       await api.setSameDayDeal(id, value);
-      await loadLead();
+      await loadLead({ silent: true });
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -921,7 +925,10 @@ export default function LeadDetailPage() {
       setError('');
       try {
         await fn();
-        await loadLead();
+        // Refresh in the background — never re-trigger the full-page
+        // "Loading..." state here. Every save action used to blank the
+        // whole page and reset scroll position on every single save.
+        await loadLead({ silent: true });
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -1106,7 +1113,7 @@ export default function LeadDetailPage() {
     });
     setBqText(''); setBqDoc(''); setBqDueDate('');
     await loadBankQueries(lead.financeCase.id);
-    await loadLead();
+    await loadLead({ silent: true });
   });
 
   async function handleResolveBankQuery(queryId: string) {
@@ -1117,7 +1124,7 @@ export default function LeadDetailPage() {
       setResolvingQueryId(null);
       setBqResolutionNotes('');
       await loadBankQueries(lead.financeCase.id);
-      await loadLead();
+      await loadLead({ silent: true });
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -1244,7 +1251,7 @@ export default function LeadDetailPage() {
     setError('');
     try {
       await api.approveFinanceCase(lead.financeCase.id);
-      await loadLead();
+      await loadLead({ silent: true });
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -1317,7 +1324,7 @@ export default function LeadDetailPage() {
     });
     setEditingFinanceCase(false);
     setShowEditCalculator(false);
-    await loadLead();
+    await loadLead({ silent: true });
   });
 
   const handleAddBooking = withSaving(async () => {
@@ -1914,9 +1921,101 @@ export default function LeadDetailPage() {
       </>
       )}
 
+      {activeStep === 'documents' && (
+      <>
+      <Section title="Documents">
+        <form onSubmit={handleAddDocument} className="space-y-3 mb-5">
+          <div className="grid grid-cols-2 gap-3">
+            <select className={selectCls} value={docType} onChange={(e) => setDocType(e.target.value)}>
+              {DOC_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <select className={selectCls} value={docPersonType} onChange={(e) => setDocPersonType(e.target.value)}>
+              <option value="APPLICANT">Applicant</option>
+              <option value="CO_APPLICANT">Co-Applicant</option>
+              <option value="GUARANTOR">Guarantor</option>
+            </select>
+          </div>
+          {docPersonType !== 'APPLICANT' && (
+            <input className={`${inputCls} w-full`} placeholder={`${docPersonType === 'CO_APPLICANT' ? 'Co-applicant' : 'Guarantor'} name`} value={docPersonName} onChange={(e) => setDocPersonName(e.target.value)} />
+          )}
+
+          <div>
+            <label className="text-[11px] text-slate-500 block mb-1">Upload from your computer</label>
+            <input type="file" accept="image/*,application/pdf" multiple className={`${inputCls} w-full`} onChange={(e) => handleDocFileSelect(e.target.files)} />
+            <p className="text-[11px] text-slate-400 mt-1">Max 5MB per file — images or PDF. You can select multiple files at once.</p>
+            {docUploading && <p className="text-[12px] text-slate-500 mt-1">Reading file(s)…</p>}
+            {docUploadError && <p className="text-[12px] text-red-600 mt-1">{docUploadError}</p>}
+            {docFiles.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {docFiles.map((f, i) => (
+                  <li key={i} className="flex items-center justify-between gap-2 text-[12px] text-slate-600 bg-slate-50 rounded-md px-2.5 py-1.5">
+                    <span className="truncate">✓ {f.name}</span>
+                    <button type="button" onClick={() => removeDocFile(i)} className="text-slate-400 hover:text-red-600 shrink-0">✕</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="h-px bg-slate-200 flex-1" />
+            <span className="text-[11px] text-slate-400">OR paste a link</span>
+            <div className="h-px bg-slate-200 flex-1" />
+          </div>
+          <input className={`${inputCls} w-full`} placeholder="https://…" value={docUrl.startsWith('data:') ? '' : docUrl} onChange={(e) => setDocUrl(e.target.value)} />
+
+          {docUrl && !docUrl.startsWith('data:') && (
+            <img src={docUrl} alt="Preview" className="h-20 w-auto rounded-lg border border-slate-200 object-cover" />
+          )}
+
+          <button disabled={saving || (!docUrl && docFiles.length === 0)} className={`${primaryBtnCls} w-full`}>
+            {docFiles.length > 1 ? `Add ${docFiles.length} Documents` : 'Add Document'}
+          </button>
+        </form>
+
+        {lead.documents?.length === 0 && <p className="text-[13px] text-slate-500">No documents uploaded.</p>}
+        {['APPLICANT', 'CO_APPLICANT', 'GUARANTOR'].map((pt) => {
+          const docs = (lead.documents || []).filter((d: any) => (d.personType || 'APPLICANT') === pt);
+          if (docs.length === 0) return null;
+          const groupLabel = pt === 'APPLICANT' ? 'Applicant' : pt === 'CO_APPLICANT' ? 'Co-Applicant' : 'Guarantor';
+          return (
+            <div key={pt} className="mb-3 last:mb-0">
+              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">{groupLabel}</p>
+              <div className="space-y-2">
+                {docs.map((d: any) => (
+                  <div key={d.id} className="border-t border-slate-100 pt-2 text-[13.5px] flex items-center justify-between gap-2">
+                    <div>
+                      <p className="font-medium text-slate-800">{d.type}{d.personName ? ` — ${d.personName}` : ''}</p>
+                      <p className="text-[11px] text-slate-400">{new Date(d.createdAt).toLocaleString()}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`${pillCls} bg-slate-100 text-slate-600`}>{d.status}</span>
+                      {canDownloadDoc(d.type) ? (
+                        <a href={d.fileUrl} target="_blank" rel="noreferrer" className={linkBtnCls}>
+                          View / Download
+                        </a>
+                      ) : (
+                        <span className="text-[11px] text-slate-400" title="Only Aadhaar/PAN are downloadable by sales staff. Finance/Admin can download all documents.">
+                          🔒 Restricted
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </Section>
+      </>
+      )}
+
       {activeStep === 'sales' && (
       <>
       <Section title="Quotations">
+        {error && (
+          <div className="mb-3 bg-red-50 border border-red-200 text-red-700 text-[12.5px] rounded-lg px-3.5 py-2.5">{error}</div>
+        )}
         {canCreateQuotation && (
           <form onSubmit={handleAddQuotation} className="space-y-3 mb-4">
             <div className="grid grid-cols-2 gap-3">
@@ -2163,90 +2262,6 @@ export default function LeadDetailPage() {
           )}
         </Section>
       )}
-      <Section title="Documents">
-        <form onSubmit={handleAddDocument} className="space-y-3 mb-5">
-          <div className="grid grid-cols-2 gap-3">
-            <select className={selectCls} value={docType} onChange={(e) => setDocType(e.target.value)}>
-              {DOC_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
-            <select className={selectCls} value={docPersonType} onChange={(e) => setDocPersonType(e.target.value)}>
-              <option value="APPLICANT">Applicant</option>
-              <option value="CO_APPLICANT">Co-Applicant</option>
-              <option value="GUARANTOR">Guarantor</option>
-            </select>
-          </div>
-          {docPersonType !== 'APPLICANT' && (
-            <input className={`${inputCls} w-full`} placeholder={`${docPersonType === 'CO_APPLICANT' ? 'Co-applicant' : 'Guarantor'} name`} value={docPersonName} onChange={(e) => setDocPersonName(e.target.value)} />
-          )}
-
-          <div>
-            <label className="text-[11px] text-slate-500 block mb-1">Upload from your computer</label>
-            <input type="file" accept="image/*,application/pdf" multiple className={`${inputCls} w-full`} onChange={(e) => handleDocFileSelect(e.target.files)} />
-            <p className="text-[11px] text-slate-400 mt-1">Max 5MB per file — images or PDF. You can select multiple files at once.</p>
-            {docUploading && <p className="text-[12px] text-slate-500 mt-1">Reading file(s)…</p>}
-            {docUploadError && <p className="text-[12px] text-red-600 mt-1">{docUploadError}</p>}
-            {docFiles.length > 0 && (
-              <ul className="mt-2 space-y-1">
-                {docFiles.map((f, i) => (
-                  <li key={i} className="flex items-center justify-between gap-2 text-[12px] text-slate-600 bg-slate-50 rounded-md px-2.5 py-1.5">
-                    <span className="truncate">✓ {f.name}</span>
-                    <button type="button" onClick={() => removeDocFile(i)} className="text-slate-400 hover:text-red-600 shrink-0">✕</button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="h-px bg-slate-200 flex-1" />
-            <span className="text-[11px] text-slate-400">OR paste a link</span>
-            <div className="h-px bg-slate-200 flex-1" />
-          </div>
-          <input className={`${inputCls} w-full`} placeholder="https://…" value={docUrl.startsWith('data:') ? '' : docUrl} onChange={(e) => setDocUrl(e.target.value)} />
-
-          {docUrl && !docUrl.startsWith('data:') && (
-            <img src={docUrl} alt="Preview" className="h-20 w-auto rounded-lg border border-slate-200 object-cover" />
-          )}
-
-          <button disabled={saving || (!docUrl && docFiles.length === 0)} className={`${primaryBtnCls} w-full`}>
-            {docFiles.length > 1 ? `Add ${docFiles.length} Documents` : 'Add Document'}
-          </button>
-        </form>
-
-        {lead.documents?.length === 0 && <p className="text-[13px] text-slate-500">No documents uploaded.</p>}
-        {['APPLICANT', 'CO_APPLICANT', 'GUARANTOR'].map((pt) => {
-          const docs = (lead.documents || []).filter((d: any) => (d.personType || 'APPLICANT') === pt);
-          if (docs.length === 0) return null;
-          const groupLabel = pt === 'APPLICANT' ? 'Applicant' : pt === 'CO_APPLICANT' ? 'Co-Applicant' : 'Guarantor';
-          return (
-            <div key={pt} className="mb-3 last:mb-0">
-              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">{groupLabel}</p>
-              <div className="space-y-2">
-                {docs.map((d: any) => (
-                  <div key={d.id} className="border-t border-slate-100 pt-2 text-[13.5px] flex items-center justify-between gap-2">
-                    <div>
-                      <p className="font-medium text-slate-800">{d.type}{d.personName ? ` — ${d.personName}` : ''}</p>
-                      <p className="text-[11px] text-slate-400">{new Date(d.createdAt).toLocaleString()}</p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`${pillCls} bg-slate-100 text-slate-600`}>{d.status}</span>
-                      {canDownloadDoc(d.type) ? (
-                        <a href={d.fileUrl} target="_blank" rel="noreferrer" className={linkBtnCls}>
-                          View / Download
-                        </a>
-                      ) : (
-                        <span className="text-[11px] text-slate-400" title="Only Aadhaar/PAN are downloadable by sales staff. Finance/Admin can download all documents.">
-                          🔒 Restricted
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </Section>
 
       {lead.financeRequired && (
         <Section title="Finance Case">

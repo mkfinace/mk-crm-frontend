@@ -23,5 +23,6 @@ export const portalApi = {
   listMyBookings: () => portalFetch('/portal/my/bookings'),
   listMyDeliveries: () => portalFetch('/portal/my/deliveries'),
   listMyQuotations: () => portalFetch('/portal/my/quotations'),
+  listMyDocuments: (leadId?: string) => portalFetch(`/documents/my${leadId ? `?leadId=${encodeURIComponent(leadId)}` : ''}`),
   requestDelivery: (leadId: string, scheduledAt: string) => portalFetch('/portal/my/deliveries/request', { method: 'POST', body: JSON.stringify({ leadId, scheduledAt }) }),
 };

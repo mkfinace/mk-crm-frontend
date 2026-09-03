@@ -17,7 +17,11 @@ const FINANCE_STATUS_LABEL: Record<string, string> = {
   DISBURSEMENT: 'Disbursement', FINANCE_COMPLETED: 'Finance Completed',
 };
 const LOST_REASONS = ['Price High', 'Other Brand', 'Other Dealer', 'Finance Rejected', 'Loan Amount Issue', 'Purchase Postponed', 'No Response', 'Not Interested', 'Other'];
-const DOC_TYPES = ['Aadhaar', 'PAN', 'Address Proof', 'Income Proof', 'Bank Statement', 'ITR', 'GST', 'Insurance Copy', 'RC Copy'];
+const DOC_TYPES = ['Aadhaar', 'PAN', 'Address Proof', 'Income Proof', 'Bank Statement', 'ITR', 'GST', 'Insurance Copy', 'RC Copy', 'Sanction Letter', 'DO Letter'];
+// Bank-issued documents shown/uploaded from a compact widget directly in the
+// Finance step, rather than the general Documents step — these come FROM
+// the finance process (bank → us), not customer KYC docs collected earlier.
+const FINANCE_LETTER_TYPES = ['Sanction Letter', 'DO Letter'];
 
 // Order follows the real-world sales flow: qualify → collect KYC documents
 // → quote → book → then run the finance case through to disbursement.
@@ -318,7 +322,7 @@ export default function LeadDetailPage() {
   // identity documents (Aadhaar, PAN) — enough to confirm who they're dealing
   // with — not income/bank/ITR/GST documents, which are finance-sensitive.
   const canDownloadAllDocs = staff?.role === 'SUPER_ADMIN' || staff?.role === 'FINANCE_ADMIN' || staff?.role === 'FINANCE_EXECUTIVE';
-  const SALES_DOWNLOADABLE_DOC_TYPES = ['Aadhaar', 'PAN', 'Insurance Copy', 'RC Copy'];
+  const SALES_DOWNLOADABLE_DOC_TYPES = ['Aadhaar', 'PAN', 'Insurance Copy', 'RC Copy', 'Sanction Letter', 'DO Letter'];
   function canDownloadDoc(docType: string) {
     return canDownloadAllDocs || SALES_DOWNLOADABLE_DOC_TYPES.includes(docType);
   }
@@ -482,6 +486,11 @@ export default function LeadDetailPage() {
   const [docPersonName, setDocPersonName] = useState('');
   const [docUploading, setDocUploading] = useState(false);
   const [docUploadError, setDocUploadError] = useState('');
+
+  const [financeLetterType, setFinanceLetterType] = useState('Sanction Letter');
+  const [financeLetterFile, setFinanceLetterFile] = useState<{ name: string; dataUrl: string } | null>(null);
+  const [financeLetterUploading, setFinanceLetterUploading] = useState(false);
+  const [financeLetterError, setFinanceLetterError] = useState('');
 
   const [banks, setBanks] = useState<any[]>([]);
   const [dealerBanks, setDealerBanks] = useState<any[]>([]);
@@ -1231,6 +1240,36 @@ export default function LeadDetailPage() {
   function removeDocFile(idx: number) {
     setDocFiles((prev) => prev.filter((_, i) => i !== idx));
   }
+
+  function handleFinanceLetterSelect(file: File | undefined) {
+    if (!file) return;
+    setFinanceLetterError('');
+    const maxBytes = 5 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      setFinanceLetterError('File too large — max 5MB.');
+      return;
+    }
+    setFinanceLetterUploading(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFinanceLetterFile({ name: file.name, dataUrl: reader.result as string });
+      setFinanceLetterUploading(false);
+    };
+    reader.onerror = () => {
+      setFinanceLetterError(`Could not read "${file.name}" — try again.`);
+      setFinanceLetterUploading(false);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  const handleAddFinanceLetter = withSaving(async () => {
+    if (!financeLetterFile) return;
+    await api.createDocument({
+      leadId: id, type: financeLetterType, fileUrl: financeLetterFile.dataUrl, uploadedBy: staff!.id,
+      personType: 'APPLICANT',
+    });
+    setFinanceLetterFile(null);
+  });
 
   const handleCreateFinanceCase = withSaving(async () => {
     await api.createFinanceCase({
@@ -2222,6 +2261,47 @@ export default function LeadDetailPage() {
 
       {activeStep === 'finance' && (
       <>
+      {lead.financeRequired && canCreateFinanceCase && (
+      <Section title="Sanction & Delivery Order (DO) Letter">
+        <p className="text-[12px] text-slate-500 mb-3">Once the bank approves the loan, upload the Sanction Letter here. Once the bank confirms disbursement, upload the DO Letter — Sales can see it and knows it's clear to proceed with delivery.</p>
+        <div className="flex gap-2 mb-3">
+          <select className={`${selectCls} w-[160px] shrink-0`} value={financeLetterType} onChange={(e) => setFinanceLetterType(e.target.value)}>
+            {FINANCE_LETTER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <input type="file" accept="image/*,application/pdf" className={`${inputCls} flex-1`} onChange={(e) => handleFinanceLetterSelect(e.target.files?.[0])} />
+        </div>
+        {financeLetterUploading && <p className="text-[12px] text-slate-500 mb-2">Reading file…</p>}
+        {financeLetterError && <p className="text-[12px] text-red-600 mb-2">{financeLetterError}</p>}
+        {financeLetterFile && (
+          <div className="flex items-center justify-between gap-2 text-[12px] text-slate-600 bg-slate-50 rounded-md px-2.5 py-1.5 mb-3">
+            <span className="truncate">✓ {financeLetterFile.name}</span>
+            <button type="button" onClick={() => setFinanceLetterFile(null)} className="text-slate-400 hover:text-red-600 shrink-0">✕</button>
+          </div>
+        )}
+        <button disabled={saving || !financeLetterFile} onClick={handleAddFinanceLetter} className={primaryBtnCls}>
+          Upload {financeLetterType}
+        </button>
+
+        {(() => {
+          const letters = (lead.documents || []).filter((d: any) => FINANCE_LETTER_TYPES.includes(d.type));
+          if (letters.length === 0) return null;
+          return (
+            <div className="mt-4 space-y-2 border-t border-slate-100 pt-3">
+              {letters.map((d: any) => (
+                <div key={d.id} className="flex items-center justify-between gap-2 text-[13.5px]">
+                  <div>
+                    <p className="font-medium text-slate-800">{d.type}</p>
+                    <p className="text-[11px] text-slate-400">{new Date(d.createdAt).toLocaleString()}</p>
+                  </div>
+                  <a href={d.fileUrl} target="_blank" rel="noreferrer" className={linkBtnCls}>View / Download</a>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+      </Section>
+      )}
+
       {lead.financeRequired && canCreateFinanceCase && (
         <Section title="Bank Applications (shop multiple banks)">
           <p className="text-[12px] text-slate-500 mb-3">Track applications sent to several banks in parallel — once one is sanctioned with good terms, finalize it below in Finance Case.</p>

@@ -12,9 +12,16 @@ function formatPrice(n: number | null | undefined) {
 }
 
 const CATEGORY_LABEL: Record<string, string> = {
-  CAR: 'Car', TRUCK: 'Truck', TEMPO: 'Tempo / Mini Truck', PICKUP: 'Pickup',
-  TRACTOR: 'Tractor', BUS: 'Bus', CONSTRUCTION: 'Construction Equipment',
+  CAR: 'Car',
+  MINI_TRUCK: 'Mini Truck', PICKUP_TRUCK: 'Pickup Truck', LCV: 'LCV', MCV: 'MCV', HCV: 'HCV', TRUCK: 'Truck',
+  TEMPO: 'Tempo / Mini Truck', PICKUP: 'Pickup', TRACTOR: 'Tractor', BUS: 'Bus', CONSTRUCTION: 'Construction Equipment',
 };
+// Fallback for any category value not in the map above (an older/unmigrated
+// value, or a new one added in admin) — so it still gets a readable label
+// and stays filterable, instead of showing a raw enum string or vanishing.
+function prettifyCategory(cat: string): string {
+  return cat.toLowerCase().split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
 
 type Row = {
   brandName: string;
@@ -314,7 +321,7 @@ export default function CarsListingPage() {
               <h4>Vehicle Type</h4>
               {allCategories.map((c) => (
                 <label key={c} className="filter-opt">
-                  <input type="checkbox" checked={selCategories.includes(c)} onChange={() => toggle(selCategories, setSelCategories, c)} /> {CATEGORY_LABEL[c] || c}
+                  <input type="checkbox" checked={selCategories.includes(c)} onChange={() => toggle(selCategories, setSelCategories, c)} /> {CATEGORY_LABEL[c] || prettifyCategory(c)}
                 </label>
               ))}
             </div>
@@ -397,7 +404,7 @@ export default function CarsListingPage() {
 
               {activeFilterCount > 0 && (
                 <div className="active-chips">
-                  {selCategories.map((c) => <span key={c} className="chip">{CATEGORY_LABEL[c] || c} <span className="x" onClick={() => toggle(selCategories, setSelCategories, c)}>✕</span></span>)}
+                  {selCategories.map((c) => <span key={c} className="chip">{CATEGORY_LABEL[c] || prettifyCategory(c)} <span className="x" onClick={() => toggle(selCategories, setSelCategories, c)}>✕</span></span>)}
                   {selBrands.map((b) => <span key={b} className="chip">{b} <span className="x" onClick={() => toggle(selBrands, setSelBrands, b)}>✕</span></span>)}
                   {selFuels.map((f) => <span key={f} className="chip">{f} <span className="x" onClick={() => toggle(selFuels, setSelFuels, f)}>✕</span></span>)}
                   {selTrans.map((t) => <span key={t} className="chip">{t} <span className="x" onClick={() => toggle(selTrans, setSelTrans, t)}>✕</span></span>)}
@@ -421,7 +428,7 @@ export default function CarsListingPage() {
                       <div className="card-img">
                         {r.image ? <img src={r.image} alt={`${r.brandName} ${r.modelName}`} /> : (r.category === 'CAR' ? '🚗' : '🚛')}
                         <span className="card-badge">{r.brandName}</span>
-                        {r.category !== 'CAR' && <span className="card-badge" style={{ left: 'auto', right: 10 }}>{CATEGORY_LABEL[r.category] || r.category}</span>}
+                        {r.category !== 'CAR' && <span className="card-badge" style={{ left: 'auto', right: 10 }}>{CATEGORY_LABEL[r.category] || prettifyCategory(r.category)}</span>}
                         <label
                           className="compare-check"
                           onClick={(e) => toggleCompare(e, r)}

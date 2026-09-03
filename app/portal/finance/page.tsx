@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { portalApi } from '@/lib/portalApi';
 
 const STAGE: Record<string,string> = { NEW:'Application Started', DOCUMENTS:'Documents', SUBMITTED:'Submitted to Bank', LOGIN:'Bank Login', APPROVED:'Approved', DISBURSED:'Disbursed', REJECTED:'Rejected', HOLD:'On Hold' };
 function money(v:any){ return v == null || v === '' ? '—' : '₹' + Number(v).toLocaleString('en-IN'); }

@@ -711,6 +711,12 @@ export default function LeadDetailPage() {
 
   const [messages, setMessages] = useState<any[]>([]);
   const [messageBody, setMessageBody] = useState('');
+  const isFinanceStaff = staff?.role === 'FINANCE_EXECUTIVE' || staff?.role === 'FINANCE_ADMIN';
+  // Default direction is "the other team" from whoever's sending — a Sales
+  // person is almost always messaging Finance and vice versa. Admins default
+  // to Finance but can switch either way.
+  const [messageDirection, setMessageDirection] = useState<'FINANCE' | 'SALES'>(isFinanceStaff ? 'SALES' : 'FINANCE');
+  const [markedMessagesRead, setMarkedMessagesRead] = useState(false);
 
   useEffect(() => {
     loadLead();
@@ -857,6 +863,18 @@ export default function LeadDetailPage() {
       setMessages([]);
     }
   }
+
+  const unreadMessagesCount = messages.filter((m: any) => !m.readAt && m.senderUserId !== staff?.id).length;
+
+  // Mark messages read once the staff member actually opens the Follow-ups
+  // & Notes step (where Team Notes / Messages lives) — not just on page
+  // load, so the unread badge stays accurate until they've actually seen it.
+  useEffect(() => {
+    if (activeStep === 'followup' && unreadMessagesCount > 0 && !markedMessagesRead) {
+      setMarkedMessagesRead(true);
+      api.markMessagesRead(id).then(() => loadMessages()).catch(() => {});
+    }
+  }, [activeStep, unreadMessagesCount, markedMessagesRead]);
 
   async function loadDealerExecs(dealerId: string) {
     if (!dealerId) {
@@ -1322,7 +1340,8 @@ export default function LeadDetailPage() {
     setSaving(true);
     setError('');
     try {
-      await api.createMessage({ leadId: id, senderUserId: staff!.id, body: messageBody });
+      const recipientUserId = messageDirection === 'FINANCE' ? lead.financeExecutiveId || undefined : lead.dealerExecutiveId || undefined;
+      await api.createMessage({ leadId: id, senderUserId: staff!.id, recipientUserId, body: messageBody });
       setMessageBody('');
       await loadMessages();
     } catch (e: any) {
@@ -1487,16 +1506,23 @@ export default function LeadDetailPage() {
                   <div className={`w-8 h-[2px] ${stepCompletion[STEPS[i - 1].key] ? 'bg-emerald-400' : 'bg-slate-200'}`} />
                 )}
                 <button onClick={() => setActiveStep(s.key)} className="flex flex-col items-center gap-1.5 px-2 group">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-semibold border-2 transition-colors ${
-                      active
-                        ? 'bg-gradient-to-br from-[#D8B155] to-[#B4872E] text-[#0B1220] border-transparent shadow-sm'
-                        : done
-                        ? 'bg-emerald-500 text-white border-emerald-500'
-                        : 'bg-white text-slate-400 border-slate-200 group-hover:border-[#D8B155]/50'
-                    }`}
-                  >
-                    {done && !active ? '✓' : i + 1}
+                  <div className="relative">
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-semibold border-2 transition-colors ${
+                        active
+                          ? 'bg-gradient-to-br from-[#D8B155] to-[#B4872E] text-[#0B1220] border-transparent shadow-sm'
+                          : done
+                          ? 'bg-emerald-500 text-white border-emerald-500'
+                          : 'bg-white text-slate-400 border-slate-200 group-hover:border-[#D8B155]/50'
+                      }`}
+                    >
+                      {done && !active ? '✓' : i + 1}
+                    </div>
+                    {s.key === 'followup' && unreadMessagesCount > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                        {unreadMessagesCount}
+                      </span>
+                    )}
                   </div>
                   <span className={`text-[10.5px] font-medium whitespace-nowrap ${active ? 'text-[#96701F]' : done ? 'text-emerald-700' : 'text-slate-400'}`}>
                     {s.label}
@@ -1842,23 +1868,47 @@ export default function LeadDetailPage() {
       </Section>
 
       <Section title="Team Notes / Messages">
-        <form onSubmit={handleSendMessage} className="flex gap-2 mb-4">
-          <input
-            className={`${inputCls} flex-1`}
-            placeholder="Write a note about this lead..."
-            value={messageBody}
-            onChange={(e) => setMessageBody(e.target.value)}
-          />
-          <button disabled={saving} className={primaryBtnCls}>Send</button>
+        <form onSubmit={handleSendMessage} className="space-y-2 mb-4">
+          <div className="flex gap-2">
+            <select
+              className={`${selectCls} w-[140px] shrink-0`}
+              value={messageDirection}
+              onChange={(e) => setMessageDirection(e.target.value as 'FINANCE' | 'SALES')}
+            >
+              <option value="FINANCE">To: Finance</option>
+              <option value="SALES">To: Sales</option>
+            </select>
+            <input
+              className={`${inputCls} flex-1`}
+              placeholder="Write a note about this lead..."
+              value={messageBody}
+              onChange={(e) => setMessageBody(e.target.value)}
+            />
+            <button disabled={saving} className={primaryBtnCls}>Send</button>
+          </div>
         </form>
         {messages.length === 0 && <p className="text-sm text-slate-500">No messages yet.</p>}
         <div className="space-y-3">
-          {messages.map((m) => (
-            <div key={m.id} className="border-t pt-2 text-sm">
-              <p className="font-medium text-xs text-slate-500">{m.sender?.name || 'Team member'} · {new Date(m.createdAt).toLocaleString()}</p>
-              <p className="text-slate-700 mt-0.5">{m.body}</p>
-            </div>
-          ))}
+          {messages.map((m: any) => {
+            const toFinance = lead.financeExecutiveId && m.recipientUserId === lead.financeExecutiveId;
+            const toSales = lead.dealerExecutiveId && m.recipientUserId === lead.dealerExecutiveId;
+            return (
+              <div key={m.id} className="border-t pt-2 text-sm">
+                <p className="font-medium text-xs text-slate-500 flex items-center gap-2">
+                  {m.sender?.name || 'Team member'} · {new Date(m.createdAt).toLocaleString()}
+                  {(toFinance || toSales) && (
+                    <span className={`${pillCls} ${toFinance ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                      To {toFinance ? 'Finance' : 'Sales'}
+                    </span>
+                  )}
+                  {!m.readAt && m.senderUserId !== staff?.id && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500" title="Unread" />
+                  )}
+                </p>
+                <p className="text-slate-700 mt-0.5">{m.body}</p>
+              </div>
+            );
+          })}
         </div>
       </Section>
       </>

@@ -249,6 +249,7 @@ export const api = {
   // Messages
   listMessages: (leadId: string) => apiFetch(`/messages?leadId=${leadId}`),
   createMessage: (data: any) => apiFetch('/messages', { method: 'POST', body: JSON.stringify(data) }),
+  markMessagesRead: (leadId: string) => apiFetch('/messages/read', { method: 'POST', body: JSON.stringify({ leadId }) }),
 
   // Dynamic Fields
   listFieldCategories: () => apiFetch('/field-categories'),

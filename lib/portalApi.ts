@@ -18,6 +18,7 @@ async function portalFetch(path: string, options: RequestInit = {}) {
 }
 
 export const portalApi = {
+  listMyLeads: () => portalFetch('/portal/my/leads'),
   createMyTestDrive: (leadId: string, scheduledAt: string) => portalFetch('/test-drives/my', { method: 'POST', body: JSON.stringify({ leadId, scheduledAt }) }),
   listMyTestDrives: () => portalFetch('/test-drives/my'),
   listMyBookings: () => portalFetch('/portal/my/bookings'),

@@ -452,41 +452,23 @@ export default function HomePage() {
           )}
         </section>
 
-        {/* COMMERCIAL VEHICLES */}
-        <section className="section mt-5 bg-white border border-[#E3E8EF] rounded-[17px] p-6" id="commercial">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <h2 className="text-[21px] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>Commercial Vehicles</h2>
-            <Link href="/cars?type=COMMERCIAL" className="text-[#68758A] text-[10px] hover:text-[#146BFF]">All commercial categories →</Link>
-          </div>
-          <p className="text-[#68758A] text-[12px] mt-2">Choose the right vehicle for goods, transport and business needs.</p>
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-2.5 mt-4">
-            {allCommercialCategories.map((cat, i) => {
-              const count = (commercialByCategory[cat] || []).length;
-              return (
-                <button
-                  key={cat}
-                  onClick={() => count > 0 ? document.getElementById(`cv-${cat}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }) : openEnquiry(undefined, undefined, 'VEHICLE_ENQUIRY', 'Commercial Vehicle Enquiry')}
-                  className="text-left border border-[#E3E8EF] rounded-xl p-4 min-h-[118px] bg-[#fbfcfd] transition-all hover:border-[#9fbdf2] hover:-translate-y-1"
-                >
-                  <strong className="text-[12px] block mb-1">{String(i + 1).padStart(2, '0')} · {CATEGORY_LABEL[cat] || prettifyCategory(cat)}</strong>
-                  <p className="text-[10px] text-[#68758A] leading-relaxed">{CATEGORY_BLURB[cat] || 'Commercial vehicles for your business needs.'}</p>
-                  <span className="inline-block mt-2 text-[8px] rounded-full px-2 py-1 bg-[#eef4ff] text-[#2169df] font-semibold">
-                    {count > 0 ? `${count} Listed →` : 'Enquire →'}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {allCommercialCategories.filter((cat) => (commercialByCategory[cat] || []).length > 0).map((cat) => (
-            <div key={cat} id={`cv-${cat}`} className="mt-6 pt-5 border-t border-[#EDF1F6]">
-              <h3 className="text-[13px] font-bold text-[#374357] mb-3">{CATEGORY_ICON[cat] || '🚛'} {CATEGORY_LABEL[cat] || prettifyCategory(cat)}</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {commercialByCategory[cat].map((v, i) => <VehicleCard key={i} v={v} onOpenDetail={() => router.push(`/${slugify(v.brand)}/${slugify(v.model)}`)} onQuickQuote={() => setSelectedVehicle(v)} />)}
-              </div>
+        {/* COMMERCIAL VEHICLES — one section per category that actually has
+            listed vehicles, styled exactly like the Cars section above.
+            Categories with zero vehicles are not shown at all. */}
+        {allCommercialCategories.filter((cat) => (commercialByCategory[cat] || []).length > 0).map((cat, idx) => (
+          <section key={cat} className="section mt-5 bg-white border border-[#E3E8EF] rounded-[17px] p-6" id={idx === 0 ? 'commercial' : undefined}>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h2 className="text-[21px] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>
+                {CATEGORY_ICON[cat] || '🚛'} {CATEGORY_LABEL[cat] || prettifyCategory(cat)}
+              </h2>
+              <Link href="/cars?type=COMMERCIAL" className="text-[#68758A] text-[10px] hover:text-[#146BFF]">All commercial categories →</Link>
             </div>
-          ))}
-        </section>
+            <p className="text-[#68758A] text-[12px] mt-2">{CATEGORY_BLURB[cat] || 'Commercial vehicles for your business needs.'}</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+              {commercialByCategory[cat].map((v, i) => <VehicleCard key={i} v={v} onOpenDetail={() => router.push(`/${slugify(v.brand)}/${slugify(v.model)}`)} onQuickQuote={() => setSelectedVehicle(v)} />)}
+            </div>
+          </section>
+        ))}
 
         {/* USED VEHICLES / FINANCE / INSURANCE */}
         <section className="section mt-5 bg-white border border-[#E3E8EF] rounded-[17px] p-6" id="used">

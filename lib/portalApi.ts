@@ -22,6 +22,7 @@ export const portalApi = {
   listMyLeads: () => portalFetch('/portal/my/leads'),
   createMyTestDrive: (leadId: string, scheduledAt: string) => portalFetch('/test-drives/my', { method: 'POST', body: JSON.stringify({ leadId, scheduledAt }) }),
   listMyTestDrives: () => portalFetch('/test-drives/my'),
+  cancelMyTestDrive: (id: string) => portalFetch(`/test-drives/my/${id}/cancel`, { method: 'PUT' }),
   listMyBookings: () => portalFetch('/portal/my/bookings'),
   listMyDeliveries: () => portalFetch('/portal/my/deliveries'),
   listMyQuotations: () => portalFetch('/portal/my/quotations'),

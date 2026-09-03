@@ -43,10 +43,9 @@ export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
-// Customer Portal session (separate from staff session above, but shares
-// the same 'mk_crm_token' key used by api.ts's Authorization header — a
-// customer and staff member are never logged in in the same browser at once
-// in practice, so one active token is fine).
+// Customer Portal session is kept separate from the staff session.
+// The API layer selects the portal token for /portal routes and the staff
+// token for /admin/public routes, so both sessions can coexist in one browser.
 export type PortalCustomer = {
   id: string;
   name: string;

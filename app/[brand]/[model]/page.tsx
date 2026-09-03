@@ -208,7 +208,11 @@ export default function ModelDetailPage() {
   }
   function goToCompare() {
     if (data) {
-      addToCompare({ brandSlug: params.brand, modelSlug: params.model, brandName: data.brand.name, modelName: data.model.name });
+      const result = addToCompare({ brandSlug: params.brand, modelSlug: params.model, brandName: data.brand.name, modelName: data.model.name, category: data.model.category || 'CAR' });
+      if (!result.ok) {
+        alert(result.reason);
+        return;
+      }
     }
     router.push('/compare');
   }

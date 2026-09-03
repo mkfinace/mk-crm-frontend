@@ -12,7 +12,16 @@ export type CompareItem = {
   modelSlug: string;
   brandName: string;
   modelName: string;
+  category: string; // Model.category, e.g. CAR, PICKUP_TRUCK, MINI_TRUCK, LCV, MCV, HCV, TRUCK, BUS, TRACTOR, CONSTRUCTION
 };
+
+// Cars only compare against cars, and any commercial category only compares
+// against other commercial categories — comparing a hatchback to a mini
+// truck isn't meaningful, and their spec fields barely overlap.
+function compareGroup(category: string): 'CAR' | 'COMMERCIAL' {
+  return category === 'CAR' ? 'CAR' : 'COMMERCIAL';
+}
+export { compareGroup };
 
 function readList(): CompareItem[] {
   if (typeof window === 'undefined') return [];
@@ -39,11 +48,15 @@ export function isInCompare(brandSlug: string, modelSlug: string): boolean {
 }
 
 // Returns { ok: true } on success, or { ok: false, reason } if the list is
-// already at COMPARE_MAX (adding the same vehicle twice is a harmless no-op).
+// already at COMPARE_MAX, or if this vehicle is from a different group
+// (car vs commercial) than what's already selected.
 export function addToCompare(item: CompareItem): { ok: boolean; reason?: string } {
   const list = readList();
   if (list.some((i) => i.brandSlug === item.brandSlug && i.modelSlug === item.modelSlug)) {
     return { ok: true };
+  }
+  if (list.length > 0 && compareGroup(list[0].category) !== compareGroup(item.category)) {
+    return { ok: false, reason: 'Cars and commercial vehicles can\'t be compared together. Clear the list to start a new comparison.' };
   }
   if (list.length >= COMPARE_MAX) {
     return { ok: false, reason: `You can compare up to ${COMPARE_MAX} vehicles at a time. Remove one first.` };

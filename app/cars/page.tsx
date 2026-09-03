@@ -137,7 +137,7 @@ export default function CarsListingPage() {
       removeFromCompare(r.brandSlug, r.modelSlug);
       setCompareNotice('');
     } else {
-      const result = addToCompare({ brandSlug: r.brandSlug, modelSlug: r.modelSlug, brandName: r.brandName, modelName: r.modelName });
+      const result = addToCompare({ brandSlug: r.brandSlug, modelSlug: r.modelSlug, brandName: r.brandName, modelName: r.modelName, category: r.category });
       if (!result.ok) {
         setCompareNotice(result.reason || '');
         setTimeout(() => setCompareNotice(''), 3000);

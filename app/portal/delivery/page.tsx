@@ -1,0 +1,15 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://mk-crm-backend.onrender.com';
+async function load() {
+  const token = localStorage.getItem('mk_portal_token');
+  const res = await fetch(`${API_URL}/deliveries/my`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(data?.message || 'Unable to load delivery schedule.');
+  return data;
+}
+const statusLabel:Record<string,string>={SCHEDULED:'Scheduled',DELIVERED:'Delivered',DELAYED:'Delayed'};
+export default function PortalDeliveryPage(){const [items,setItems]=useState<any[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState('');useEffect(()=>{load().then(setItems).catch(e=>setError(e.message)).finally(()=>setLoading(false));},[]);if(loading)return <div className="space-y-3">{[1,2].map(i=><div key={i} className="h-32 rounded-2xl bg-white border border-[#E3E8EF] animate-pulse"/>)}</div>;if(error)return <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">{error}</div>;return <div className="max-w-[1000px] mx-auto"><div className="mb-7"><p className="text-[11px] font-bold tracking-[3px] uppercase text-[#146BFF]">Delivery</p><h1 className="text-[28px] font-extrabold tracking-tight mt-1">My Delivery</h1><p className="text-[13px] text-[#8894A5] mt-1">Track your vehicle delivery schedule and status.</p></div>{items.length===0?<div className="bg-white border border-[#E3E8EF] rounded-2xl p-7"><h2 className="font-extrabold">Delivery not scheduled</h2><p className="text-[13px] text-[#8894A5] mt-1">Your delivery details will appear here once scheduled by the dealer.</p><Link href="/portal" className="inline-flex mt-5 rounded-lg border border-[#E3E8EF] px-5 py-2.5 text-[12.5px] font-semibold">Back to Dashboard</Link></div>:<div className="space-y-3">{items.map(d=><Link key={d.id} href={`/portal/leads/${d.leadId}`} className="block bg-white border border-[#E3E8EF] rounded-2xl p-5 hover:border-[#146BFF]/40"><div className="flex justify-between gap-4"><div><p className="font-extrabold">{d.lead?.brand?.name} {d.lead?.model?.name}</p><p className="text-[12px] text-[#8894A5] mt-1">{d.lead?.variant?.name||'Variant'} · {d.lead?.leadCode}</p></div><span className="text-[10px] font-semibold rounded-full bg-[#F0F6FF] text-[#146BFF] px-3 py-1 h-fit">{statusLabel[d.status]||d.status}</span></div><div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-5"><div><p className="text-[10px] uppercase text-[#94A0AF]">Scheduled</p><p className="font-semibold mt-1">{new Date(d.scheduledAt).toLocaleDateString('en-IN')}</p></div><div><p className="text-[10px] uppercase text-[#94A0AF]">Time</p><p className="font-semibold mt-1">{new Date(d.scheduledAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</p></div><div><p className="text-[10px] uppercase text-[#94A0AF]">Action</p><p className="font-semibold text-[#146BFF] mt-1">View deal →</p></div></div></Link>)}</div>}</div>}

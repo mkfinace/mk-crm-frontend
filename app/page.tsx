@@ -54,21 +54,26 @@ function VehicleCard({ v, onOpenDetail, onQuickQuote }: { v: any; onOpenDetail: 
     >
       <div
         className="h-[125px] flex items-center justify-center relative overflow-hidden rounded-t-xl"
-        style={{ background: 'radial-gradient(ellipse, #dceaff, #f5f7fa 68%)' }}
+        style={{ background: v.image ? '#F5F7FA' : 'radial-gradient(ellipse, #dceaff, #f5f7fa 68%)' }}
       >
-        {/* ".mini" car silhouette — matches the reference mockup's CSS
-            car icon exactly (body trapezoid + roof arc), instead of a
-            generic emoji, so every card reads as "a car" at a glance. */}
-        <div className="relative w-[165px] h-[66px] transition-transform duration-300 group-hover:scale-105">
-          <div
-            className="absolute left-[12px] top-[26px] w-[142px] h-[34px]"
-            style={{ borderRadius: '38px 50px 11px 10px', background: 'linear-gradient(#6a7784,#1a222b)' }}
-          />
-          <div
-            className="absolute left-[47px] top-[10px] w-[70px] h-[29px] rounded-t-[40px]"
-            style={{ background: '#192a39', border: '1px solid #8aa0b4' }}
-          />
-        </div>
+        {v.image ? (
+          <img src={v.image} alt={`${v.brand} ${v.model}`} className="w-full h-full object-cover" />
+        ) : (
+          /* ".mini" car silhouette — matches the reference mockup's CSS
+             car icon exactly (body trapezoid + roof arc), instead of a
+             generic emoji, so every card reads as "a car" at a glance.
+             Only shown as a fallback when no photo has been uploaded yet. */
+          <div className="relative w-[165px] h-[66px] transition-transform duration-300 group-hover:scale-105">
+            <div
+              className="absolute left-[12px] top-[26px] w-[142px] h-[34px]"
+              style={{ borderRadius: '38px 50px 11px 10px', background: 'linear-gradient(#6a7784,#1a222b)' }}
+            />
+            <div
+              className="absolute left-[47px] top-[10px] w-[70px] h-[29px] rounded-t-[40px]"
+              style={{ background: '#192a39', border: '1px solid #8aa0b4' }}
+            />
+          </div>
+        )}
         <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide text-[#2A3648] border border-[#D9E0E9]">
           {v.brand}
         </span>
@@ -164,6 +169,14 @@ export default function HomePage() {
             }
           }
         }
+        // Real uploaded vehicle photo, if one's been added in the admin —
+        // same source as the /cars listing page. Falls back to the CSS
+        // silhouette icon in VehicleCard when no photo exists yet.
+        let image: string | null = null;
+        for (const v of variants) {
+          const imgs = v.vehicles?.[0]?.imagesJson ? JSON.parse(v.vehicles[0].imagesJson) : [];
+          if (imgs.length > 0) { image = imgs[0]; break; }
+        }
         list.push({
           brand: brand.name,
           brandId: brand.id,
@@ -172,6 +185,7 @@ export default function HomePage() {
           category,
           bodyTypes: Array.from(bodyTypes),
           icon: category === 'CAR' ? '🚗' : CATEGORY_ICON[category] || '🚛',
+          image,
           price: !min ? 'Price on request' : min === max ? formatLakh(min) : `${formatLakh(min).replace('*', '')} - ${formatLakh(max)}`,
           fuelType: [...new Set(sorted.map((v: any) => v.fuelType))].join('/'),
           transmission: [...new Set(sorted.map((v: any) => v.transmission))].join('/'),

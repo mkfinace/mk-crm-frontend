@@ -15,4 +15,5 @@ async function portalFetch(path: string, options: RequestInit = {}) {
 export const portalApi = {
   listQuotations: (leadId?: string) => portalFetch(`/quotations/my${leadId ? `?leadId=${encodeURIComponent(leadId)}` : ''}`),
   getQuotation: (id: string) => portalFetch(`/quotations/my/${encodeURIComponent(id)}`),
+  createMyTestDrive: (leadId: string, scheduledAt: string) => portalFetch('/test-drives/my', { method: 'POST', body: JSON.stringify({ leadId, scheduledAt }) }),
 };

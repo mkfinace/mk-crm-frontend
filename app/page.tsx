@@ -424,7 +424,7 @@ export default function HomePage() {
         <section className="section mt-5 bg-white border border-[#E3E8EF] rounded-[17px] p-6" id="cars">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <h2 className="text-[21px] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>Cars</h2>
-            <Link href="/cars" className="text-[#68758A] text-[10px] hover:text-[#146BFF]">Explore all cars →</Link>
+            <Link href="/cars?type=CAR" className="text-[#68758A] text-[10px] hover:text-[#146BFF]">Explore all cars →</Link>
           </div>
           {carBodyTypes.length > 0 && (
             <div className="flex gap-2 my-4 flex-wrap">
@@ -456,7 +456,7 @@ export default function HomePage() {
         <section className="section mt-5 bg-white border border-[#E3E8EF] rounded-[17px] p-6" id="commercial">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <h2 className="text-[21px] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>Commercial Vehicles</h2>
-            <span className="text-[#68758A] text-[10px]">All commercial categories</span>
+            <Link href="/cars?type=COMMERCIAL" className="text-[#68758A] text-[10px] hover:text-[#146BFF]">All commercial categories →</Link>
           </div>
           <p className="text-[#68758A] text-[12px] mt-2">Choose the right vehicle for goods, transport and business needs.</p>
           <div className="grid grid-cols-2 md:grid-cols-6 gap-2.5 mt-4">

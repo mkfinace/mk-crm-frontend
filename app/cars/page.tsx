@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { slugify } from '@/lib/slugify';
 import { addToCompare, removeFromCompare, clearCompare, isInCompare, useCompareList, COMPARE_MAX } from '@/lib/compare';
@@ -47,11 +48,19 @@ function fieldValueLabel(field: any, rawValue: string): string {
 }
 
 export default function CarsListingPage() {
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<Row[]>([]);
   const [filterableFields, setFilterableFields] = useState<any[]>([]);
 
   const [search, setSearch] = useState('');
+  // Pre-set from a "?type=CAR" / "?type=COMMERCIAL" link (e.g. the Home
+  // page's "Explore all cars" / "All commercial categories" links) — 'ALL'
+  // shows everything, same as visiting /cars directly.
+  const [typeFilter, setTypeFilter] = useState<'ALL' | 'CAR' | 'COMMERCIAL'>(() => {
+    const t = searchParams.get('type');
+    return t === 'COMMERCIAL' ? 'COMMERCIAL' : t === 'CAR' ? 'CAR' : 'ALL';
+  });
   const [selCategories, setSelCategories] = useState<string[]>([]);
   const [selBrands, setSelBrands] = useState<string[]>([]);
   const [selFuels, setSelFuels] = useState<string[]>([]);
@@ -154,6 +163,8 @@ export default function CarsListingPage() {
 
   const filtered = useMemo(() => {
     let list = rows.filter((r) => {
+      if (typeFilter === 'CAR' && r.category !== 'CAR') return false;
+      if (typeFilter === 'COMMERCIAL' && r.category === 'CAR') return false;
       if (search && !`${r.brandName} ${r.modelName}`.toLowerCase().includes(search.toLowerCase())) return false;
       if (selCategories.length && !selCategories.includes(r.category)) return false;
       if (selBrands.length && !selBrands.includes(r.brandName)) return false;
@@ -171,7 +182,7 @@ export default function CarsListingPage() {
     else if (sort === 'price-desc') list = [...list].sort((a, b) => (b.minPrice || 0) - (a.minPrice || 0));
     else list = [...list].sort((a, b) => `${a.brandName}${a.modelName}`.localeCompare(`${b.brandName}${b.modelName}`));
     return list;
-  }, [rows, search, selCategories, selBrands, selFuels, selTrans, priceMax, selDynamic, sort]);
+  }, [rows, typeFilter, search, selCategories, selBrands, selFuels, selTrans, priceMax, selDynamic, sort]);
 
   function toggleDynamic(fieldId: string, val: string) {
     setSelDynamic((prev) => {
@@ -182,6 +193,7 @@ export default function CarsListingPage() {
   }
 
   function clearFilters() {
+    setTypeFilter('ALL');
     setSelCategories([]);
     setSelBrands([]);
     setSelFuels([]);
@@ -192,7 +204,7 @@ export default function CarsListingPage() {
   }
 
   const dynamicFilterCount = Object.values(selDynamic).reduce((sum, v) => sum + v.length, 0);
-  const activeFilterCount = selCategories.length + selBrands.length + selFuels.length + selTrans.length + (priceMax > 0 ? 1 : 0) + dynamicFilterCount;
+  const activeFilterCount = (typeFilter !== 'ALL' ? 1 : 0) + selCategories.length + selBrands.length + selFuels.length + selTrans.length + (priceMax > 0 ? 1 : 0) + dynamicFilterCount;
 
   return (
     <div className="lpage">
@@ -404,6 +416,7 @@ export default function CarsListingPage() {
 
               {activeFilterCount > 0 && (
                 <div className="active-chips">
+                  {typeFilter !== 'ALL' && <span className="chip">{typeFilter === 'CAR' ? 'Cars only' : 'Commercial vehicles only'} <span className="x" onClick={() => setTypeFilter('ALL')}>✕</span></span>}
                   {selCategories.map((c) => <span key={c} className="chip">{CATEGORY_LABEL[c] || prettifyCategory(c)} <span className="x" onClick={() => toggle(selCategories, setSelCategories, c)}>✕</span></span>)}
                   {selBrands.map((b) => <span key={b} className="chip">{b} <span className="x" onClick={() => toggle(selBrands, setSelBrands, b)}>✕</span></span>)}
                   {selFuels.map((f) => <span key={f} className="chip">{f} <span className="x" onClick={() => toggle(selFuels, setSelFuels, f)}>✕</span></span>)}

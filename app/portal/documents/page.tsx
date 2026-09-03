@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { portalApi } from '@/lib/portalApi';
 import { api } from '@/lib/api';
 
 export default function PortalDocumentsPage() {
   const [docs, setDocs] = useState<any[]>([]); const [leads, setLeads] = useState<any[]>([]); const [leadId, setLeadId] = useState(''); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
-  async function load(id = leadId) { setLoading(true); setError(''); try { const [d, l] = await Promise.all([api.listMyDocuments(id || undefined), api.listMyLeads()]); setDocs(d || []); setLeads(l || []); } catch (e: any) { setError(e.message || 'Unable to load documents.'); } finally { setLoading(false); } }
+  async function load(id = leadId) { setLoading(true); setError(''); try { const [d, l] = await Promise.all([portalApi.listMyDocuments(id || undefined), api.listMyLeads()]); setDocs(d || []); setLeads(l || []); } catch (e: any) { setError(e.message || 'Unable to load documents.'); } finally { setLoading(false); } }
   useEffect(() => { load(''); }, []);
   const vehicleFor = (id: string) => leads.find((l) => l.id === id);
   const status = (s: string) => s === 'VERIFIED' ? 'Verified' : s === 'REJECTED' ? 'Rejected' : s === 'PENDING' ? 'Pending review' : 'Uploaded';

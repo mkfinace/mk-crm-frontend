@@ -17,7 +17,7 @@ const FINANCE_STATUS_LABEL: Record<string, string> = {
   DISBURSEMENT: 'Disbursement', FINANCE_COMPLETED: 'Finance Completed',
 };
 const LOST_REASONS = ['Price High', 'Other Brand', 'Other Dealer', 'Finance Rejected', 'Loan Amount Issue', 'Purchase Postponed', 'No Response', 'Not Interested', 'Other'];
-const DOC_TYPES = ['Aadhaar', 'PAN', 'Address Proof', 'Income Proof', 'Bank Statement', 'ITR', 'GST'];
+const DOC_TYPES = ['Aadhaar', 'PAN', 'Address Proof', 'Income Proof', 'Bank Statement', 'ITR', 'GST', 'Insurance Copy', 'RC Copy'];
 
 // Order follows the real-world sales flow: qualify → collect KYC documents
 // → quote → book → then run the finance case through to disbursement.
@@ -318,7 +318,7 @@ export default function LeadDetailPage() {
   // identity documents (Aadhaar, PAN) — enough to confirm who they're dealing
   // with — not income/bank/ITR/GST documents, which are finance-sensitive.
   const canDownloadAllDocs = staff?.role === 'SUPER_ADMIN' || staff?.role === 'FINANCE_ADMIN' || staff?.role === 'FINANCE_EXECUTIVE';
-  const SALES_DOWNLOADABLE_DOC_TYPES = ['Aadhaar', 'PAN'];
+  const SALES_DOWNLOADABLE_DOC_TYPES = ['Aadhaar', 'PAN', 'Insurance Copy', 'RC Copy'];
   function canDownloadDoc(docType: string) {
     return canDownloadAllDocs || SALES_DOWNLOADABLE_DOC_TYPES.includes(docType);
   }
@@ -712,6 +712,9 @@ export default function LeadDetailPage() {
 
   const [bookingAmount, setBookingAmount] = useState('');
   const [deliveryDate, setDeliveryDate] = useState('');
+  const [regNumber, setRegNumber] = useState('');
+  const [insurancePolicy, setInsurancePolicy] = useState('');
+  const [editingVehicleDetails, setEditingVehicleDetails] = useState(false);
 
   const [messages, setMessages] = useState<any[]>([]);
   const [messageBody, setMessageBody] = useState('');
@@ -1339,6 +1342,11 @@ export default function LeadDetailPage() {
 
   const handleMarkDelivered = withSaving(async () => {
     await api.updateDelivery(lead.delivery.id, { status: 'DELIVERED', deliveredAt: new Date().toISOString() });
+  });
+
+  const handleSaveVehicleDetails = withSaving(async () => {
+    await api.updateDelivery(lead.delivery.id, { registrationNumber: regNumber || undefined, insurancePolicyNumber: insurancePolicy || undefined });
+    setEditingVehicleDetails(false);
   });
 
   async function handleSendMessage(e: React.FormEvent) {
@@ -1995,7 +2003,7 @@ export default function LeadDetailPage() {
                           View / Download
                         </a>
                       ) : (
-                        <span className="text-[11px] text-slate-400" title="Only Aadhaar/PAN are downloadable by sales staff. Finance/Admin can download all documents.">
+                        <span className="text-[11px] text-slate-400" title="Only Aadhaar/PAN/RC/Insurance Copy are downloadable by sales staff. Finance/Admin can download all documents.">
                           🔒 Restricted
                         </span>
                       )}
@@ -2533,8 +2541,37 @@ export default function LeadDetailPage() {
 
       <Section title="Delivery">
         {lead.delivery ? (
-          <div className="text-sm space-y-2">
+          <div className="text-sm space-y-3">
             <p>Scheduled: {new Date(lead.delivery.scheduledAt).toLocaleString()} — <span className="text-xs bg-slate-100 rounded-full px-2 py-1">{lead.delivery.status}</span></p>
+
+            <div className="border-t border-slate-100 pt-3">
+              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-2">Vehicle Registration & Insurance</p>
+              {editingVehicleDetails ? (
+                <div className="space-y-2">
+                  <input className={`${inputCls} w-full`} placeholder="Registration number (e.g. GJ01AB1234)" value={regNumber} onChange={(e) => setRegNumber(e.target.value)} />
+                  <input className={`${inputCls} w-full`} placeholder="Insurance policy number" value={insurancePolicy} onChange={(e) => setInsurancePolicy(e.target.value)} />
+                  <div className="flex gap-2">
+                    <button disabled={saving} onClick={handleSaveVehicleDetails} className={primaryBtnCls}>Save</button>
+                    <button onClick={() => setEditingVehicleDetails(false)} className={secondaryBtnCls}>Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-[13px] text-slate-600">
+                    <p>Reg. No: <span className="font-medium text-slate-800">{lead.delivery.registrationNumber || 'Not set'}</span></p>
+                    <p>Insurance Policy: <span className="font-medium text-slate-800">{lead.delivery.insurancePolicyNumber || 'Not set'}</span></p>
+                  </div>
+                  <button
+                    onClick={() => { setRegNumber(lead.delivery.registrationNumber || ''); setInsurancePolicy(lead.delivery.insurancePolicyNumber || ''); setEditingVehicleDetails(true); }}
+                    className={linkBtnCls}
+                  >
+                    {lead.delivery.registrationNumber || lead.delivery.insurancePolicyNumber ? 'Edit' : '+ Add'}
+                  </button>
+                </div>
+              )}
+              <p className="text-[11px] text-slate-400 mt-2">To upload the RC copy or insurance copy scans, use the Documents step — "RC Copy" and "Insurance Copy" are available there as document types.</p>
+            </div>
+
             {lead.delivery.status !== 'DELIVERED' && (
               <button disabled={saving} onClick={handleMarkDelivered} className="bg-green-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60">
                 Mark as Delivered

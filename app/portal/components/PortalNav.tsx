@@ -6,6 +6,9 @@ import { usePathname } from 'next/navigation';
 const items = [
   { href: '/portal', label: 'Dashboard' },
   { href: '/portal/enquiries', label: 'My Enquiries' },
+  { href: '/portal/finance', label: 'Finance' },
+  { href: '/portal/documents', label: 'Documents' },
+  { href: '/portal/profile', label: 'Profile' },
   { href: '/cars', label: 'Explore Cars' },
   { href: '/compare', label: 'Compare' },
 ];
@@ -18,13 +21,7 @@ export default function PortalNav() {
         {items.map((item) => {
           const active = item.href === '/portal' ? pathname === '/portal' : pathname.startsWith(item.href);
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`shrink-0 px-4 py-3 text-[12.5px] font-medium border-b-2 transition-colors ${
-                active ? 'text-[#146BFF] border-[#146BFF]' : 'text-[#68758A] border-transparent hover:text-[#172033]'
-              }`}
-            >
+            <Link key={item.href} href={item.href} className={`shrink-0 px-4 py-3 text-[12.5px] font-medium border-b-2 transition-colors ${active ? 'text-[#146BFF] border-[#146BFF]' : 'text-[#68758A] border-transparent hover:text-[#172033]'}`}>
               {item.label}
             </Link>
           );

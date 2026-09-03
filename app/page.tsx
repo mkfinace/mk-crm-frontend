@@ -12,6 +12,15 @@ import EnquiryModal from '@/components/EnquiryModal';
 const rajdhani = Rajdhani({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--font-heading' });
 const montserrat = Montserrat({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700', '800'], variable: '--font-body' });
 
+// Same pipeline/labels used on the portal dashboard's Deal Journey — reused
+// here so the inline "My Enquiries" list on the home page matches exactly.
+const MY_DEAL_PIPELINE = ['NEW', 'CONTACTED', 'QUALIFIED', 'INTERESTED', 'TEST_DRIVE', 'QUOTATION', 'NEGOTIATION', 'BOOKING', 'DELIVERY', 'CLOSED'];
+const MY_DEAL_STAGE_LABEL: Record<string, string> = {
+  NEW: 'New Enquiry', CONTACTED: 'We Contacted You', QUALIFIED: 'Qualified', INTERESTED: 'Interested',
+  TEST_DRIVE: 'Test Drive', QUOTATION: 'Quotation Shared', NEGOTIATION: 'Negotiation',
+  BOOKING: 'Booked', DELIVERY: 'Delivery in Progress', CLOSED: 'Delivered', HOLD: 'On Hold', LOST: 'Closed',
+};
+
 // Weight-class taxonomy for the Commercial Vehicles grid. TRACTOR/BUS/
 // CONSTRUCTION still exist as valid categories in the catalogue (nothing
 // deleted) — they just don't get a tile in this specific 6-tile layout.
@@ -91,6 +100,9 @@ export default function HomePage() {
   const [selectedVehicle, setSelectedVehicle] = useState<any | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [customer, setCustomer] = useState<PortalCustomer | null>(null);
+  const [enquiriesOpen, setEnquiriesOpen] = useState(false);
+  const [myLeads, setMyLeads] = useState<any[] | null>(null);
+  const [loadingLeads, setLoadingLeads] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef<HTMLLIElement>(null);
   const [contactInfo, setContactInfo] = useState({ contact_phone: '98247 42356', contact_city: 'Valsad, Gujarat', contact_email: 'mkfinance.guj@gmail.com' });
@@ -212,6 +224,18 @@ export default function HomePage() {
     setModalEnquiryType(type);
     setModalTitle(title);
     setModalOpen(true);
+  }
+  function toggleMyEnquiries() {
+    if (!customer) return;
+    if (enquiriesOpen) { setEnquiriesOpen(false); return; }
+    setEnquiriesOpen(true);
+    if (myLeads === null) {
+      setLoadingLeads(true);
+      api.listMyLeads()
+        .then((data: any[]) => setMyLeads(data || []))
+        .catch(() => setMyLeads([]))
+        .finally(() => setLoadingLeads(false));
+    }
   }
   const scrollTo = (id: string) => {
     setMenuOpen(false);
@@ -523,10 +547,58 @@ export default function HomePage() {
                 Sales status, finance progress, documents, booking and delivery — everything about your enquiry, updated in real time.
               </p>
             </div>
-            <Link href={customer ? '/portal' : '/portal/login'} className="shrink-0 text-white px-8 py-3.5 rounded-lg font-bold text-[12px] whitespace-nowrap" style={{ background: 'linear-gradient(100deg,#146BFF,#7146FF)' }}>
-              {customer ? 'View My Enquiries →' : 'Track My Enquiry →'}
-            </Link>
+            {customer ? (
+              <button onClick={toggleMyEnquiries} className="shrink-0 text-white px-8 py-3.5 rounded-lg font-bold text-[12px] whitespace-nowrap" style={{ background: 'linear-gradient(100deg,#146BFF,#7146FF)' }}>
+                {enquiriesOpen ? 'Hide My Enquiries ↑' : 'View My Enquiries →'}
+              </button>
+            ) : (
+              <Link href="/portal/login" className="shrink-0 text-white px-8 py-3.5 rounded-lg font-bold text-[12px] whitespace-nowrap" style={{ background: 'linear-gradient(100deg,#146BFF,#7146FF)' }}>
+                Track My Enquiry →
+              </Link>
+            )}
           </div>
+
+          {customer && enquiriesOpen && (
+            <div className="mt-5">
+              {loadingLeads ? (
+                <div className="space-y-2.5">
+                  {[0, 1].map((i) => <div key={i} className="h-20 bg-[#F5F7FA] border border-[#E3E8EF] rounded-xl animate-pulse" />)}
+                </div>
+              ) : !myLeads || myLeads.length === 0 ? (
+                <div className="text-center py-10 bg-[#F5F7FA] border border-[#E3E8EF] rounded-xl">
+                  <p className="text-[13px] text-[#68758A]">No enquiries found for this mobile number yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {myLeads.map((l) => {
+                    const stageIdx = MY_DEAL_PIPELINE.indexOf(l.salesStatus);
+                    const progressPct = stageIdx >= 0 ? Math.round(((stageIdx + 1) / MY_DEAL_PIPELINE.length) * 100) : 0;
+                    const isClosed = l.salesStatus === 'CLOSED';
+                    return (
+                      <Link
+                        key={l.id}
+                        href={`/portal/leads/${l.id}`}
+                        className="group block bg-white border border-[#E3E8EF] rounded-xl p-4 transition-all hover:-translate-y-0.5 hover:border-[#2F8CFF]/40 hover:shadow-[0_12px_30px_rgba(20,107,255,0.15)]"
+                      >
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div>
+                            <p className="font-semibold text-[14px] text-[#172033]">{l.brand?.name} {l.model?.name} {l.variant?.name}</p>
+                            <p className="text-[11.5px] text-[#68758A] mt-0.5">{l.leadCode} · {new Date(l.createdAt).toLocaleDateString('en-IN')}</p>
+                          </div>
+                          <span className={`text-[10.5px] px-2.5 py-1 rounded-full border whitespace-nowrap ${isClosed ? 'bg-emerald-500/10 text-emerald-700 border-emerald-500/25' : 'bg-[#146BFF]/10 text-[#146BFF] border-[#146BFF]/25'}`}>
+                            {MY_DEAL_STAGE_LABEL[l.salesStatus] || l.salesStatus}
+                          </span>
+                        </div>
+                        <div className="mt-3 h-1.5 bg-[#F0F3F7] rounded-full overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${progressPct}%`, background: 'linear-gradient(90deg,#146BFF,#7146FF)' }} />
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </section>
 
         {/* FOOTER */}

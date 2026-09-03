@@ -11,7 +11,8 @@ async function portalFetch(path: string, options: RequestInit = {}) {
   if (res.status === 401 && typeof window !== 'undefined') {
     localStorage.removeItem('mk_portal_token');
     localStorage.removeItem('mk_portal_customer');
-    if (window.location.pathname !== '/portal/login') window.location.href = '/portal/login';
+    const next = `${window.location.pathname}${window.location.search}`;
+    if (window.location.pathname !== '/portal/login') window.location.href = `/portal/login?next=${encodeURIComponent(next)}`;
   }
   if (!res.ok) throw new Error(data?.message || data?.error || 'Something went wrong.');
   return data;
